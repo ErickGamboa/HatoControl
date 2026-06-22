@@ -1,10 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../config/supabase_config.dart';
 import '../local/database.dart';
 
 /// Motor de sincronización entre la base local (Drift/SQLite) y Supabase.
@@ -144,29 +144,16 @@ class SyncService {
     }
   }
 
-  /// Sube al Storage de Supabase las fotos de fincas marcadas `fotoPendiente`,
-  /// guarda la URL pública en `fincas.foto_url` y limpia la bandera.
-  ///
-  /// Usa un cliente de Storage construido con el token actual de la sesión,
-  /// porque el cliente de Storage de la librería no siempre adjunta el token
-  /// de una sesión restaurada (a diferencia de PostgREST).
+  /// Sube las fotos de fincas marcadas `fotoPendiente` a través de la Edge
+  /// Function `subir-foto-finca` (que valida al usuario y escribe con permisos
+  /// de servidor), guarda la URL pública devuelta y limpia la bandera.
   Future<void> _subirFotosFincas() async {
-    final token = _sb.auth.currentSession?.accessToken;
-    if (token == null) return;
+    if (_sb.auth.currentSession == null) return;
 
     final conFoto = await (db.select(db.fincas)
           ..where((t) =>
               t.fotoPendiente.equals(true) & t.fotoLocalPath.isNotNull()))
         .get();
-    if (conFoto.isEmpty) return;
-
-    final storage = SupabaseStorageClient(
-      '${SupabaseConfig.url}/storage/v1',
-      {
-        'apikey': SupabaseConfig.publishableKey,
-        'Authorization': 'Bearer $token',
-      },
-    );
 
     for (final f in conFoto) {
       final ruta = f.fotoLocalPath;
@@ -178,25 +165,25 @@ class SyncService {
             .write(const FincasCompanion(fotoPendiente: Value(false)));
         continue;
       }
-      final cuenta = f.cuentaId ?? 'sin_cuenta';
-      final path = '$cuenta/${f.id}.jpg';
       try {
-        await storage.from('fincas-fotos').upload(
-              path,
-              archivo,
-              fileOptions: const FileOptions(
-                upsert: true,
-                contentType: 'image/jpeg',
-              ),
-            );
-        final url = storage.from('fincas-fotos').getPublicUrl(path);
-        await _sb.from('fincas').update({'foto_url': url}).eq('id', f.id);
-        await (db.update(db.fincas)..where((t) => t.id.equals(f.id))).write(
-              FincasCompanion(
-                fotoUrl: Value(url),
-                fotoPendiente: const Value(false),
-              ),
-            );
+        final bytes = await archivo.readAsBytes();
+        final res = await _sb.functions.invoke(
+          'subir-foto-finca',
+          body: {
+            'finca_id': f.id,
+            'imagen_base64': base64Encode(bytes),
+          },
+        );
+        final data = res.data;
+        final url = data is Map ? data['url'] as String? : null;
+        if (url != null && url.isNotEmpty) {
+          await (db.update(db.fincas)..where((t) => t.id.equals(f.id))).write(
+                FincasCompanion(
+                  fotoUrl: Value(url),
+                  fotoPendiente: const Value(false),
+                ),
+              );
+        }
       } catch (e) {
         // Que un fallo de foto no rompa el resto de la sincronización.
         debugPrint('No se pudo subir la foto de la finca ${f.id}: $e');
