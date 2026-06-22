@@ -1,0 +1,9 @@
+# Configuración de generación de código para Drift.
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          # Guardar fechas como texto ISO-8601 (no como enteros). Conserva la
+          # precisión de milisegundos, ideal para comparar al sincronizar.
+          store_date_time_values_as_text: true
