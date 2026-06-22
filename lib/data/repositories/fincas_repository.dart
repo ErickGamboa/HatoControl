@@ -101,9 +101,12 @@ class FincasRepository {
 
   /// Crea una finca y, en la misma transacción, agrega al creador como admin.
   /// Valida el límite del plan antes de crear. Ambas filas quedan `pendiente`.
+  /// [fotoLocalPath] es opcional: si se pasa, la foto se guarda local y se sube
+  /// al sincronizar.
   Future<void> crearFinca({
     required String nombre,
     required String creadaPor,
+    String? fotoLocalPath,
   }) async {
     final estado = await estadoLicencia(creadaPor);
     if (estado == null) {
@@ -115,6 +118,7 @@ class FincasRepository {
 
     final ahora = DateTime.now();
     final fincaId = _uuid.v4();
+    final tieneFoto = fotoLocalPath != null;
 
     await db.transaction(() async {
       await db.into(db.fincas).insert(FincasCompanion.insert(
@@ -122,6 +126,8 @@ class FincasRepository {
             nombre: nombre,
             creadaPor: creadaPor,
             cuentaId: Value(estado.cuentaId),
+            fotoLocalPath: Value(fotoLocalPath),
+            fotoPendiente: Value(tieneFoto),
             createdAt: ahora,
             updatedAt: ahora,
             pendiente: const Value(true),

@@ -1391,6 +1391,32 @@ class $FincasTable extends Fincas with TableInfo<$FincasTable, FincaRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _fotoLocalPathMeta = const VerificationMeta(
+    'fotoLocalPath',
+  );
+  @override
+  late final GeneratedColumn<String> fotoLocalPath = GeneratedColumn<String>(
+    'foto_local_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fotoPendienteMeta = const VerificationMeta(
+    'fotoPendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> fotoPendiente = GeneratedColumn<bool>(
+    'foto_pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("foto_pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1446,6 +1472,8 @@ class $FincasTable extends Fincas with TableInfo<$FincasTable, FincaRow> {
     fotoUrl,
     creadaPor,
     cuentaId,
+    fotoLocalPath,
+    fotoPendiente,
     createdAt,
     updatedAt,
     deletedAt,
@@ -1494,6 +1522,24 @@ class $FincasTable extends Fincas with TableInfo<$FincasTable, FincaRow> {
       context.handle(
         _cuentaIdMeta,
         cuentaId.isAcceptableOrUnknown(data['cuenta_id']!, _cuentaIdMeta),
+      );
+    }
+    if (data.containsKey('foto_local_path')) {
+      context.handle(
+        _fotoLocalPathMeta,
+        fotoLocalPath.isAcceptableOrUnknown(
+          data['foto_local_path']!,
+          _fotoLocalPathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('foto_pendiente')) {
+      context.handle(
+        _fotoPendienteMeta,
+        fotoPendiente.isAcceptableOrUnknown(
+          data['foto_pendiente']!,
+          _fotoPendienteMeta,
+        ),
       );
     }
     if (data.containsKey('created_at')) {
@@ -1553,6 +1599,14 @@ class $FincasTable extends Fincas with TableInfo<$FincasTable, FincaRow> {
         DriftSqlType.string,
         data['${effectivePrefix}cuenta_id'],
       ),
+      fotoLocalPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}foto_local_path'],
+      ),
+      fotoPendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}foto_pendiente'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1584,6 +1638,8 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
   final String? fotoUrl;
   final String creadaPor;
   final String? cuentaId;
+  final String? fotoLocalPath;
+  final bool fotoPendiente;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -1594,6 +1650,8 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
     this.fotoUrl,
     required this.creadaPor,
     this.cuentaId,
+    this.fotoLocalPath,
+    required this.fotoPendiente,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -1611,6 +1669,10 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
     if (!nullToAbsent || cuentaId != null) {
       map['cuenta_id'] = Variable<String>(cuentaId);
     }
+    if (!nullToAbsent || fotoLocalPath != null) {
+      map['foto_local_path'] = Variable<String>(fotoLocalPath);
+    }
+    map['foto_pendiente'] = Variable<bool>(fotoPendiente);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -1631,6 +1693,10 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
       cuentaId: cuentaId == null && nullToAbsent
           ? const Value.absent()
           : Value(cuentaId),
+      fotoLocalPath: fotoLocalPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fotoLocalPath),
+      fotoPendiente: Value(fotoPendiente),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -1651,6 +1717,8 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
       fotoUrl: serializer.fromJson<String?>(json['fotoUrl']),
       creadaPor: serializer.fromJson<String>(json['creadaPor']),
       cuentaId: serializer.fromJson<String?>(json['cuentaId']),
+      fotoLocalPath: serializer.fromJson<String?>(json['fotoLocalPath']),
+      fotoPendiente: serializer.fromJson<bool>(json['fotoPendiente']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -1666,6 +1734,8 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
       'fotoUrl': serializer.toJson<String?>(fotoUrl),
       'creadaPor': serializer.toJson<String>(creadaPor),
       'cuentaId': serializer.toJson<String?>(cuentaId),
+      'fotoLocalPath': serializer.toJson<String?>(fotoLocalPath),
+      'fotoPendiente': serializer.toJson<bool>(fotoPendiente),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -1679,6 +1749,8 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
     Value<String?> fotoUrl = const Value.absent(),
     String? creadaPor,
     Value<String?> cuentaId = const Value.absent(),
+    Value<String?> fotoLocalPath = const Value.absent(),
+    bool? fotoPendiente,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -1689,6 +1761,10 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
     fotoUrl: fotoUrl.present ? fotoUrl.value : this.fotoUrl,
     creadaPor: creadaPor ?? this.creadaPor,
     cuentaId: cuentaId.present ? cuentaId.value : this.cuentaId,
+    fotoLocalPath: fotoLocalPath.present
+        ? fotoLocalPath.value
+        : this.fotoLocalPath,
+    fotoPendiente: fotoPendiente ?? this.fotoPendiente,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -1701,6 +1777,12 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
       fotoUrl: data.fotoUrl.present ? data.fotoUrl.value : this.fotoUrl,
       creadaPor: data.creadaPor.present ? data.creadaPor.value : this.creadaPor,
       cuentaId: data.cuentaId.present ? data.cuentaId.value : this.cuentaId,
+      fotoLocalPath: data.fotoLocalPath.present
+          ? data.fotoLocalPath.value
+          : this.fotoLocalPath,
+      fotoPendiente: data.fotoPendiente.present
+          ? data.fotoPendiente.value
+          : this.fotoPendiente,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -1716,6 +1798,8 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
           ..write('fotoUrl: $fotoUrl, ')
           ..write('creadaPor: $creadaPor, ')
           ..write('cuentaId: $cuentaId, ')
+          ..write('fotoLocalPath: $fotoLocalPath, ')
+          ..write('fotoPendiente: $fotoPendiente, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -1731,6 +1815,8 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
     fotoUrl,
     creadaPor,
     cuentaId,
+    fotoLocalPath,
+    fotoPendiente,
     createdAt,
     updatedAt,
     deletedAt,
@@ -1745,6 +1831,8 @@ class FincaRow extends DataClass implements Insertable<FincaRow> {
           other.fotoUrl == this.fotoUrl &&
           other.creadaPor == this.creadaPor &&
           other.cuentaId == this.cuentaId &&
+          other.fotoLocalPath == this.fotoLocalPath &&
+          other.fotoPendiente == this.fotoPendiente &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -1757,6 +1845,8 @@ class FincasCompanion extends UpdateCompanion<FincaRow> {
   final Value<String?> fotoUrl;
   final Value<String> creadaPor;
   final Value<String?> cuentaId;
+  final Value<String?> fotoLocalPath;
+  final Value<bool> fotoPendiente;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -1768,6 +1858,8 @@ class FincasCompanion extends UpdateCompanion<FincaRow> {
     this.fotoUrl = const Value.absent(),
     this.creadaPor = const Value.absent(),
     this.cuentaId = const Value.absent(),
+    this.fotoLocalPath = const Value.absent(),
+    this.fotoPendiente = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -1780,6 +1872,8 @@ class FincasCompanion extends UpdateCompanion<FincaRow> {
     this.fotoUrl = const Value.absent(),
     required String creadaPor,
     this.cuentaId = const Value.absent(),
+    this.fotoLocalPath = const Value.absent(),
+    this.fotoPendiente = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -1796,6 +1890,8 @@ class FincasCompanion extends UpdateCompanion<FincaRow> {
     Expression<String>? fotoUrl,
     Expression<String>? creadaPor,
     Expression<String>? cuentaId,
+    Expression<String>? fotoLocalPath,
+    Expression<bool>? fotoPendiente,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -1808,6 +1904,8 @@ class FincasCompanion extends UpdateCompanion<FincaRow> {
       if (fotoUrl != null) 'foto_url': fotoUrl,
       if (creadaPor != null) 'creada_por': creadaPor,
       if (cuentaId != null) 'cuenta_id': cuentaId,
+      if (fotoLocalPath != null) 'foto_local_path': fotoLocalPath,
+      if (fotoPendiente != null) 'foto_pendiente': fotoPendiente,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -1822,6 +1920,8 @@ class FincasCompanion extends UpdateCompanion<FincaRow> {
     Value<String?>? fotoUrl,
     Value<String>? creadaPor,
     Value<String?>? cuentaId,
+    Value<String?>? fotoLocalPath,
+    Value<bool>? fotoPendiente,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -1834,6 +1934,8 @@ class FincasCompanion extends UpdateCompanion<FincaRow> {
       fotoUrl: fotoUrl ?? this.fotoUrl,
       creadaPor: creadaPor ?? this.creadaPor,
       cuentaId: cuentaId ?? this.cuentaId,
+      fotoLocalPath: fotoLocalPath ?? this.fotoLocalPath,
+      fotoPendiente: fotoPendiente ?? this.fotoPendiente,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -1859,6 +1961,12 @@ class FincasCompanion extends UpdateCompanion<FincaRow> {
     }
     if (cuentaId.present) {
       map['cuenta_id'] = Variable<String>(cuentaId.value);
+    }
+    if (fotoLocalPath.present) {
+      map['foto_local_path'] = Variable<String>(fotoLocalPath.value);
+    }
+    if (fotoPendiente.present) {
+      map['foto_pendiente'] = Variable<bool>(fotoPendiente.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -1886,6 +1994,8 @@ class FincasCompanion extends UpdateCompanion<FincaRow> {
           ..write('fotoUrl: $fotoUrl, ')
           ..write('creadaPor: $creadaPor, ')
           ..write('cuentaId: $cuentaId, ')
+          ..write('fotoLocalPath: $fotoLocalPath, ')
+          ..write('fotoPendiente: $fotoPendiente, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -4945,6 +5055,8 @@ typedef $$FincasTableCreateCompanionBuilder =
       Value<String?> fotoUrl,
       required String creadaPor,
       Value<String?> cuentaId,
+      Value<String?> fotoLocalPath,
+      Value<bool> fotoPendiente,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
@@ -4958,6 +5070,8 @@ typedef $$FincasTableUpdateCompanionBuilder =
       Value<String?> fotoUrl,
       Value<String> creadaPor,
       Value<String?> cuentaId,
+      Value<String?> fotoLocalPath,
+      Value<bool> fotoPendiente,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -4996,6 +5110,16 @@ class $$FincasTableFilterComposer
 
   ColumnFilters<String> get cuentaId => $composableBuilder(
     column: $table.cuentaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fotoLocalPath => $composableBuilder(
+    column: $table.fotoLocalPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get fotoPendiente => $composableBuilder(
+    column: $table.fotoPendiente,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5054,6 +5178,16 @@ class $$FincasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get fotoLocalPath => $composableBuilder(
+    column: $table.fotoLocalPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get fotoPendiente => $composableBuilder(
+    column: $table.fotoPendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5098,6 +5232,16 @@ class $$FincasTableAnnotationComposer
 
   GeneratedColumn<String> get cuentaId =>
       $composableBuilder(column: $table.cuentaId, builder: (column) => column);
+
+  GeneratedColumn<String> get fotoLocalPath => $composableBuilder(
+    column: $table.fotoLocalPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get fotoPendiente => $composableBuilder(
+    column: $table.fotoPendiente,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -5145,6 +5289,8 @@ class $$FincasTableTableManager
                 Value<String?> fotoUrl = const Value.absent(),
                 Value<String> creadaPor = const Value.absent(),
                 Value<String?> cuentaId = const Value.absent(),
+                Value<String?> fotoLocalPath = const Value.absent(),
+                Value<bool> fotoPendiente = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -5156,6 +5302,8 @@ class $$FincasTableTableManager
                 fotoUrl: fotoUrl,
                 creadaPor: creadaPor,
                 cuentaId: cuentaId,
+                fotoLocalPath: fotoLocalPath,
+                fotoPendiente: fotoPendiente,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -5169,6 +5317,8 @@ class $$FincasTableTableManager
                 Value<String?> fotoUrl = const Value.absent(),
                 required String creadaPor,
                 Value<String?> cuentaId = const Value.absent(),
+                Value<String?> fotoLocalPath = const Value.absent(),
+                Value<bool> fotoPendiente = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -5180,6 +5330,8 @@ class $$FincasTableTableManager
                 fotoUrl: fotoUrl,
                 creadaPor: creadaPor,
                 cuentaId: cuentaId,
+                fotoLocalPath: fotoLocalPath,
+                fotoPendiente: fotoPendiente,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../config/supabase_config.dart';
 import '../local/database.dart';
 
 /// Motor de sincronización entre la base local (Drift/SQLite) y Supabase.
@@ -51,6 +54,8 @@ class SyncService {
     await _subirFincas();
     await _subirMiembros();
     await _subirLotes();
+    // Fotos: después de la membresía (la RLS de update exige ser admin).
+    await _subirFotosFincas();
     // Bajar después. Planes y cuentas primero (la finca necesita su cuenta).
     await _bajarPlanes();
     await _bajarCuentas();
@@ -139,6 +144,66 @@ class SyncService {
     }
   }
 
+  /// Sube al Storage de Supabase las fotos de fincas marcadas `fotoPendiente`,
+  /// guarda la URL pública en `fincas.foto_url` y limpia la bandera.
+  ///
+  /// Usa un cliente de Storage construido con el token actual de la sesión,
+  /// porque el cliente de Storage de la librería no siempre adjunta el token
+  /// de una sesión restaurada (a diferencia de PostgREST).
+  Future<void> _subirFotosFincas() async {
+    final token = _sb.auth.currentSession?.accessToken;
+    if (token == null) return;
+
+    final conFoto = await (db.select(db.fincas)
+          ..where((t) =>
+              t.fotoPendiente.equals(true) & t.fotoLocalPath.isNotNull()))
+        .get();
+    if (conFoto.isEmpty) return;
+
+    final storage = SupabaseStorageClient(
+      '${SupabaseConfig.url}/storage/v1',
+      {
+        'apikey': SupabaseConfig.publishableKey,
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    for (final f in conFoto) {
+      final ruta = f.fotoLocalPath;
+      if (ruta == null) continue;
+      final archivo = File(ruta);
+      if (!await archivo.exists()) {
+        // El archivo local ya no está; no insistir.
+        await (db.update(db.fincas)..where((t) => t.id.equals(f.id)))
+            .write(const FincasCompanion(fotoPendiente: Value(false)));
+        continue;
+      }
+      final cuenta = f.cuentaId ?? 'sin_cuenta';
+      final path = '$cuenta/${f.id}.jpg';
+      try {
+        await storage.from('fincas-fotos').upload(
+              path,
+              archivo,
+              fileOptions: const FileOptions(
+                upsert: true,
+                contentType: 'image/jpeg',
+              ),
+            );
+        final url = storage.from('fincas-fotos').getPublicUrl(path);
+        await _sb.from('fincas').update({'foto_url': url}).eq('id', f.id);
+        await (db.update(db.fincas)..where((t) => t.id.equals(f.id))).write(
+              FincasCompanion(
+                fotoUrl: Value(url),
+                fotoPendiente: const Value(false),
+              ),
+            );
+      } catch (e) {
+        // Que un fallo de foto no rompa el resto de la sincronización.
+        debugPrint('No se pudo subir la foto de la finca ${f.id}: $e');
+      }
+    }
+  }
+
   // ---------------------------------------------------------------- BAJAR
 
   /// Catálogo de licencias (solo lectura). No usa borrado suave.
@@ -211,19 +276,28 @@ class SyncService {
     DateTime? maxU = cursor;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
-      await db.into(db.fincas).insertOnConflictUpdate(FincaRow(
-            id: r['id'] as String,
-            nombre: r['nombre'] as String,
-            fotoUrl: r['foto_url'] as String?,
-            creadaPor: r['creada_por'] as String,
-            cuentaId: r['cuenta_id'] as String?,
-            createdAt: DateTime.parse(r['created_at'] as String),
-            updatedAt: u,
-            deletedAt: r['deleted_at'] != null
-                ? DateTime.parse(r['deleted_at'] as String)
-                : null,
-            pendiente: false,
-          ));
+      final deletedAt = r['deleted_at'] != null
+          ? DateTime.parse(r['deleted_at'] as String)
+          : null;
+
+      // Solo columnas del servidor; NO tocamos fotoLocalPath/fotoPendiente
+      // (son locales) para no perder una foto aún sin subir.
+      FincasCompanion datosServidor({required bool conId}) => FincasCompanion(
+            id: conId ? Value(r['id'] as String) : const Value.absent(),
+            nombre: Value(r['nombre'] as String),
+            fotoUrl: Value(r['foto_url'] as String?),
+            creadaPor: Value(r['creada_por'] as String),
+            cuentaId: Value(r['cuenta_id'] as String?),
+            createdAt: Value(DateTime.parse(r['created_at'] as String)),
+            updatedAt: Value(u),
+            deletedAt: Value(deletedAt),
+            pendiente: const Value(false),
+          );
+
+      await db.into(db.fincas).insert(
+            datosServidor(conId: true),
+            onConflict: DoUpdate((_) => datosServidor(conId: false)),
+          );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
     if (maxU != null) await _guardarCursor('fincas', maxU);

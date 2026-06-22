@@ -66,6 +66,10 @@ class Fincas extends Table {
   // Nullable en local para simplificar la migración; se setea al crear.
   // El servidor lo mantiene NOT NULL.
   TextColumn get cuentaId => text().nullable()();
+  // Foto: ruta del archivo local (sólo en este dispositivo) y bandera de si
+  // falta subirla al servidor. fotoUrl guarda la URL pública ya subida.
+  TextColumn get fotoLocalPath => text().nullable()();
+  BoolColumn get fotoPendiente => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -165,7 +169,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_abrirConexion());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -177,6 +181,11 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(cuentas);
             await m.addColumn(usuarios, usuarios.cuentaId);
             await m.addColumn(fincas, fincas.cuentaId);
+          }
+          if (from < 3) {
+            // v3: foto de la finca (ruta local + bandera de subida pendiente).
+            await m.addColumn(fincas, fincas.fotoLocalPath);
+            await m.addColumn(fincas, fincas.fotoPendiente);
           }
         },
       );
