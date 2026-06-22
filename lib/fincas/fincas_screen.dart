@@ -138,9 +138,9 @@ class _FincasScreenState extends State<FincasScreen> {
                   return _VacioFincas(onCrear: _crearFincaDialog);
                 }
                 return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                   itemCount: fincas.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 16),
                   itemBuilder: (context, i) => _TarjetaFinca(
                     finca: fincas[i],
                     onTap: () => Navigator.of(context).push(
@@ -175,9 +175,10 @@ class _TarjetaFinca extends StatelessWidget {
       margin: EdgeInsets.zero,
       child: InkWell(
         onTap: onTap,
-        child: SizedBox(
-          height: 130,
-          width: double.infinity,
+        child: AspectRatio(
+          // Proporción de foto (16:9): se aprecia bien la finca y se adapta
+          // al ancho de la pantalla.
+          aspectRatio: 16 / 9,
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -384,13 +385,9 @@ class _BannerLicencia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lleno = estado.alcanzoLimite;
-    final color = lleno
-        ? theme.colorScheme.errorContainer
-        : theme.colorScheme.surfaceContainerHighest;
-    final textColor = lleno
-        ? theme.colorScheme.onErrorContainer
-        : theme.colorScheme.onSurfaceVariant;
+    // Color neutro siempre, también al alcanzar el límite (sin rojo).
+    final color = theme.colorScheme.surfaceContainerHighest;
+    final textColor = theme.colorScheme.onSurfaceVariant;
 
     return Container(
       width: double.infinity,

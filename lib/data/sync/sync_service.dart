@@ -107,21 +107,18 @@ class SyncService {
     }
   }
 
-  /// Inserta una fila nueva en el servidor. Si ya existe (clave duplicada),
-  /// la actualiza. Hacemos esto en vez de `upsert` porque `upsert` evalúa
-  /// también la política RLS de UPDATE, que puede bloquear inserciones nuevas
-  /// (p. ej. crear una finca cuando todavía no sos admin de ella).
+  /// Sube una fila al servidor: ACTUALIZA primero y, si no existía (0 filas),
+  /// INSERTA. El orden importa: hacer update-first evita disparar validaciones
+  /// de INSERT (como el límite de fincas) al editar filas que ya existen.
+  /// Tampoco usamos `upsert` porque evalúa también la RLS de UPDATE y puede
+  /// bloquear inserciones nuevas legítimas.
   Future<void> _insertarOActualizar(
       String tabla, String id, Map<String, dynamic> datos) async {
-    try {
+    final actualizadas =
+        await _sb.from(tabla).update(datos).eq('id', id).select();
+    if ((actualizadas as List).isEmpty) {
+      // No existía en el servidor → es una fila nueva.
       await _sb.from(tabla).insert(datos);
-    } on PostgrestException catch (e) {
-      if (e.code == '23505') {
-        // Ya existe en el servidor → actualizar.
-        await _sb.from(tabla).update(datos).eq('id', id);
-      } else {
-        rethrow;
-      }
     }
   }
 

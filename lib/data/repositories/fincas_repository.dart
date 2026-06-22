@@ -61,6 +61,38 @@ class FincasRepository {
         .map((filas) => filas.map((f) => f.readTable(db.fincas)).toList());
   }
 
+  /// Stream con una finca por id (para mostrar datos en vivo). null si no existe.
+  Stream<FincaRow?> observarFinca(String fincaId) {
+    return (db.select(db.fincas)..where((t) => t.id.equals(fincaId)))
+        .watchSingleOrNull();
+  }
+
+  /// Edita el nombre de una finca y, opcionalmente, reemplaza su foto.
+  /// Si [nuevaFotoLocalPath] no es null, la nueva foto queda pendiente de subir.
+  Future<void> editarFinca({
+    required String fincaId,
+    required String nombre,
+    String? nuevaFotoLocalPath,
+  }) async {
+    final ahora = DateTime.now();
+    final cambiaFoto = nuevaFotoLocalPath != null;
+    await (db.update(db.fincas)..where((t) => t.id.equals(fincaId))).write(
+      cambiaFoto
+          ? FincasCompanion(
+              nombre: Value(nombre),
+              updatedAt: Value(ahora),
+              pendiente: const Value(true),
+              fotoLocalPath: Value(nuevaFotoLocalPath),
+              fotoPendiente: const Value(true),
+            )
+          : FincasCompanion(
+              nombre: Value(nombre),
+              updatedAt: Value(ahora),
+              pendiente: const Value(true),
+            ),
+    );
+  }
+
   /// Calcula el estado de licencia del usuario (plan, límite y fincas propias
   /// usadas). Devuelve null si todavía no se conoce la cuenta (sin sincronizar).
   Future<EstadoLicencia?> estadoLicencia(String usuarioId) async {
