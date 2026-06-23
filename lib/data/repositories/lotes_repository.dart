@@ -23,6 +23,17 @@ class LotesRepository {
         .watch();
   }
 
+  /// Lista (una sola vez) los lotes activos de una finca, ordenados.
+  Future<List<LoteRow>> lotesActivos(String fincaId) {
+    return (db.select(db.lotes)
+          ..where((t) => t.fincaId.equals(fincaId) & t.deletedAt.isNull())
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.numero),
+            (t) => OrderingTerm.asc(t.nombre),
+          ]))
+        .get();
+  }
+
   Future<void> crearLote({
     required String fincaId,
     required String nombre,

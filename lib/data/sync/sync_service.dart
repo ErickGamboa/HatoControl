@@ -54,6 +54,8 @@ class SyncService {
     await _subirFincas();
     await _subirMiembros();
     await _subirLotes();
+    await _subirAnimales();
+    await _subirPesajes();
     // Fotos: después de la membresía (la RLS de update exige ser admin).
     await _subirFotosFincas();
     // Bajar después. Planes y cuentas primero (la finca necesita su cuenta).
@@ -63,6 +65,8 @@ class SyncService {
     await _bajarFincas();
     await _bajarMiembros();
     await _bajarLotes();
+    await _bajarAnimales();
+    await _bajarPesajes();
   }
 
   // ---------------------------------------------------------------- SUBIR
@@ -138,6 +142,45 @@ class SyncService {
       await _insertarOActualizar('lotes', l.id, datos);
       await (db.update(db.lotes)..where((t) => t.id.equals(l.id)))
           .write(const LotesCompanion(pendiente: Value(false)));
+    }
+  }
+
+  Future<void> _subirAnimales() async {
+    final pendientes =
+        await (db.select(db.animales)..where((t) => t.pendiente.equals(true)))
+            .get();
+    for (final a in pendientes) {
+      final datos = {
+        'id': a.id,
+        'finca_id': a.fincaId,
+        'lote_id': a.loteId,
+        'identificador': a.identificador,
+        'created_at': a.createdAt.toIso8601String(),
+        'deleted_at': a.deletedAt?.toIso8601String(),
+      };
+      await _insertarOActualizar('animales', a.id, datos);
+      await (db.update(db.animales)..where((t) => t.id.equals(a.id)))
+          .write(const AnimalesCompanion(pendiente: Value(false)));
+    }
+  }
+
+  Future<void> _subirPesajes() async {
+    final pendientes =
+        await (db.select(db.pesajes)..where((t) => t.pendiente.equals(true)))
+            .get();
+    for (final p in pendientes) {
+      final datos = {
+        'id': p.id,
+        'animal_id': p.animalId,
+        'peso': p.peso,
+        'fecha': p.fecha.toIso8601String(),
+        'registrado_por': p.registradoPor,
+        'created_at': p.createdAt.toIso8601String(),
+        'deleted_at': p.deletedAt?.toIso8601String(),
+      };
+      await _insertarOActualizar('pesajes', p.id, datos);
+      await (db.update(db.pesajes)..where((t) => t.id.equals(p.id)))
+          .write(const PesajesCompanion(pendiente: Value(false)));
     }
   }
 
@@ -331,6 +374,53 @@ class SyncService {
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
     if (maxU != null) await _guardarCursor('lotes', maxU);
+  }
+
+  Future<void> _bajarAnimales() async {
+    final cursor = await _leerCursor('animales');
+    final filas = await _consultar('animales', cursor);
+    DateTime? maxU = cursor;
+    for (final r in filas) {
+      final u = DateTime.parse(r['updated_at'] as String);
+      await db.into(db.animales).insertOnConflictUpdate(AnimalRow(
+            id: r['id'] as String,
+            fincaId: r['finca_id'] as String,
+            loteId: r['lote_id'] as String,
+            identificador: r['identificador'] as String,
+            createdAt: DateTime.parse(r['created_at'] as String),
+            updatedAt: u,
+            deletedAt: r['deleted_at'] != null
+                ? DateTime.parse(r['deleted_at'] as String)
+                : null,
+            pendiente: false,
+          ));
+      if (maxU == null || u.isAfter(maxU)) maxU = u;
+    }
+    if (maxU != null) await _guardarCursor('animales', maxU);
+  }
+
+  Future<void> _bajarPesajes() async {
+    final cursor = await _leerCursor('pesajes');
+    final filas = await _consultar('pesajes', cursor);
+    DateTime? maxU = cursor;
+    for (final r in filas) {
+      final u = DateTime.parse(r['updated_at'] as String);
+      await db.into(db.pesajes).insertOnConflictUpdate(PesajeRow(
+            id: r['id'] as String,
+            animalId: r['animal_id'] as String,
+            peso: (r['peso'] as num).toDouble(),
+            fecha: DateTime.parse(r['fecha'] as String),
+            registradoPor: r['registrado_por'] as String?,
+            createdAt: DateTime.parse(r['created_at'] as String),
+            updatedAt: u,
+            deletedAt: r['deleted_at'] != null
+                ? DateTime.parse(r['deleted_at'] as String)
+                : null,
+            pendiente: false,
+          ));
+      if (maxU == null || u.isAfter(maxU)) maxU = u;
+    }
+    if (maxU != null) await _guardarCursor('pesajes', maxU);
   }
 
   /// Trae del servidor las filas con updated_at > cursor (o todas si es null).
