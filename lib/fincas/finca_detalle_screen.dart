@@ -1,13 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../data/local/database.dart';
+import '../lotes/lotes_screen.dart';
+import '../pesaje/pesaje_screen.dart';
 import '../services.dart';
 import 'foto_picker.dart';
 
-/// Detalle de una finca: muestra y permite crear sus lotes, y editar la finca.
+/// Detalle de una finca: menú de opciones (botonera) + editar la finca.
 class FincaDetalleScreen extends StatefulWidget {
   const FincaDetalleScreen({super.key, required this.finca});
 
@@ -18,64 +19,6 @@ class FincaDetalleScreen extends StatefulWidget {
 }
 
 class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
-  Future<void> _crearLoteDialog() async {
-    final nombreCtrl = TextEditingController();
-    final numeroCtrl = TextEditingController();
-
-    final creado = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nuevo lote'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nombreCtrl,
-              autofocus: true,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del lote',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: numeroCtrl,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Número (opcional)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Crear'),
-          ),
-        ],
-      ),
-    );
-
-    if (creado != true) return;
-    final nombre = nombreCtrl.text.trim();
-    if (nombre.isEmpty) return;
-    final numero = int.tryParse(numeroCtrl.text.trim());
-
-    await lotesRepo.crearLote(
-      fincaId: widget.finca.id,
-      nombre: nombre,
-      numero: numero,
-    );
-    syncService.sincronizar();
-  }
-
   Future<void> _editarFincaDialog(FincaRow finca) async {
     final resultado = await showDialog<(String, String?)>(
       context: context,
@@ -91,6 +34,10 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
       nuevaFotoLocalPath: nuevaFotoPath,
     );
     syncService.sincronizar();
+  }
+
+  void _abrir(Widget pantalla) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => pantalla));
   }
 
   @override
@@ -111,49 +58,64 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
               ),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: _crearLoteDialog,
-            icon: const Icon(Icons.add),
-            label: const Text('Lote'),
-          ),
-          body: StreamBuilder<List<LoteRow>>(
-            stream: lotesRepo.observarLotes(finca.id),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final lotes = snapshot.data ?? const [];
-              if (lotes.isEmpty) {
-                return _VacioLotes(onCrear: _crearLoteDialog);
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.all(12),
-                itemCount: lotes.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, i) {
-                  final l = lotes[i];
-                  return Card(
-                    margin: EdgeInsets.zero,
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        child: Text(l.numero?.toString() ?? '–'),
-                      ),
-                      title: Text(l.nombre),
-                      subtitle: l.pendiente
-                          ? const Text('Pendiente de sincronizar')
-                          : null,
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        // Próximo paso: abrir el lote (animales).
-                      },
-                    ),
-                  );
-                },
-              );
-            },
+          body: GridView.count(
+            padding: const EdgeInsets.all(16),
+            crossAxisCount: 2,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 1,
+            children: [
+              _BotonOpcion(
+                icon: Icons.scale,
+                label: 'Pesaje',
+                onTap: () => _abrir(PesajeScreen(finca: finca)),
+              ),
+              _BotonOpcion(
+                icon: Icons.fence,
+                label: 'Lotes',
+                onTap: () => _abrir(LotesScreen(finca: finca)),
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Botón cuadrado con ícono y etiqueta para el menú de la finca.
+class _BotonOpcion extends StatelessWidget {
+  const _BotonOpcion({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 56, color: theme.colorScheme.primary),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -262,39 +224,6 @@ class _DialogoEditarFincaState extends State<_DialogoEditarFinca> {
           child: const Text('Guardar'),
         ),
       ],
-    );
-  }
-}
-
-class _VacioLotes extends StatelessWidget {
-  const _VacioLotes({required this.onCrear});
-
-  final VoidCallback onCrear;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.grid_view_outlined,
-                size: 72, color: theme.colorScheme.outline),
-            const SizedBox(height: 16),
-            Text('Esta finca no tiene lotes',
-                style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'Creá el primer lote con el botón de abajo.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.outline),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
