@@ -50,4 +50,20 @@ class LotesRepository {
           pendiente: const Value(true),
         ));
   }
+
+  /// Edita el nombre y/o número de un lote. Queda pendiente de sincronizar.
+  Future<void> editarLote({
+    required String loteId,
+    required String nombre,
+    int? numero,
+  }) async {
+    await (db.update(db.lotes)..where((t) => t.id.equals(loteId))).write(
+      LotesCompanion(
+        nombre: Value(nombre),
+        numero: Value(numero),
+        updatedAt: Value(DateTime.now()),
+        pendiente: const Value(true),
+      ),
+    );
+  }
 }

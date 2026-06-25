@@ -197,13 +197,20 @@ class _PesajeScreenState extends State<PesajeScreen> {
               TextField(
                 controller: _identCtrl,
                 focusNode: _identFocus,
+                keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
                 onSubmitted: (_) => _pesoFocus.requestFocus(),
                 style: const TextStyle(fontSize: 20),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Identificador del animal (arete)',
-                  prefixIcon: Icon(Icons.nfc),
-                  border: OutlineInputBorder(),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Image.asset('assets/iconos/arete.png',
+                        width: 24,
+                        height: 24,
+                        color: Theme.of(context).colorScheme.primary),
+                  ),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -218,11 +225,17 @@ class _PesajeScreenState extends State<PesajeScreen> {
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _registrar(),
                 style: const TextStyle(fontSize: 20),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Peso',
-                  prefixIcon: Icon(Icons.scale),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Image.asset('assets/iconos/peso.png',
+                        width: 24,
+                        height: 24,
+                        color: Theme.of(context).colorScheme.primary),
+                  ),
                   suffixText: 'kg',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 24),

@@ -10,14 +10,17 @@ class LotesScreen extends StatelessWidget {
 
   final FincaRow finca;
 
-  Future<void> _crearLoteDialog(BuildContext context) async {
-    final nombreCtrl = TextEditingController();
-    final numeroCtrl = TextEditingController();
+  /// Diálogo para crear o editar un lote. Si [lote] es null, crea uno nuevo.
+  Future<void> _loteDialog(BuildContext context, {LoteRow? lote}) async {
+    final esEdicion = lote != null;
+    final nombreCtrl = TextEditingController(text: lote?.nombre ?? '');
+    final numeroCtrl =
+        TextEditingController(text: lote?.numero?.toString() ?? '');
 
-    final creado = await showDialog<bool>(
+    final guardar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Nuevo lote'),
+        title: Text(esEdicion ? 'Editar lote' : 'Nuevo lote'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -49,22 +52,30 @@ class LotesScreen extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Crear'),
+            child: Text(esEdicion ? 'Guardar' : 'Crear'),
           ),
         ],
       ),
     );
 
-    if (creado != true) return;
+    if (guardar != true) return;
     final nombre = nombreCtrl.text.trim();
     if (nombre.isEmpty) return;
     final numero = int.tryParse(numeroCtrl.text.trim());
 
-    await lotesRepo.crearLote(
-      fincaId: finca.id,
-      nombre: nombre,
-      numero: numero,
-    );
+    if (esEdicion) {
+      await lotesRepo.editarLote(
+        loteId: lote.id,
+        nombre: nombre,
+        numero: numero,
+      );
+    } else {
+      await lotesRepo.crearLote(
+        fincaId: finca.id,
+        nombre: nombre,
+        numero: numero,
+      );
+    }
     syncService.sincronizar();
   }
 
@@ -73,7 +84,7 @@ class LotesScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Lotes')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _crearLoteDialog(context),
+        onPressed: () => _loteDialog(context),
         icon: const Icon(Icons.add),
         label: const Text('Lote'),
       ),
@@ -85,7 +96,7 @@ class LotesScreen extends StatelessWidget {
           }
           final lotes = snapshot.data ?? const [];
           if (lotes.isEmpty) {
-            return _VacioLotes(onCrear: () => _crearLoteDialog(context));
+            return _VacioLotes(onCrear: () => _loteDialog(context));
           }
           return ListView.separated(
             padding: const EdgeInsets.all(12),
@@ -103,10 +114,8 @@ class LotesScreen extends StatelessWidget {
                   subtitle: l.pendiente
                       ? const Text('Pendiente de sincronizar')
                       : null,
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    // Próximo paso: abrir el lote (animales).
-                  },
+                  trailing: const Icon(Icons.edit, size: 20),
+                  onTap: () => _loteDialog(context, lote: l),
                 ),
               );
             },
