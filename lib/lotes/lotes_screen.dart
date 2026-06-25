@@ -131,8 +131,12 @@ class _VacioLotes extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.fence,
-                size: 72, color: theme.colorScheme.outline),
+            Image.asset(
+              'assets/iconos/lotes.png',
+              width: 72,
+              height: 72,
+              color: theme.colorScheme.outline,
+            ),
             const SizedBox(height: 16),
             Text('Esta finca no tiene lotes',
                 style: theme.textTheme.titleMedium),

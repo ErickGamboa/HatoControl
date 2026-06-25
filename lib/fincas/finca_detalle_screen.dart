@@ -47,6 +47,7 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
       initialData: widget.finca,
       builder: (context, snapshot) {
         final finca = snapshot.data ?? widget.finca;
+        final theme = Theme.of(context);
         return Scaffold(
           appBar: AppBar(
             title: Text(finca.nombre),
@@ -66,12 +67,22 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
             childAspectRatio: 1,
             children: [
               _BotonOpcion(
-                icon: Icons.scale,
+                icono: Image.asset(
+                  'assets/iconos/pesaje.png',
+                  width: 60,
+                  height: 60,
+                  color: theme.colorScheme.primary,
+                ),
                 label: 'Pesaje',
                 onTap: () => _abrir(PesajeScreen(finca: finca)),
               ),
               _BotonOpcion(
-                icon: Icons.fence,
+                icono: Image.asset(
+                  'assets/iconos/lotes.png',
+                  width: 60,
+                  height: 60,
+                  color: theme.colorScheme.primary,
+                ),
                 label: 'Lotes',
                 onTap: () => _abrir(LotesScreen(finca: finca)),
               ),
@@ -83,15 +94,15 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
   }
 }
 
-/// Botón cuadrado con ícono y etiqueta para el menú de la finca.
+/// Botón cuadrado con un ícono (widget) y etiqueta para el menú de la finca.
 class _BotonOpcion extends StatelessWidget {
   const _BotonOpcion({
-    required this.icon,
+    required this.icono,
     required this.label,
     required this.onTap,
   });
 
-  final IconData icon;
+  final Widget icono;
   final String label;
   final VoidCallback onTap;
 
@@ -106,7 +117,7 @@ class _BotonOpcion extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 56, color: theme.colorScheme.primary),
+            SizedBox(height: 64, child: Center(child: icono)),
             const SizedBox(height: 12),
             Text(
               label,
