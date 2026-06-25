@@ -55,6 +55,17 @@ class PesajesRepository {
     });
   }
 
+  /// Devuelve el peso del pesaje más reciente de un animal (o null si no tiene
+  /// ninguno todavía). Sirve para calcular la ganancia respecto al anterior.
+  Future<double?> ultimoPeso(String animalId) async {
+    final fila = await (db.select(db.pesajes)
+          ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
+          ..limit(1))
+        .getSingleOrNull();
+    return fila?.peso;
+  }
+
   /// Registra un pesaje para un animal existente.
   Future<void> agregarPesaje({
     required String animalId,
