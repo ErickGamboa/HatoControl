@@ -50,23 +50,35 @@ class SyncService {
   }
 
   Future<void> _ejecutarSync() async {
+    // Cada paso va aislado: si uno falla (p. ej. un registro con conflicto),
+    // los demás igual se ejecutan. Así un problema al SUBIR nunca impide BAJAR.
     // Subir primero (para no pisar cambios locales al bajar).
-    await _subirFincas();
-    await _subirMiembros();
-    await _subirLotes();
-    await _subirAnimales();
-    await _subirPesajes();
+    await _paso(_subirFincas);
+    await _paso(_subirMiembros);
+    await _paso(_subirLotes);
+    await _paso(_subirAnimales);
+    await _paso(_subirPesajes);
     // Fotos: después de la membresía (la RLS de update exige ser admin).
-    await _subirFotosFincas();
+    await _paso(_subirFotosFincas);
     // Bajar después. Planes y cuentas primero (la finca necesita su cuenta).
-    await _bajarPlanes();
-    await _bajarCuentas();
-    await _bajarUsuarios();
-    await _bajarFincas();
-    await _bajarMiembros();
-    await _bajarLotes();
-    await _bajarAnimales();
-    await _bajarPesajes();
+    await _paso(_bajarPlanes);
+    await _paso(_bajarCuentas);
+    await _paso(_bajarUsuarios);
+    await _paso(_bajarFincas);
+    await _paso(_bajarMiembros);
+    await _paso(_bajarLotes);
+    await _paso(_bajarAnimales);
+    await _paso(_bajarPesajes);
+  }
+
+  /// Ejecuta un paso del sync de forma aislada: si lanza una excepción, la
+  /// registra y sigue con los demás pasos (no aborta toda la sincronización).
+  Future<void> _paso(Future<void> Function() accion) async {
+    try {
+      await accion();
+    } catch (e) {
+      debugPrint('Sync: un paso falló y se omite ($e)');
+    }
   }
 
   // ---------------------------------------------------------------- SUBIR

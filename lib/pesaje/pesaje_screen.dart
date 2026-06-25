@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/local/database.dart';
+import '../data/repositories/pesajes_repository.dart';
 import '../services.dart';
 
 /// Registro de pesajes. Se ingresa el identificador (arete) y el peso.
 /// Si el animal no existe, se pide elegir el lote y se crea con ese peso.
 /// El identificador se puede escribir a mano o lo "teclea" el lector RFID
 /// (modo HID) cuando este campo está enfocado.
+/// Abajo se muestran todos los pesajes de HOY, agrupados por lote en pestañas.
 class PesajeScreen extends StatefulWidget {
   const PesajeScreen({super.key, required this.finca});
 
@@ -17,14 +19,6 @@ class PesajeScreen extends StatefulWidget {
   State<PesajeScreen> createState() => _PesajeScreenState();
 }
 
-/// Una fila de la tabla de la sesión de pesaje.
-class _FilaPesaje {
-  _FilaPesaje({required this.ident, required this.peso, required this.ganancia});
-  final String ident;
-  final double peso;
-  final double? ganancia; // null = animal nuevo (peso de entrada)
-}
-
 class _PesajeScreenState extends State<PesajeScreen> {
   final _identCtrl = TextEditingController();
   final _pesoCtrl = TextEditingController();
@@ -32,10 +26,13 @@ class _PesajeScreenState extends State<PesajeScreen> {
   final _pesoFocus = FocusNode();
   bool _guardando = false;
 
-  // Pesajes registrados en esta sesión (el más reciente arriba).
-  final List<_FilaPesaje> _sesion = [];
-
   String get _usuarioId => supabase.auth.currentUser!.id;
+
+  /// Inicio del día de hoy (medianoche), para filtrar los pesajes de hoy.
+  DateTime get _inicioDeHoy {
+    final n = DateTime.now();
+    return DateTime(n.year, n.month, n.day);
+  }
 
   @override
   void initState() {
@@ -100,18 +97,12 @@ class _PesajeScreenState extends State<PesajeScreen> {
     try {
       final animal = await pesajesRepo.buscarAnimal(widget.finca.id, ident);
       if (animal != null) {
-        final anterior = await pesajesRepo.ultimoPeso(animal.id);
         await pesajesRepo.agregarPesaje(
           animalId: animal.id,
           peso: peso,
           registradoPor: _usuarioId,
         );
         syncService.sincronizar();
-        _agregarFila(_FilaPesaje(
-          ident: ident,
-          peso: peso,
-          ganancia: anterior == null ? null : peso - anterior,
-        ));
         _exito('Pesaje registrado: $ident — ${_pesoFmt(peso)} kg');
       } else {
         await _animalNuevo(ident, peso);
@@ -119,10 +110,6 @@ class _PesajeScreenState extends State<PesajeScreen> {
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
-  }
-
-  void _agregarFila(_FilaPesaje fila) {
-    setState(() => _sesion.insert(0, fila));
   }
 
   Future<void> _animalNuevo(String ident, double peso) async {
@@ -196,8 +183,6 @@ class _PesajeScreenState extends State<PesajeScreen> {
       registradoPor: _usuarioId,
     );
     syncService.sincronizar();
-    // Animal nuevo: su primer pesaje es el de entrada (sin ganancia previa).
-    _agregarFila(_FilaPesaje(ident: ident, peso: peso, ganancia: null));
     _exito('Animal "$ident" creado y pesado: ${_pesoFmt(peso)} kg');
   }
 
@@ -282,7 +267,16 @@ class _PesajeScreenState extends State<PesajeScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              Expanded(child: _TablaSesion(filas: _sesion)),
+              Expanded(
+                child: StreamBuilder<List<PesajeHoy>>(
+                  stream: pesajesRepo.observarPesajesDelDia(
+                      widget.finca.id, _inicioDeHoy),
+                  builder: (context, snapshot) {
+                    final pesajes = snapshot.data ?? const [];
+                    return _PesajesDeHoy(pesajes: pesajes);
+                  },
+                ),
+              ),
             ],
           ),
         ),
@@ -291,23 +285,19 @@ class _PesajeScreenState extends State<PesajeScreen> {
   }
 }
 
-/// Tabla de la sesión de pesaje: ID, peso y ganancia (vs. peso anterior).
-/// Abajo muestra la cantidad de animales pesados.
-class _TablaSesion extends StatelessWidget {
-  const _TablaSesion({required this.filas});
+/// Muestra los pesajes de hoy agrupados por lote, en pestañas deslizables.
+class _PesajesDeHoy extends StatelessWidget {
+  const _PesajesDeHoy({required this.pesajes});
 
-  final List<_FilaPesaje> filas;
-
-  String _fmt(double p) =>
-      p == p.roundToDouble() ? p.toInt().toString() : p.toStringAsFixed(1);
+  final List<PesajeHoy> pesajes;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (filas.isEmpty) {
+    if (pesajes.isEmpty) {
       return Center(
         child: Text(
-          'Acá aparecerán los animales que vayas pesando.',
+          'Acá aparecerán los animales que peses hoy.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium
               ?.copyWith(color: theme.colorScheme.outline),
@@ -315,8 +305,60 @@ class _TablaSesion extends StatelessWidget {
       );
     }
 
-    // Cantidad de animales (distintos) pesados en la sesión.
-    final cantidad = filas.map((f) => f.ident).toSet().length;
+    // Agrupar por lote, conservando el orden de aparición (más reciente primero).
+    final lotesOrden = <String>[];
+    final nombres = <String, String>{};
+    final porLote = <String, List<PesajeHoy>>{};
+    for (final p in pesajes) {
+      if (!porLote.containsKey(p.loteId)) {
+        porLote[p.loteId] = [];
+        lotesOrden.add(p.loteId);
+        nombres[p.loteId] = p.loteNombre;
+      }
+      porLote[p.loteId]!.add(p);
+    }
+
+    return DefaultTabController(
+      // key liga el controlador a la cantidad de lotes (se recrea si cambia).
+      key: ValueKey(lotesOrden.join(',')),
+      length: lotesOrden.length,
+      child: Column(
+        children: [
+          TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: [
+              for (final id in lotesOrden) Tab(text: nombres[id]),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: TabBarView(
+              children: [
+                for (final id in lotesOrden)
+                  _TablaLote(filas: porLote[id]!),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tabla de pesajes de un lote: ID, peso y ganancia, con total abajo.
+class _TablaLote extends StatelessWidget {
+  const _TablaLote({required this.filas});
+
+  final List<PesajeHoy> filas;
+
+  String _fmt(double p) =>
+      p == p.roundToDouble() ? p.toInt().toString() : p.toStringAsFixed(1);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cantidad = filas.map((f) => f.identificador).toSet().length;
 
     Widget celdaEncabezado(String t, {TextAlign align = TextAlign.start}) =>
         Text(t,
@@ -326,7 +368,6 @@ class _TablaSesion extends StatelessWidget {
 
     return Column(
       children: [
-        // Encabezado
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
@@ -339,16 +380,13 @@ class _TablaSesion extends StatelessWidget {
               Expanded(flex: 4, child: celdaEncabezado('Animal')),
               Expanded(
                   flex: 3,
-                  child:
-                      celdaEncabezado('Peso (kg)', align: TextAlign.end)),
+                  child: celdaEncabezado('Peso (kg)', align: TextAlign.end)),
               Expanded(
                   flex: 3,
-                  child:
-                      celdaEncabezado('Ganancia', align: TextAlign.end)),
+                  child: celdaEncabezado('Ganancia', align: TextAlign.end)),
             ],
           ),
         ),
-        // Filas
         Expanded(
           child: ListView.separated(
             itemCount: filas.length,
@@ -362,7 +400,7 @@ class _TablaSesion extends StatelessWidget {
                   children: [
                     Expanded(
                       flex: 4,
-                      child: Text(f.ident,
+                      child: Text(f.identificador,
                           style: const TextStyle(fontSize: 16)),
                     ),
                     Expanded(
@@ -371,14 +409,19 @@ class _TablaSesion extends StatelessWidget {
                           textAlign: TextAlign.end,
                           style: const TextStyle(fontSize: 16)),
                     ),
-                    Expanded(flex: 3, child: _Ganancia(valor: f.ganancia)),
+                    Expanded(
+                      flex: 3,
+                      child: _ValorGanancia(
+                          valor: f.ganancia,
+                          sufijo: 'kg',
+                          esEntrada: f.ganancia == null),
+                    ),
                   ],
                 ),
               );
             },
           ),
         ),
-        // Total
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -400,49 +443,66 @@ class _TablaSesion extends StatelessWidget {
   }
 }
 
-/// Muestra la ganancia: verde si subió, rojo si bajó, gris "Entrada" si es nuevo.
-class _Ganancia extends StatelessWidget {
-  const _Ganancia({required this.valor});
+/// Muestra un valor de ganancia coloreado: verde si es positivo, rojo si es
+/// negativo, gris si es 0. "Entrada" si es el primer pesaje. "—" si no aplica.
+class _ValorGanancia extends StatelessWidget {
+  const _ValorGanancia({
+    required this.valor,
+    required this.sufijo,
+    required this.esEntrada,
+  });
 
   final double? valor;
+  final String sufijo;
+  final bool esEntrada;
 
   String _fmt(double p) {
     final abs = p.abs();
-    final s = abs == abs.roundToDouble()
+    return abs == abs.roundToDouble()
         ? abs.toInt().toString()
         : abs.toStringAsFixed(1);
-    return s;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (valor == null) {
+
+    if (esEntrada) {
       return Text('Entrada',
+          textAlign: TextAlign.end,
+          style: TextStyle(fontSize: 14, color: theme.colorScheme.outline));
+    }
+    if (valor == null) {
+      // No se puede calcular (p. ej. kg/día con menos de un día transcurrido).
+      return Text('—',
           textAlign: TextAlign.end,
           style: TextStyle(fontSize: 15, color: theme.colorScheme.outline));
     }
+
     const verde = Color(0xFF2E7D32);
     const rojo = Color(0xFFC62828);
     final v = valor!;
-    if (v == 0) {
-      return Text('0 kg',
-          textAlign: TextAlign.end,
-          style: TextStyle(fontSize: 16, color: theme.colorScheme.outline));
-    }
-    final positivo = v > 0;
+    final color = v > 0
+        ? verde
+        : v < 0
+            ? rojo
+            : theme.colorScheme.outline;
+    final signo = v > 0 ? '+' : v < 0 ? '-' : '';
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Icon(positivo ? Icons.arrow_upward : Icons.arrow_downward,
-            size: 16, color: positivo ? verde : rojo),
-        const SizedBox(width: 2),
-        Text(
-          '${_fmt(v)} kg',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: positivo ? verde : rojo,
+        if (v != 0)
+          Icon(v > 0 ? Icons.arrow_upward : Icons.arrow_downward,
+              size: 14, color: color),
+        const SizedBox(width: 1),
+        Flexible(
+          child: Text(
+            '$signo${_fmt(v)} $sufijo',
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w700, color: color),
           ),
         ),
       ],

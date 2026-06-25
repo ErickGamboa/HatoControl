@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../data/local/database.dart';
 import '../services.dart';
+import 'lote_animales_screen.dart';
 
 /// Lista y creación de lotes de una finca.
 class LotesScreen extends StatelessWidget {
@@ -114,8 +115,16 @@ class LotesScreen extends StatelessWidget {
                   subtitle: l.pendiente
                       ? const Text('Pendiente de sincronizar')
                       : null,
-                  trailing: const Icon(Icons.edit, size: 20),
-                  onTap: () => _loteDialog(context, lote: l),
+                  trailing: IconButton(
+                    tooltip: 'Editar lote',
+                    icon: const Icon(Icons.edit, size: 20),
+                    onPressed: () => _loteDialog(context, lote: l),
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => LoteAnimalesScreen(lote: l),
+                    ),
+                  ),
                 ),
               );
             },
