@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'invitado_screen.dart';
 import 'mensajes_auth.dart';
 
 /// Pantalla de inicio de sesión / registro con correo y contraseña.
@@ -198,6 +199,24 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? '¿Ya tenés cuenta? Iniciá sesión'
                           : '¿No tenés cuenta? Creá una'),
                     ),
+
+                    // Acceso para personas a las que les compartieron una finca.
+                    if (!_esRegistro) ...[
+                      const Divider(height: 24),
+                      OutlinedButton.icon(
+                        onPressed: _cargando
+                            ? null
+                            : () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => const InvitadoScreen()),
+                                ),
+                        icon: const Icon(Icons.mark_email_read_outlined),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        label: const Text('Me invitaron a una finca'),
+                      ),
+                    ],
                   ],
                 ),
               ),

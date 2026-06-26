@@ -32,8 +32,10 @@ class Cuentas extends Table {
   TextColumn get id => text()();
   TextColumn get nombre => text()();
   TextColumn get duenoId => text()();
-  TextColumn get plan => text()(); // 'light' | 'medium' | 'pro'
+  TextColumn get plan => text()(); // 'invitado' | 'light' | 'medium' | 'pro'
   TextColumn get estado => text()(); // 'activa' | 'suspendida'
+  // Fin de la prueba gratis de 7 días. null = sin prueba (pagado o invitado).
+  DateTimeColumn get pruebaTermina => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -169,7 +171,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_abrirConexion());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -186,6 +188,10 @@ class AppDatabase extends _$AppDatabase {
             // v3: foto de la finca (ruta local + bandera de subida pendiente).
             await m.addColumn(fincas, fincas.fotoLocalPath);
             await m.addColumn(fincas, fincas.fotoPendiente);
+          }
+          if (from < 4) {
+            // v4: fin de la prueba gratis de 7 días en la cuenta.
+            await m.addColumn(cuentas, cuentas.pruebaTermina);
           }
         },
       );

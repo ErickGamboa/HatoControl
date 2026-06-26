@@ -6,6 +6,7 @@ import '../data/local/database.dart';
 import '../lotes/lotes_screen.dart';
 import '../pesaje/pesaje_screen.dart';
 import '../services.dart';
+import 'compartir_finca_screen.dart';
 import 'foto_picker.dart';
 
 /// Detalle de una finca: menú de opciones (botonera) + editar la finca.
@@ -52,6 +53,11 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
           appBar: AppBar(
             title: Text(finca.nombre),
             actions: [
+              IconButton(
+                tooltip: 'Compartir finca',
+                icon: const Icon(Icons.person_add_alt_1),
+                onPressed: () => _abrir(CompartirFincaScreen(finca: finca)),
+              ),
               IconButton(
                 tooltip: 'Editar finca',
                 icon: const Icon(Icons.edit),

@@ -34,6 +34,19 @@ class LicenciaNoDisponibleException implements Exception {
   const LicenciaNoDisponibleException();
 }
 
+/// Una persona con acceso a una finca: la fila de membresía + (si ya se
+/// sincronizó su perfil) su nombre y correo.
+class MiembroConUsuario {
+  const MiembroConUsuario({
+    required this.miembro,
+    required this.nombre,
+    required this.email,
+  });
+  final FincaMiembroRow miembro;
+  final String? nombre;
+  final String? email;
+}
+
 /// Acceso a las fincas. SIEMPRE lee y escribe en la base local (instantáneo y
 /// offline). La sincronización con Supabase corre por separado (SyncService).
 class FincasRepository {
@@ -65,6 +78,43 @@ class FincasRepository {
   Stream<FincaRow?> observarFinca(String fincaId) {
     return (db.select(db.fincas)..where((t) => t.id.equals(fincaId)))
         .watchSingleOrNull();
+  }
+
+  /// Stream reactivo con las personas que tienen acceso a una finca (miembros no
+  /// borrados), junto con su nombre y correo si su perfil ya se sincronizó.
+  /// Ordenadas por antigüedad (el dueño/creador suele ser el primero).
+  Stream<List<MiembroConUsuario>> observarMiembros(String fincaId) {
+    final consulta = db.select(db.fincaMiembros).join([
+      leftOuterJoin(
+        db.usuarios,
+        db.usuarios.id.equalsExp(db.fincaMiembros.usuarioId),
+      ),
+    ])
+      ..where(db.fincaMiembros.fincaId.equals(fincaId) &
+          db.fincaMiembros.deletedAt.isNull())
+      ..orderBy([OrderingTerm.asc(db.fincaMiembros.createdAt)]);
+
+    return consulta.watch().map((filas) => filas.map((f) {
+          final m = f.readTable(db.fincaMiembros);
+          final u = f.readTableOrNull(db.usuarios);
+          return MiembroConUsuario(
+            miembro: m,
+            nombre: u?.nombre,
+            email: u?.email,
+          );
+        }).toList());
+  }
+
+  /// Quita el acceso de una persona a una finca (borrado suave). Queda
+  /// pendiente para sincronizar; en el servidor la RLS exige ser admin.
+  Future<void> quitarAcceso(String miembroId) async {
+    final ahora = DateTime.now();
+    await (db.update(db.fincaMiembros)..where((t) => t.id.equals(miembroId)))
+        .write(FincaMiembrosCompanion(
+      deletedAt: Value(ahora),
+      updatedAt: Value(ahora),
+      pendiente: const Value(true),
+    ));
   }
 
   /// Edita el nombre de una finca y, opcionalmente, reemplaza su foto.

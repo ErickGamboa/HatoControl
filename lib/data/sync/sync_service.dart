@@ -275,6 +275,9 @@ class SyncService {
             duenoId: r['dueno_id'] as String,
             plan: r['plan'] as String,
             estado: r['estado'] as String,
+            pruebaTermina: r['prueba_termina'] != null
+                ? DateTime.parse(r['prueba_termina'] as String)
+                : null,
             createdAt: DateTime.parse(r['created_at'] as String),
             updatedAt: u,
             deletedAt: r['deleted_at'] != null
