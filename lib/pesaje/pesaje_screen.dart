@@ -393,30 +393,81 @@ class _TablaLote extends StatelessWidget {
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, i) {
               final f = filas[i];
-              return Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 4,
-                      child: Text(f.identificador,
-                          style: const TextStyle(fontSize: 16)),
+              return Dismissible(
+                key: ValueKey(f.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: const Color(0xFFC62828),
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(Icons.delete, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text('Eliminar',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                confirmDismiss: (_) async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Eliminar pesaje'),
+                      content: Text(
+                        '¿Eliminar el pesaje del animal "${f.identificador}" '
+                        '(${_fmt(f.peso)} kg)?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFC62828)),
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Eliminar'),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      flex: 3,
-                      child: Text(_fmt(f.peso),
-                          textAlign: TextAlign.end,
-                          style: const TextStyle(fontSize: 16)),
-                    ),
-                    Expanded(
-                      flex: 3,
-                      child: _ValorGanancia(
-                          valor: f.ganancia,
-                          sufijo: 'kg',
-                          esEntrada: f.ganancia == null),
-                    ),
-                  ],
+                  );
+                  if (ok == true) {
+                    await pesajesRepo.eliminarPesaje(f.id);
+                    syncService.sincronizar();
+                  }
+                  // La lista se actualiza sola por el stream; devolvemos false
+                  // para no duplicar la remoción del widget.
+                  return false;
+                },
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: Text(f.identificador,
+                            style: const TextStyle(fontSize: 16)),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(_fmt(f.peso),
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(fontSize: 16)),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: _ValorGanancia(
+                            valor: f.ganancia,
+                            sufijo: 'kg',
+                            esEntrada: f.ganancia == null),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },

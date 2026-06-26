@@ -19,6 +19,7 @@ class AnimalConPeso {
 /// Un pesaje hecho hoy, con el lote del animal y la ganancia vs. el anterior.
 class PesajeHoy {
   PesajeHoy({
+    required this.id,
     required this.identificador,
     required this.loteId,
     required this.loteNombre,
@@ -27,6 +28,7 @@ class PesajeHoy {
     required this.ganancia,
     required this.dias,
   });
+  final String id; // id del pesaje (para poder eliminarlo)
   final String identificador;
   final String loteId;
   final String loteNombre;
@@ -179,6 +181,7 @@ class PesajesRepository {
               ..limit(1))
             .getSingleOrNull();
         resultado.add(PesajeHoy(
+          id: p.id,
           identificador: a.identificador,
           loteId: l.id,
           loteNombre: l.nombre,
@@ -230,6 +233,17 @@ class PesajesRepository {
           ..limit(1))
         .getSingleOrNull();
     return fila?.peso;
+  }
+
+  /// Elimina (borrado suave) un pesaje. Queda pendiente para sincronizar.
+  Future<void> eliminarPesaje(String pesajeId) async {
+    await (db.update(db.pesajes)..where((t) => t.id.equals(pesajeId))).write(
+      PesajesCompanion(
+        deletedAt: Value(DateTime.now()),
+        updatedAt: Value(DateTime.now()),
+        pendiente: const Value(true),
+      ),
+    );
   }
 
   /// Registra un pesaje para un animal existente.
