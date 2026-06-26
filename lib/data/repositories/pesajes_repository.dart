@@ -72,6 +72,16 @@ class PesajesRepository {
   final AppDatabase db;
   final _uuid = const Uuid();
 
+  /// Días de CALENDARIO entre dos pesajes (ignora la hora del día). Así, de
+  /// ayer a hoy = 1 día aunque hayan pasado menos de 24 horas reales. Usar
+  /// `inDays` de la diferencia contaría bloques completos de 24 h (ayer 3pm →
+  /// hoy 10am = 0), y el kg/día nunca aparecería.
+  static int _diasCalendario(DateTime anterior, DateTime actual) {
+    final a = DateTime(anterior.year, anterior.month, anterior.day);
+    final b = DateTime(actual.year, actual.month, actual.day);
+    return b.difference(a).inDays;
+  }
+
   /// Stream reactivo con los animales (no borrados) de un lote, cada uno con su
   /// peso actual (el pesaje más reciente). Se actualiza solo al cambiar datos.
   Stream<List<AnimalConPeso>> observarAnimalesDeLote(String loteId) {
@@ -92,7 +102,7 @@ class PesajesRepository {
         final pesoActual = ultimos.isNotEmpty ? ultimos.first.peso : null;
         double? gananciaDiaria;
         if (ultimos.length == 2) {
-          final dias = ultimos[0].fecha.difference(ultimos[1].fecha).inDays;
+          final dias = _diasCalendario(ultimos[1].fecha, ultimos[0].fecha);
           if (dias >= 1) {
             gananciaDiaria = (ultimos[0].peso - ultimos[1].peso) / dias;
           }
@@ -188,7 +198,7 @@ class PesajesRepository {
           peso: p.peso,
           fecha: p.fecha,
           ganancia: prev == null ? null : p.peso - prev.peso,
-          dias: prev == null ? null : p.fecha.difference(prev.fecha).inDays,
+          dias: prev == null ? null : _diasCalendario(prev.fecha, p.fecha),
         ));
       }
       return resultado;
@@ -216,7 +226,7 @@ class PesajesRepository {
             fecha: p.fecha,
             peso: p.peso,
             ganancia: p.peso - prev.peso,
-            dias: p.fecha.difference(prev.fecha).inDays,
+            dias: _diasCalendario(prev.fecha, p.fecha),
           ));
         }
       }
@@ -233,6 +243,20 @@ class PesajesRepository {
           ..limit(1))
         .getSingleOrNull();
     return fila?.peso;
+  }
+
+  /// Mueve un animal a otro lote. Queda pendiente para sincronizar.
+  Future<void> moverAnimalDeLote({
+    required String animalId,
+    required String nuevoLoteId,
+  }) async {
+    await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
+      AnimalesCompanion(
+        loteId: Value(nuevoLoteId),
+        updatedAt: Value(DateTime.now()),
+        pendiente: const Value(true),
+      ),
+    );
   }
 
   /// Elimina (borrado suave) un pesaje. Queda pendiente para sincronizar.
