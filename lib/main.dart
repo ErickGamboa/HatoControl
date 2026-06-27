@@ -30,17 +30,37 @@ Future<void> main() async {
   runApp(const HatoControlApp());
 }
 
+/// Colores de marca de HatoControl, tomados del logo.
+const Color kAzulHato = Color(0xFF1B3A5B); // azul marino (la "H", los textos)
+const Color kVerdeHato = Color(0xFF3C8C56); // verde (la "C", el arete, el arco)
+
 class HatoControlApp extends StatelessWidget {
   const HatoControlApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Combinación de los dos colores del logo repartida entre los componentes:
+    // verde como color principal (botones de acción, íconos) y azul marino como
+    // secundario, usado en botones flotantes, chips y acentos. El encabezado
+    // queda con el estilo por defecto (no se pinta de azul).
+    final scheme = ColorScheme.fromSeed(
+      seedColor: kVerdeHato,
+      primary: kVerdeHato,
+      secondary: kAzulHato,
+      tertiary: kAzulHato,
+    );
     return MaterialApp(
       title: 'HatoControl',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
+        colorScheme: scheme,
         useMaterial3: true,
+        // Botones flotantes ("+") en azul marino: combina con el verde de los
+        // botones principales.
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: kAzulHato,
+          foregroundColor: Colors.white,
+        ),
       ),
       home: const AuthGate(),
     );

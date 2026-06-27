@@ -54,6 +54,16 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.33.0
   build_runner: ^2.15.0
+  flutter_launcher_icons: ^0.14.4
+
+# Ícono de la app (se genera con: dart run flutter_launcher_icons).
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo/hatocontrol_icono_fg.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/logo/hatocontrol_icono_fg.png"
+  remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -68,6 +78,7 @@ flutter:
 
   assets:
     - assets/iconos/
+    - assets/logo/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

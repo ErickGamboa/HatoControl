@@ -80,6 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -92,16 +93,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.agriculture,
-                        size: 72, color: theme.colorScheme.primary),
-                    const SizedBox(height: 12),
-                    Text(
-                      'HatoControl',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                    Image.asset(
+                      'assets/logo/hatocontrol_logo.png',
+                      height: 220,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Text(
                       _esRegistro ? 'Creá tu cuenta' : 'Iniciá sesión',
                       textAlign: TextAlign.center,

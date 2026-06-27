@@ -87,8 +87,11 @@ class SyncService {
     final pendientes =
         await (db.select(db.fincas)..where((t) => t.pendiente.equals(true)))
             .get();
-    for (final f in pendientes) {
-      final datos = {
+    await _subirPendientes<FincaRow>(
+      tabla: 'fincas',
+      filas: pendientes,
+      id: (f) => f.id,
+      datos: (f) => {
         'id': f.id,
         'nombre': f.nombre,
         'foto_url': f.fotoUrl,
@@ -97,30 +100,33 @@ class SyncService {
         'created_at': f.createdAt.toIso8601String(),
         'deleted_at': f.deletedAt?.toIso8601String(),
         // updated_at lo fija el servidor.
-      };
-      await _insertarOActualizar('fincas', f.id, datos);
-      await (db.update(db.fincas)..where((t) => t.id.equals(f.id)))
-          .write(const FincasCompanion(pendiente: Value(false)));
-    }
+      },
+      marcarSubida: (id) =>
+          (db.update(db.fincas)..where((t) => t.id.equals(id)))
+              .write(const FincasCompanion(pendiente: Value(false))),
+    );
   }
 
   Future<void> _subirMiembros() async {
     final pendientes = await (db.select(db.fincaMiembros)
           ..where((t) => t.pendiente.equals(true)))
         .get();
-    for (final m in pendientes) {
-      final datos = {
+    await _subirPendientes<FincaMiembroRow>(
+      tabla: 'finca_miembros',
+      filas: pendientes,
+      id: (m) => m.id,
+      datos: (m) => {
         'id': m.id,
         'finca_id': m.fincaId,
         'usuario_id': m.usuarioId,
         'rol': m.rol,
         'created_at': m.createdAt.toIso8601String(),
         'deleted_at': m.deletedAt?.toIso8601String(),
-      };
-      await _insertarOActualizar('finca_miembros', m.id, datos);
-      await (db.update(db.fincaMiembros)..where((t) => t.id.equals(m.id)))
-          .write(const FincaMiembrosCompanion(pendiente: Value(false)));
-    }
+      },
+      marcarSubida: (id) =>
+          (db.update(db.fincaMiembros)..where((t) => t.id.equals(id)))
+              .write(const FincaMiembrosCompanion(pendiente: Value(false))),
+    );
   }
 
   /// Sube una fila al servidor: ACTUALIZA primero y, si no existía (0 filas),
@@ -138,50 +144,83 @@ class SyncService {
     }
   }
 
+  /// Sube filas pendientes con resiliencia POR FILA: si una falla (conflicto,
+  /// red, RLS, etc.) se registra y se sigue con las demás — una fila con
+  /// problema NUNCA bloquea ni descarta al resto. Cada fila se marca como
+  /// subida solo si su subida tuvo éxito; si falla, queda `pendiente` y se
+  /// reintenta en la próxima sincronización. Así un dato local sin subir no se
+  /// pierde: insiste hasta lograrlo.
+  Future<void> _subirPendientes<T>({
+    required String tabla,
+    required List<T> filas,
+    required String Function(T) id,
+    required Map<String, dynamic> Function(T) datos,
+    required Future<void> Function(String id) marcarSubida,
+  }) async {
+    for (final fila in filas) {
+      try {
+        await _insertarOActualizar(tabla, id(fila), datos(fila));
+        await marcarSubida(id(fila));
+      } catch (e) {
+        debugPrint(
+            'Sync: no se pudo subir $tabla ${id(fila)}; queda pendiente '
+            'para reintentar ($e)');
+      }
+    }
+  }
+
   Future<void> _subirLotes() async {
     final pendientes =
         await (db.select(db.lotes)..where((t) => t.pendiente.equals(true)))
             .get();
-    for (final l in pendientes) {
-      final datos = {
+    await _subirPendientes<LoteRow>(
+      tabla: 'lotes',
+      filas: pendientes,
+      id: (l) => l.id,
+      datos: (l) => {
         'id': l.id,
         'finca_id': l.fincaId,
         'nombre': l.nombre,
         'numero': l.numero,
         'created_at': l.createdAt.toIso8601String(),
         'deleted_at': l.deletedAt?.toIso8601String(),
-      };
-      await _insertarOActualizar('lotes', l.id, datos);
-      await (db.update(db.lotes)..where((t) => t.id.equals(l.id)))
-          .write(const LotesCompanion(pendiente: Value(false)));
-    }
+      },
+      marcarSubida: (id) => (db.update(db.lotes)..where((t) => t.id.equals(id)))
+          .write(const LotesCompanion(pendiente: Value(false))),
+    );
   }
 
   Future<void> _subirAnimales() async {
     final pendientes =
         await (db.select(db.animales)..where((t) => t.pendiente.equals(true)))
             .get();
-    for (final a in pendientes) {
-      final datos = {
+    await _subirPendientes<AnimalRow>(
+      tabla: 'animales',
+      filas: pendientes,
+      id: (a) => a.id,
+      datos: (a) => {
         'id': a.id,
         'finca_id': a.fincaId,
         'lote_id': a.loteId,
         'identificador': a.identificador,
         'created_at': a.createdAt.toIso8601String(),
         'deleted_at': a.deletedAt?.toIso8601String(),
-      };
-      await _insertarOActualizar('animales', a.id, datos);
-      await (db.update(db.animales)..where((t) => t.id.equals(a.id)))
-          .write(const AnimalesCompanion(pendiente: Value(false)));
-    }
+      },
+      marcarSubida: (id) =>
+          (db.update(db.animales)..where((t) => t.id.equals(id)))
+              .write(const AnimalesCompanion(pendiente: Value(false))),
+    );
   }
 
   Future<void> _subirPesajes() async {
     final pendientes =
         await (db.select(db.pesajes)..where((t) => t.pendiente.equals(true)))
             .get();
-    for (final p in pendientes) {
-      final datos = {
+    await _subirPendientes<PesajeRow>(
+      tabla: 'pesajes',
+      filas: pendientes,
+      id: (p) => p.id,
+      datos: (p) => {
         'id': p.id,
         'animal_id': p.animalId,
         'peso': p.peso,
@@ -189,11 +228,11 @@ class SyncService {
         'registrado_por': p.registradoPor,
         'created_at': p.createdAt.toIso8601String(),
         'deleted_at': p.deletedAt?.toIso8601String(),
-      };
-      await _insertarOActualizar('pesajes', p.id, datos);
-      await (db.update(db.pesajes)..where((t) => t.id.equals(p.id)))
-          .write(const PesajesCompanion(pendiente: Value(false)));
-    }
+      },
+      marcarSubida: (id) =>
+          (db.update(db.pesajes)..where((t) => t.id.equals(id)))
+              .write(const PesajesCompanion(pendiente: Value(false))),
+    );
   }
 
   /// Sube las fotos de fincas marcadas `fotoPendiente` a través de la Edge
