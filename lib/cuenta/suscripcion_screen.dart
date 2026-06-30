@@ -27,14 +27,18 @@ class SuscripcionScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.workspace_premium_outlined,
-                    size: 80, color: theme.colorScheme.primary),
+                Icon(
+                  Icons.workspace_premium_outlined,
+                  size: 80,
+                  color: theme.colorScheme.primary,
+                ),
                 const SizedBox(height: 24),
                 Text(
                   'Tu prueba gratis terminó',
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -77,8 +81,10 @@ class SuscripcionScreen extends StatelessWidget {
                   onPressed: () => syncService.sincronizar(),
                   icon: const Icon(Icons.refresh),
                   style: FilledButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
                   ),
                   label: const Text('Ya pagué, actualizar'),
                 ),

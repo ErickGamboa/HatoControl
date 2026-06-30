@@ -15,8 +15,9 @@ class LotesScreen extends StatelessWidget {
   Future<void> _loteDialog(BuildContext context, {LoteRow? lote}) async {
     final esEdicion = lote != null;
     final nombreCtrl = TextEditingController(text: lote?.nombre ?? '');
-    final numeroCtrl =
-        TextEditingController(text: lote?.numero?.toString() ?? '');
+    final numeroCtrl = TextEditingController(
+      text: lote?.numero?.toString() ?? '',
+    );
 
     final guardar = await showDialog<bool>(
       context: context,
@@ -26,6 +27,7 @@ class LotesScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
+              key: const ValueKey('lotes.name'),
               controller: nombreCtrl,
               autofocus: true,
               textCapitalization: TextCapitalization.words,
@@ -36,6 +38,7 @@ class LotesScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             TextField(
+              key: const ValueKey('lotes.number'),
               controller: numeroCtrl,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -52,6 +55,7 @@ class LotesScreen extends StatelessWidget {
             child: const Text('Cancelar'),
           ),
           FilledButton(
+            key: const ValueKey('lotes.save'),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(esEdicion ? 'Guardar' : 'Crear'),
           ),
@@ -85,6 +89,7 @@ class LotesScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Lotes')),
       floatingActionButton: FloatingActionButton.extended(
+        key: const ValueKey('lotes.create'),
         onPressed: () => _loteDialog(context),
         icon: const Icon(Icons.add),
         label: const Text('Lote'),
@@ -156,14 +161,17 @@ class _VacioLotes extends StatelessWidget {
               color: theme.colorScheme.outline,
             ),
             const SizedBox(height: 16),
-            Text('Esta finca no tiene lotes',
-                style: theme.textTheme.titleMedium),
+            Text(
+              'Esta finca no tiene lotes',
+              style: theme.textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               'Creá el primer lote con el botón de abajo.',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ],
         ),

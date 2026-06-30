@@ -58,63 +58,75 @@ class FincasRepository {
   /// Stream reactivo con las fincas del usuario (donde es miembro), no borradas.
   /// La lista se actualiza sola cuando cambian los datos locales.
   Stream<List<FincaRow>> observarFincas(String usuarioId) {
-    final consulta = db.select(db.fincas).join([
-      innerJoin(
-        db.fincaMiembros,
-        db.fincaMiembros.fincaId.equalsExp(db.fincas.id),
-      ),
-    ])
-      ..where(db.fincaMiembros.usuarioId.equals(usuarioId) &
-          db.fincaMiembros.deletedAt.isNull() &
-          db.fincas.deletedAt.isNull())
-      ..orderBy([OrderingTerm.asc(db.fincas.nombre)]);
+    final consulta =
+        db.select(db.fincas).join([
+            innerJoin(
+              db.fincaMiembros,
+              db.fincaMiembros.fincaId.equalsExp(db.fincas.id),
+            ),
+          ])
+          ..where(
+            db.fincaMiembros.usuarioId.equals(usuarioId) &
+                db.fincaMiembros.deletedAt.isNull() &
+                db.fincas.deletedAt.isNull(),
+          )
+          ..orderBy([OrderingTerm.asc(db.fincas.nombre)]);
 
-    return consulta
-        .watch()
-        .map((filas) => filas.map((f) => f.readTable(db.fincas)).toList());
+    return consulta.watch().map(
+      (filas) => filas.map((f) => f.readTable(db.fincas)).toList(),
+    );
   }
 
   /// Stream con una finca por id (para mostrar datos en vivo). null si no existe.
   Stream<FincaRow?> observarFinca(String fincaId) {
-    return (db.select(db.fincas)..where((t) => t.id.equals(fincaId)))
-        .watchSingleOrNull();
+    return (db.select(
+      db.fincas,
+    )..where((t) => t.id.equals(fincaId))).watchSingleOrNull();
   }
 
   /// Stream reactivo con las personas que tienen acceso a una finca (miembros no
   /// borrados), junto con su nombre y correo si su perfil ya se sincronizó.
   /// Ordenadas por antigüedad (el dueño/creador suele ser el primero).
   Stream<List<MiembroConUsuario>> observarMiembros(String fincaId) {
-    final consulta = db.select(db.fincaMiembros).join([
-      leftOuterJoin(
-        db.usuarios,
-        db.usuarios.id.equalsExp(db.fincaMiembros.usuarioId),
-      ),
-    ])
-      ..where(db.fincaMiembros.fincaId.equals(fincaId) &
-          db.fincaMiembros.deletedAt.isNull())
-      ..orderBy([OrderingTerm.asc(db.fincaMiembros.createdAt)]);
+    final consulta =
+        db.select(db.fincaMiembros).join([
+            leftOuterJoin(
+              db.usuarios,
+              db.usuarios.id.equalsExp(db.fincaMiembros.usuarioId),
+            ),
+          ])
+          ..where(
+            db.fincaMiembros.fincaId.equals(fincaId) &
+                db.fincaMiembros.deletedAt.isNull(),
+          )
+          ..orderBy([OrderingTerm.asc(db.fincaMiembros.createdAt)]);
 
-    return consulta.watch().map((filas) => filas.map((f) {
-          final m = f.readTable(db.fincaMiembros);
-          final u = f.readTableOrNull(db.usuarios);
-          return MiembroConUsuario(
-            miembro: m,
-            nombre: u?.nombre,
-            email: u?.email,
-          );
-        }).toList());
+    return consulta.watch().map(
+      (filas) => filas.map((f) {
+        final m = f.readTable(db.fincaMiembros);
+        final u = f.readTableOrNull(db.usuarios);
+        return MiembroConUsuario(
+          miembro: m,
+          nombre: u?.nombre,
+          email: u?.email,
+        );
+      }).toList(),
+    );
   }
 
   /// Quita el acceso de una persona a una finca (borrado suave). Queda
   /// pendiente para sincronizar; en el servidor la RLS exige ser admin.
   Future<void> quitarAcceso(String miembroId) async {
     final ahora = DateTime.now();
-    await (db.update(db.fincaMiembros)..where((t) => t.id.equals(miembroId)))
-        .write(FincaMiembrosCompanion(
-      deletedAt: Value(ahora),
-      updatedAt: Value(ahora),
-      pendiente: const Value(true),
-    ));
+    await (db.update(
+      db.fincaMiembros,
+    )..where((t) => t.id.equals(miembroId))).write(
+      FincaMiembrosCompanion(
+        deletedAt: Value(ahora),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
   }
 
   /// Edita el nombre de una finca y, opcionalmente, reemplaza su foto.
@@ -146,20 +158,20 @@ class FincasRepository {
   /// Calcula el estado de licencia del usuario (plan, límite y fincas propias
   /// usadas). Devuelve null si todavía no se conoce la cuenta (sin sincronizar).
   Future<EstadoLicencia?> estadoLicencia(String usuarioId) async {
-    final usuario = await (db.select(db.usuarios)
-          ..where((u) => u.id.equals(usuarioId)))
-        .getSingleOrNull();
+    final usuario = await (db.select(
+      db.usuarios,
+    )..where((u) => u.id.equals(usuarioId))).getSingleOrNull();
     final cuentaId = usuario?.cuentaId;
     if (cuentaId == null) return null;
 
-    final cuenta = await (db.select(db.cuentas)
-          ..where((c) => c.id.equals(cuentaId)))
-        .getSingleOrNull();
+    final cuenta = await (db.select(
+      db.cuentas,
+    )..where((c) => c.id.equals(cuentaId))).getSingleOrNull();
     if (cuenta == null) return null;
 
-    final plan = await (db.select(db.planes)
-          ..where((p) => p.codigo.equals(cuenta.plan)))
-        .getSingleOrNull();
+    final plan = await (db.select(
+      db.planes,
+    )..where((p) => p.codigo.equals(cuenta.plan))).getSingleOrNull();
 
     return EstadoLicencia(
       cuentaId: cuentaId,
@@ -175,8 +187,9 @@ class FincasRepository {
     final conteo = db.fincas.id.count();
     final q = db.selectOnly(db.fincas)
       ..addColumns([conteo])
-      ..where(db.fincas.cuentaId.equals(cuentaId) &
-          db.fincas.deletedAt.isNull());
+      ..where(
+        db.fincas.cuentaId.equals(cuentaId) & db.fincas.deletedAt.isNull(),
+      );
     final row = await q.getSingle();
     return row.read(conteo) ?? 0;
   }
@@ -203,26 +216,34 @@ class FincasRepository {
     final tieneFoto = fotoLocalPath != null;
 
     await db.transaction(() async {
-      await db.into(db.fincas).insert(FincasCompanion.insert(
-            id: fincaId,
-            nombre: nombre,
-            creadaPor: creadaPor,
-            cuentaId: Value(estado.cuentaId),
-            fotoLocalPath: Value(fotoLocalPath),
-            fotoPendiente: Value(tieneFoto),
-            createdAt: ahora,
-            updatedAt: ahora,
-            pendiente: const Value(true),
-          ));
-      await db.into(db.fincaMiembros).insert(FincaMiembrosCompanion.insert(
-            id: _uuid.v4(),
-            fincaId: fincaId,
-            usuarioId: creadaPor,
-            rol: 'admin',
-            createdAt: ahora,
-            updatedAt: ahora,
-            pendiente: const Value(true),
-          ));
+      await db
+          .into(db.fincas)
+          .insert(
+            FincasCompanion.insert(
+              id: fincaId,
+              nombre: nombre,
+              creadaPor: creadaPor,
+              cuentaId: Value(estado.cuentaId),
+              fotoLocalPath: Value(fotoLocalPath),
+              fotoPendiente: Value(tieneFoto),
+              createdAt: ahora,
+              updatedAt: ahora,
+              pendiente: const Value(true),
+            ),
+          );
+      await db
+          .into(db.fincaMiembros)
+          .insert(
+            FincaMiembrosCompanion.insert(
+              id: _uuid.v4(),
+              fincaId: fincaId,
+              usuarioId: creadaPor,
+              rol: 'admin',
+              createdAt: ahora,
+              updatedAt: ahora,
+              pendiente: const Value(true),
+            ),
+          );
     });
   }
 }

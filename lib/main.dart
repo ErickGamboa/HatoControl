@@ -17,8 +17,7 @@ Future<void> main() async {
   // Sincronizar: al arrancar, cuando VUELVA la conexión y al iniciar sesión.
   syncService.sincronizar();
   Connectivity().onConnectivityChanged.listen((resultados) {
-    final hayConexion =
-        resultados.any((r) => r != ConnectivityResult.none);
+    final hayConexion = resultados.any((r) => r != ConnectivityResult.none);
     if (hayConexion) syncService.sincronizar();
   });
   supabase.auth.onAuthStateChange.listen((estado) {

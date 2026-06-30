@@ -40,15 +40,19 @@ class LotesRepository {
     int? numero,
   }) async {
     final ahora = DateTime.now();
-    await db.into(db.lotes).insert(LotesCompanion.insert(
-          id: _uuid.v4(),
-          fincaId: fincaId,
-          nombre: nombre,
-          numero: Value(numero),
-          createdAt: ahora,
-          updatedAt: ahora,
-          pendiente: const Value(true),
-        ));
+    await db
+        .into(db.lotes)
+        .insert(
+          LotesCompanion.insert(
+            id: _uuid.v4(),
+            fincaId: fincaId,
+            nombre: nombre,
+            numero: Value(numero),
+            createdAt: ahora,
+            updatedAt: ahora,
+            pendiente: const Value(true),
+          ),
+        );
   }
 
   /// Edita el nombre y/o número de un lote. Queda pendiente de sincronizar.

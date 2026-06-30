@@ -29,24 +29,22 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.check_circle,
-                  size: 64, color: theme.colorScheme.primary),
+              Icon(
+                Icons.check_circle,
+                size: 64,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(height: 16),
-              Text(
-                '¡Sesión iniciada!',
-                style: theme.textTheme.headlineSmall,
-              ),
+              Text('¡Sesión iniciada!', style: theme.textTheme.headlineSmall),
               const SizedBox(height: 8),
-              Text(
-                user?.email ?? 'Usuario',
-                style: theme.textTheme.bodyLarge,
-              ),
+              Text(user?.email ?? 'Usuario', style: theme.textTheme.bodyLarge),
               const SizedBox(height: 24),
               Text(
                 'Próximo paso: aquí van a aparecer tus fincas.',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.outline),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
               ),
             ],
           ),

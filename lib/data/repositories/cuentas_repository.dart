@@ -13,15 +13,11 @@ class CuentasRepository {
   /// el admin la suspende y se sincroniza).
   Stream<CuentaRow?> observarMiCuenta(String usuarioId) {
     final consulta = db.select(db.usuarios).join([
-      innerJoin(
-        db.cuentas,
-        db.cuentas.id.equalsExp(db.usuarios.cuentaId),
-      ),
-    ])
-      ..where(db.usuarios.id.equals(usuarioId));
+      innerJoin(db.cuentas, db.cuentas.id.equalsExp(db.usuarios.cuentaId)),
+    ])..where(db.usuarios.id.equals(usuarioId));
 
-    return consulta
-        .watchSingleOrNull()
-        .map((fila) => fila?.readTable(db.cuentas));
+    return consulta.watchSingleOrNull().map(
+      (fila) => fila?.readTable(db.cuentas),
+    );
   }
 }

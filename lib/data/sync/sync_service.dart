@@ -84,9 +84,9 @@ class SyncService {
   // ---------------------------------------------------------------- SUBIR
 
   Future<void> _subirFincas() async {
-    final pendientes =
-        await (db.select(db.fincas)..where((t) => t.pendiente.equals(true)))
-            .get();
+    final pendientes = await (db.select(
+      db.fincas,
+    )..where((t) => t.pendiente.equals(true))).get();
     await _subirPendientes<FincaRow>(
       tabla: 'fincas',
       filas: pendientes,
@@ -102,15 +102,16 @@ class SyncService {
         // updated_at lo fija el servidor.
       },
       marcarSubida: (id) =>
-          (db.update(db.fincas)..where((t) => t.id.equals(id)))
-              .write(const FincasCompanion(pendiente: Value(false))),
+          (db.update(db.fincas)..where((t) => t.id.equals(id))).write(
+            const FincasCompanion(pendiente: Value(false)),
+          ),
     );
   }
 
   Future<void> _subirMiembros() async {
-    final pendientes = await (db.select(db.fincaMiembros)
-          ..where((t) => t.pendiente.equals(true)))
-        .get();
+    final pendientes = await (db.select(
+      db.fincaMiembros,
+    )..where((t) => t.pendiente.equals(true))).get();
     await _subirPendientes<FincaMiembroRow>(
       tabla: 'finca_miembros',
       filas: pendientes,
@@ -124,8 +125,9 @@ class SyncService {
         'deleted_at': m.deletedAt?.toIso8601String(),
       },
       marcarSubida: (id) =>
-          (db.update(db.fincaMiembros)..where((t) => t.id.equals(id)))
-              .write(const FincaMiembrosCompanion(pendiente: Value(false))),
+          (db.update(db.fincaMiembros)..where((t) => t.id.equals(id))).write(
+            const FincaMiembrosCompanion(pendiente: Value(false)),
+          ),
     );
   }
 
@@ -135,9 +137,15 @@ class SyncService {
   /// Tampoco usamos `upsert` porque evalúa también la RLS de UPDATE y puede
   /// bloquear inserciones nuevas legítimas.
   Future<void> _insertarOActualizar(
-      String tabla, String id, Map<String, dynamic> datos) async {
-    final actualizadas =
-        await _sb.from(tabla).update(datos).eq('id', id).select();
+    String tabla,
+    String id,
+    Map<String, dynamic> datos,
+  ) async {
+    final actualizadas = await _sb
+        .from(tabla)
+        .update(datos)
+        .eq('id', id)
+        .select();
     if ((actualizadas as List).isEmpty) {
       // No existía en el servidor → es una fila nueva.
       await _sb.from(tabla).insert(datos);
@@ -163,16 +171,17 @@ class SyncService {
         await marcarSubida(id(fila));
       } catch (e) {
         debugPrint(
-            'Sync: no se pudo subir $tabla ${id(fila)}; queda pendiente '
-            'para reintentar ($e)');
+          'Sync: no se pudo subir $tabla ${id(fila)}; queda pendiente '
+          'para reintentar ($e)',
+        );
       }
     }
   }
 
   Future<void> _subirLotes() async {
-    final pendientes =
-        await (db.select(db.lotes)..where((t) => t.pendiente.equals(true)))
-            .get();
+    final pendientes = await (db.select(
+      db.lotes,
+    )..where((t) => t.pendiente.equals(true))).get();
     await _subirPendientes<LoteRow>(
       tabla: 'lotes',
       filas: pendientes,
@@ -191,9 +200,9 @@ class SyncService {
   }
 
   Future<void> _subirAnimales() async {
-    final pendientes =
-        await (db.select(db.animales)..where((t) => t.pendiente.equals(true)))
-            .get();
+    final pendientes = await (db.select(
+      db.animales,
+    )..where((t) => t.pendiente.equals(true))).get();
     await _subirPendientes<AnimalRow>(
       tabla: 'animales',
       filas: pendientes,
@@ -207,15 +216,16 @@ class SyncService {
         'deleted_at': a.deletedAt?.toIso8601String(),
       },
       marcarSubida: (id) =>
-          (db.update(db.animales)..where((t) => t.id.equals(id)))
-              .write(const AnimalesCompanion(pendiente: Value(false))),
+          (db.update(db.animales)..where((t) => t.id.equals(id))).write(
+            const AnimalesCompanion(pendiente: Value(false)),
+          ),
     );
   }
 
   Future<void> _subirPesajes() async {
-    final pendientes =
-        await (db.select(db.pesajes)..where((t) => t.pendiente.equals(true)))
-            .get();
+    final pendientes = await (db.select(
+      db.pesajes,
+    )..where((t) => t.pendiente.equals(true))).get();
     await _subirPendientes<PesajeRow>(
       tabla: 'pesajes',
       filas: pendientes,
@@ -230,8 +240,9 @@ class SyncService {
         'deleted_at': p.deletedAt?.toIso8601String(),
       },
       marcarSubida: (id) =>
-          (db.update(db.pesajes)..where((t) => t.id.equals(id)))
-              .write(const PesajesCompanion(pendiente: Value(false))),
+          (db.update(db.pesajes)..where((t) => t.id.equals(id))).write(
+            const PesajesCompanion(pendiente: Value(false)),
+          ),
     );
   }
 
@@ -241,10 +252,11 @@ class SyncService {
   Future<void> _subirFotosFincas() async {
     if (_sb.auth.currentSession == null) return;
 
-    final conFoto = await (db.select(db.fincas)
-          ..where((t) =>
-              t.fotoPendiente.equals(true) & t.fotoLocalPath.isNotNull()))
-        .get();
+    final conFoto =
+        await (db.select(db.fincas)..where(
+              (t) => t.fotoPendiente.equals(true) & t.fotoLocalPath.isNotNull(),
+            ))
+            .get();
 
     for (final f in conFoto) {
       final ruta = f.fotoLocalPath;
@@ -252,28 +264,26 @@ class SyncService {
       final archivo = File(ruta);
       if (!await archivo.exists()) {
         // El archivo local ya no está; no insistir.
-        await (db.update(db.fincas)..where((t) => t.id.equals(f.id)))
-            .write(const FincasCompanion(fotoPendiente: Value(false)));
+        await (db.update(db.fincas)..where((t) => t.id.equals(f.id))).write(
+          const FincasCompanion(fotoPendiente: Value(false)),
+        );
         continue;
       }
       try {
         final bytes = await archivo.readAsBytes();
         final res = await _sb.functions.invoke(
           'subir-foto-finca',
-          body: {
-            'finca_id': f.id,
-            'imagen_base64': base64Encode(bytes),
-          },
+          body: {'finca_id': f.id, 'imagen_base64': base64Encode(bytes)},
         );
         final data = res.data;
         final url = data is Map ? data['url'] as String? : null;
         if (url != null && url.isNotEmpty) {
           await (db.update(db.fincas)..where((t) => t.id.equals(f.id))).write(
-                FincasCompanion(
-                  fotoUrl: Value(url),
-                  fotoPendiente: const Value(false),
-                ),
-              );
+            FincasCompanion(
+              fotoUrl: Value(url),
+              fotoPendiente: const Value(false),
+            ),
+          );
         }
       } catch (e) {
         // Que un fallo de foto no rompa el resto de la sincronización.
@@ -291,12 +301,16 @@ class SyncService {
     DateTime? maxU = cursor;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
-      await db.into(db.planes).insertOnConflictUpdate(PlanRow(
-            codigo: r['codigo'] as String,
-            nombre: r['nombre'] as String,
-            limiteFincas: r['limite_fincas'] as int,
-            updatedAt: u,
-          ));
+      await db
+          .into(db.planes)
+          .insertOnConflictUpdate(
+            PlanRow(
+              codigo: r['codigo'] as String,
+              nombre: r['nombre'] as String,
+              limiteFincas: r['limite_fincas'] as int,
+              updatedAt: u,
+            ),
+          );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
     if (maxU != null) await _guardarCursor('planes', maxU);
@@ -308,22 +322,26 @@ class SyncService {
     DateTime? maxU = cursor;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
-      await db.into(db.cuentas).insertOnConflictUpdate(CuentaRow(
-            id: r['id'] as String,
-            nombre: r['nombre'] as String,
-            duenoId: r['dueno_id'] as String,
-            plan: r['plan'] as String,
-            estado: r['estado'] as String,
-            pruebaTermina: r['prueba_termina'] != null
-                ? DateTime.parse(r['prueba_termina'] as String)
-                : null,
-            createdAt: DateTime.parse(r['created_at'] as String),
-            updatedAt: u,
-            deletedAt: r['deleted_at'] != null
-                ? DateTime.parse(r['deleted_at'] as String)
-                : null,
-            pendiente: false,
-          ));
+      await db
+          .into(db.cuentas)
+          .insertOnConflictUpdate(
+            CuentaRow(
+              id: r['id'] as String,
+              nombre: r['nombre'] as String,
+              duenoId: r['dueno_id'] as String,
+              plan: r['plan'] as String,
+              estado: r['estado'] as String,
+              pruebaTermina: r['prueba_termina'] != null
+                  ? DateTime.parse(r['prueba_termina'] as String)
+                  : null,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
     if (maxU != null) await _guardarCursor('cuentas', maxU);
@@ -337,15 +355,19 @@ class SyncService {
     DateTime? maxU = cursor;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
-      await db.into(db.usuarios).insertOnConflictUpdate(UsuarioRow(
-            id: r['id'] as String,
-            nombre: r['nombre'] as String?,
-            email: r['email'] as String?,
-            cuentaId: r['cuenta_id'] as String?,
-            createdAt: DateTime.parse(r['created_at'] as String),
-            updatedAt: u,
-            pendiente: false,
-          ));
+      await db
+          .into(db.usuarios)
+          .insertOnConflictUpdate(
+            UsuarioRow(
+              id: r['id'] as String,
+              nombre: r['nombre'] as String?,
+              email: r['email'] as String?,
+              cuentaId: r['cuenta_id'] as String?,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              pendiente: false,
+            ),
+          );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
     if (maxU != null) await _guardarCursor('usuarios', maxU);
@@ -364,18 +386,20 @@ class SyncService {
       // Solo columnas del servidor; NO tocamos fotoLocalPath/fotoPendiente
       // (son locales) para no perder una foto aún sin subir.
       FincasCompanion datosServidor({required bool conId}) => FincasCompanion(
-            id: conId ? Value(r['id'] as String) : const Value.absent(),
-            nombre: Value(r['nombre'] as String),
-            fotoUrl: Value(r['foto_url'] as String?),
-            creadaPor: Value(r['creada_por'] as String),
-            cuentaId: Value(r['cuenta_id'] as String?),
-            createdAt: Value(DateTime.parse(r['created_at'] as String)),
-            updatedAt: Value(u),
-            deletedAt: Value(deletedAt),
-            pendiente: const Value(false),
-          );
+        id: conId ? Value(r['id'] as String) : const Value.absent(),
+        nombre: Value(r['nombre'] as String),
+        fotoUrl: Value(r['foto_url'] as String?),
+        creadaPor: Value(r['creada_por'] as String),
+        cuentaId: Value(r['cuenta_id'] as String?),
+        createdAt: Value(DateTime.parse(r['created_at'] as String)),
+        updatedAt: Value(u),
+        deletedAt: Value(deletedAt),
+        pendiente: const Value(false),
+      );
 
-      await db.into(db.fincas).insert(
+      await db
+          .into(db.fincas)
+          .insert(
             datosServidor(conId: true),
             onConflict: DoUpdate((_) => datosServidor(conId: false)),
           );
@@ -390,18 +414,22 @@ class SyncService {
     DateTime? maxU = cursor;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
-      await db.into(db.fincaMiembros).insertOnConflictUpdate(FincaMiembroRow(
-            id: r['id'] as String,
-            fincaId: r['finca_id'] as String,
-            usuarioId: r['usuario_id'] as String,
-            rol: r['rol'] as String,
-            createdAt: DateTime.parse(r['created_at'] as String),
-            updatedAt: u,
-            deletedAt: r['deleted_at'] != null
-                ? DateTime.parse(r['deleted_at'] as String)
-                : null,
-            pendiente: false,
-          ));
+      await db
+          .into(db.fincaMiembros)
+          .insertOnConflictUpdate(
+            FincaMiembroRow(
+              id: r['id'] as String,
+              fincaId: r['finca_id'] as String,
+              usuarioId: r['usuario_id'] as String,
+              rol: r['rol'] as String,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
     if (maxU != null) await _guardarCursor('finca_miembros', maxU);
@@ -413,18 +441,22 @@ class SyncService {
     DateTime? maxU = cursor;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
-      await db.into(db.lotes).insertOnConflictUpdate(LoteRow(
-            id: r['id'] as String,
-            fincaId: r['finca_id'] as String,
-            nombre: r['nombre'] as String,
-            numero: r['numero'] as int?,
-            createdAt: DateTime.parse(r['created_at'] as String),
-            updatedAt: u,
-            deletedAt: r['deleted_at'] != null
-                ? DateTime.parse(r['deleted_at'] as String)
-                : null,
-            pendiente: false,
-          ));
+      await db
+          .into(db.lotes)
+          .insertOnConflictUpdate(
+            LoteRow(
+              id: r['id'] as String,
+              fincaId: r['finca_id'] as String,
+              nombre: r['nombre'] as String,
+              numero: r['numero'] as int?,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
     if (maxU != null) await _guardarCursor('lotes', maxU);
@@ -436,18 +468,22 @@ class SyncService {
     DateTime? maxU = cursor;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
-      await db.into(db.animales).insertOnConflictUpdate(AnimalRow(
-            id: r['id'] as String,
-            fincaId: r['finca_id'] as String,
-            loteId: r['lote_id'] as String,
-            identificador: r['identificador'] as String,
-            createdAt: DateTime.parse(r['created_at'] as String),
-            updatedAt: u,
-            deletedAt: r['deleted_at'] != null
-                ? DateTime.parse(r['deleted_at'] as String)
-                : null,
-            pendiente: false,
-          ));
+      await db
+          .into(db.animales)
+          .insertOnConflictUpdate(
+            AnimalRow(
+              id: r['id'] as String,
+              fincaId: r['finca_id'] as String,
+              loteId: r['lote_id'] as String,
+              identificador: r['identificador'] as String,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
     if (maxU != null) await _guardarCursor('animales', maxU);
@@ -459,19 +495,23 @@ class SyncService {
     DateTime? maxU = cursor;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
-      await db.into(db.pesajes).insertOnConflictUpdate(PesajeRow(
-            id: r['id'] as String,
-            animalId: r['animal_id'] as String,
-            peso: (r['peso'] as num).toDouble(),
-            fecha: DateTime.parse(r['fecha'] as String),
-            registradoPor: r['registrado_por'] as String?,
-            createdAt: DateTime.parse(r['created_at'] as String),
-            updatedAt: u,
-            deletedAt: r['deleted_at'] != null
-                ? DateTime.parse(r['deleted_at'] as String)
-                : null,
-            pendiente: false,
-          ));
+      await db
+          .into(db.pesajes)
+          .insertOnConflictUpdate(
+            PesajeRow(
+              id: r['id'] as String,
+              animalId: r['animal_id'] as String,
+              peso: (r['peso'] as num).toDouble(),
+              fecha: DateTime.parse(r['fecha'] as String),
+              registradoPor: r['registrado_por'] as String?,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
     if (maxU != null) await _guardarCursor('pesajes', maxU);
@@ -479,27 +519,31 @@ class SyncService {
 
   /// Trae del servidor las filas con updated_at > cursor (o todas si es null).
   Future<List<Map<String, dynamic>>> _consultar(
-      String tabla, DateTime? cursor) async {
+    String tabla,
+    DateTime? cursor,
+  ) async {
     final base = _sb.from(tabla).select();
     final res = cursor == null
         ? await base.order('updated_at', ascending: true)
         : await base
-            .gt('updated_at', cursor.toIso8601String())
-            .order('updated_at', ascending: true);
+              .gt('updated_at', cursor.toIso8601String())
+              .order('updated_at', ascending: true);
     return (res as List).cast<Map<String, dynamic>>();
   }
 
   // -------------------------------------------------------------- MARCADORES
 
   Future<DateTime?> _leerCursor(String tabla) async {
-    final row = await (db.select(db.syncCursores)
-          ..where((t) => t.tabla.equals(tabla)))
-        .getSingleOrNull();
+    final row = await (db.select(
+      db.syncCursores,
+    )..where((t) => t.tabla.equals(tabla))).getSingleOrNull();
     return row?.ultimaBajada;
   }
 
   Future<void> _guardarCursor(String tabla, DateTime fecha) async {
-    await db.into(db.syncCursores).insertOnConflictUpdate(
+    await db
+        .into(db.syncCursores)
+        .insertOnConflictUpdate(
           SyncCursorRow(tabla: tabla, ultimaBajada: fecha),
         );
   }

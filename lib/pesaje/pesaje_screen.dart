@@ -203,6 +203,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
           child: Column(
             children: [
               TextField(
+                key: const ValueKey('pesaje.animalId'),
                 controller: _identCtrl,
                 focusNode: _identFocus,
                 keyboardType: TextInputType.number,
@@ -213,20 +214,24 @@ class _PesajeScreenState extends State<PesajeScreen> {
                   labelText: 'Identificador del animal (arete)',
                   prefixIcon: Padding(
                     padding: const EdgeInsets.all(10),
-                    child: Image.asset('assets/iconos/arete.png',
-                        width: 24,
-                        height: 24,
-                        color: Theme.of(context).colorScheme.primary),
+                    child: Image.asset(
+                      'assets/iconos/arete.png',
+                      width: 24,
+                      height: 24,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
+                key: const ValueKey('pesaje.weight'),
                 controller: _pesoCtrl,
                 focusNode: _pesoFocus,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                 ],
@@ -237,10 +242,12 @@ class _PesajeScreenState extends State<PesajeScreen> {
                   labelText: 'Peso',
                   prefixIcon: Padding(
                     padding: const EdgeInsets.all(10),
-                    child: Image.asset('assets/iconos/peso.png',
-                        width: 24,
-                        height: 24,
-                        color: Theme.of(context).colorScheme.primary),
+                    child: Image.asset(
+                      'assets/iconos/peso.png',
+                      width: 24,
+                      height: 24,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   suffixText: 'kg',
                   border: const OutlineInputBorder(),
@@ -250,6 +257,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
+                  key: const ValueKey('pesaje.submit'),
                   onPressed: _guardando ? null : _registrar,
                   icon: _guardando
                       ? const SizedBox(
@@ -262,7 +270,9 @@ class _PesajeScreenState extends State<PesajeScreen> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     textStyle: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w600),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -270,7 +280,9 @@ class _PesajeScreenState extends State<PesajeScreen> {
               Expanded(
                 child: StreamBuilder<List<PesajeHoy>>(
                   stream: pesajesRepo.observarPesajesDelDia(
-                      widget.finca.id, _inicioDeHoy),
+                    widget.finca.id,
+                    _inicioDeHoy,
+                  ),
                   builder: (context, snapshot) {
                     final pesajes = snapshot.data ?? const [];
                     return _PesajesDeHoy(pesajes: pesajes);
@@ -299,8 +311,9 @@ class _PesajesDeHoy extends StatelessWidget {
         child: Text(
           'Acá aparecerán los animales que peses hoy.',
           textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium
-              ?.copyWith(color: theme.colorScheme.outline),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.outline,
+          ),
         ),
       );
     }
@@ -327,16 +340,13 @@ class _PesajesDeHoy extends StatelessWidget {
           TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            tabs: [
-              for (final id in lotesOrden) Tab(text: nombres[id]),
-            ],
+            tabs: [for (final id in lotesOrden) Tab(text: nombres[id])],
           ),
           const SizedBox(height: 8),
           Expanded(
             child: TabBarView(
               children: [
-                for (final id in lotesOrden)
-                  _TablaLote(filas: porLote[id]!),
+                for (final id in lotesOrden) _TablaLote(filas: porLote[id]!),
               ],
             ),
           ),
@@ -361,10 +371,13 @@ class _TablaLote extends StatelessWidget {
     final cantidad = filas.map((f) => f.identificador).toSet().length;
 
     Widget celdaEncabezado(String t, {TextAlign align = TextAlign.start}) =>
-        Text(t,
-            textAlign: align,
-            style: theme.textTheme.labelLarge
-                ?.copyWith(fontWeight: FontWeight.bold));
+        Text(
+          t,
+          textAlign: align,
+          style: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        );
 
     return Column(
       children: [
@@ -372,18 +385,19 @@ class _TablaLote extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(10)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
           ),
           child: Row(
             children: [
               Expanded(flex: 4, child: celdaEncabezado('Animal')),
               Expanded(
-                  flex: 3,
-                  child: celdaEncabezado('Peso (kg)', align: TextAlign.end)),
+                flex: 3,
+                child: celdaEncabezado('Peso (kg)', align: TextAlign.end),
+              ),
               Expanded(
-                  flex: 3,
-                  child: celdaEncabezado('Ganancia', align: TextAlign.end)),
+                flex: 3,
+                child: celdaEncabezado('Ganancia', align: TextAlign.end),
+              ),
             ],
           ),
         ),
@@ -405,10 +419,13 @@ class _TablaLote extends StatelessWidget {
                     children: [
                       Icon(Icons.delete, color: Colors.white),
                       SizedBox(width: 6),
-                      Text('Eliminar',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600)),
+                      Text(
+                        'Eliminar',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -428,7 +445,8 @@ class _TablaLote extends StatelessWidget {
                         ),
                         FilledButton(
                           style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFC62828)),
+                            backgroundColor: const Color(0xFFC62828),
+                          ),
                           onPressed: () => Navigator.pop(ctx, true),
                           child: const Text('Eliminar'),
                         ),
@@ -444,27 +462,34 @@ class _TablaLote extends StatelessWidget {
                   return false;
                 },
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
                         flex: 4,
-                        child: Text(f.identificador,
-                            style: const TextStyle(fontSize: 16)),
+                        child: Text(
+                          f.identificador,
+                          style: const TextStyle(fontSize: 16),
+                        ),
                       ),
                       Expanded(
                         flex: 3,
-                        child: Text(_fmt(f.peso),
-                            textAlign: TextAlign.end,
-                            style: const TextStyle(fontSize: 16)),
+                        child: Text(
+                          _fmt(f.peso),
+                          textAlign: TextAlign.end,
+                          style: const TextStyle(fontSize: 16),
+                        ),
                       ),
                       Expanded(
                         flex: 3,
                         child: _ValorGanancia(
-                            valor: f.ganancia,
-                            sufijo: 'kg',
-                            esEntrada: f.ganancia == null),
+                          valor: f.ganancia,
+                          sufijo: 'kg',
+                          esEntrada: f.ganancia == null,
+                        ),
                       ),
                     ],
                   ),
@@ -478,8 +503,9 @@ class _TablaLote extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: theme.colorScheme.primaryContainer,
-            borderRadius:
-                const BorderRadius.vertical(bottom: Radius.circular(10)),
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(10),
+            ),
           ),
           child: Text(
             'Animales pesados: $cantidad',
@@ -519,15 +545,19 @@ class _ValorGanancia extends StatelessWidget {
     final theme = Theme.of(context);
 
     if (esEntrada) {
-      return Text('Entrada',
-          textAlign: TextAlign.end,
-          style: TextStyle(fontSize: 14, color: theme.colorScheme.outline));
+      return Text(
+        'Entrada',
+        textAlign: TextAlign.end,
+        style: TextStyle(fontSize: 14, color: theme.colorScheme.outline),
+      );
     }
     if (valor == null) {
       // No se puede calcular (p. ej. kg/día con menos de un día transcurrido).
-      return Text('—',
-          textAlign: TextAlign.end,
-          style: TextStyle(fontSize: 15, color: theme.colorScheme.outline));
+      return Text(
+        '—',
+        textAlign: TextAlign.end,
+        style: TextStyle(fontSize: 15, color: theme.colorScheme.outline),
+      );
     }
 
     const verde = Color(0xFF2E7D32);
@@ -536,16 +566,23 @@ class _ValorGanancia extends StatelessWidget {
     final color = v > 0
         ? verde
         : v < 0
-            ? rojo
-            : theme.colorScheme.outline;
-    final signo = v > 0 ? '+' : v < 0 ? '-' : '';
+        ? rojo
+        : theme.colorScheme.outline;
+    final signo = v > 0
+        ? '+'
+        : v < 0
+        ? '-'
+        : '';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         if (v != 0)
-          Icon(v > 0 ? Icons.arrow_upward : Icons.arrow_downward,
-              size: 14, color: color),
+          Icon(
+            v > 0 ? Icons.arrow_upward : Icons.arrow_downward,
+            size: 14,
+            color: color,
+          ),
         const SizedBox(width: 1),
         Flexible(
           child: Text(
@@ -553,7 +590,10 @@ class _ValorGanancia extends StatelessWidget {
             textAlign: TextAlign.end,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w700, color: color),
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
           ),
         ),
       ],

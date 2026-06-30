@@ -45,15 +45,19 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
       switch (status) {
         case 'agregado':
           syncService.sincronizar();
-          _mostrar('Listo. Compartiste la finca con $email '
-              'como administrador.');
+          _mostrar(
+            'Listo. Compartiste la finca con $email '
+            'como administrador.',
+          );
         case 'ya_es_miembro':
           _mostrar('Esa persona ya tiene acceso a esta finca.');
         case 'invitado_nuevo':
           syncService.sincronizar();
-          _mostrar('Listo. Invitamos a $email. Pedile que abra HatoControl, '
-              'toque "Me invitaron a una finca", escriba su correo y siga '
-              'los pasos con el código que le llegará.');
+          _mostrar(
+            'Listo. Invitamos a $email. Pedile que abra HatoControl, '
+            'toque "Me invitaron a una finca", escriba su correo y siga '
+            'los pasos con el código que le llegará.',
+          );
         default:
           _mostrar('No se pudo compartir. Intentá de nuevo.');
       }
@@ -61,8 +65,7 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
       final det = e.details;
       final err = det is Map ? det['error'] as String? : null;
       _mostrar(switch (err) {
-        'sin_permiso' =>
-          'Solo un administrador de la finca puede compartirla.',
+        'sin_permiso' => 'Solo un administrador de la finca puede compartirla.',
         'no_autenticado' => 'Tu sesión expiró. Iniciá sesión de nuevo.',
         'datos_incompletos' => 'Falta el correo.',
         _ => 'No se pudo compartir. Revisá tu conexión e intentá de nuevo.',
@@ -129,9 +132,12 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Personas con acceso',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold)),
+              child: Text(
+                'Personas con acceso',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -146,8 +152,7 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
                 return ListView.separated(
                   itemCount: miembros.length,
                   separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (context, i) =>
-                      _filaMiembro(theme, miembros[i]),
+                  itemBuilder: (context, i) => _filaMiembro(theme, miembros[i]),
                 );
               },
             ),
@@ -252,12 +257,18 @@ class _DialogoCompartirState extends State<_DialogoCompartir> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.shield_outlined,
-                  size: 18, color: theme.colorScheme.primary),
+              Icon(
+                Icons.shield_outlined,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 8),
-              Text('Se compartirá como Administrador',
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: theme.colorScheme.primary)),
+              Text(
+                'Se compartirá como Administrador',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
             ],
           ),
         ],

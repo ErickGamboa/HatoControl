@@ -119,6 +119,7 @@ class _FincasScreenState extends State<FincasScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        key: const ValueKey('fincas.create'),
         onPressed: _crearFincaDialog,
         icon: const Icon(Icons.add),
         label: const Text('Finca'),
@@ -222,8 +223,11 @@ class _TarjetaFinca extends StatelessWidget {
                       color: Colors.black54,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.cloud_upload_outlined,
-                        size: 18, color: Colors.white),
+                    child: const Icon(
+                      Icons.cloud_upload_outlined,
+                      size: 18,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
             ],
@@ -278,8 +282,11 @@ class _PlaceholderFoto extends StatelessWidget {
                 width: 22,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : Icon(Icons.landscape_outlined,
-                size: 40, color: theme.colorScheme.outline),
+            : Icon(
+                Icons.landscape_outlined,
+                size: 40,
+                color: theme.colorScheme.outline,
+              ),
       ),
     );
   }
@@ -332,12 +339,18 @@ class _DialogoNuevaFincaState extends State<_DialogoNuevaFinca> {
                   ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_a_photo_outlined,
-                            size: 36, color: theme.colorScheme.outline),
+                        Icon(
+                          Icons.add_a_photo_outlined,
+                          size: 36,
+                          color: theme.colorScheme.outline,
+                        ),
                         const SizedBox(height: 8),
-                        Text('Agregar foto (opcional)',
-                            style: theme.textTheme.bodyMedium
-                                ?.copyWith(color: theme.colorScheme.outline)),
+                        Text(
+                          'Agregar foto (opcional)',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
                       ],
                     )
                   : Image.file(File(_fotoPath!), fit: BoxFit.cover),
@@ -351,6 +364,7 @@ class _DialogoNuevaFincaState extends State<_DialogoNuevaFinca> {
             ),
           const SizedBox(height: 12),
           TextField(
+            key: const ValueKey('fincas.name'),
             controller: _ctrl,
             autofocus: true,
             textCapitalization: TextCapitalization.words,
@@ -367,6 +381,7 @@ class _DialogoNuevaFincaState extends State<_DialogoNuevaFinca> {
           child: const Text('Cancelar'),
         ),
         FilledButton(
+          key: const ValueKey('fincas.save'),
           onPressed: () =>
               Navigator.pop(context, (_ctrl.text.trim(), _fotoPath)),
           child: const Text('Crear'),
@@ -423,17 +438,20 @@ class _VacioFincas extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.holiday_village_outlined,
-                size: 72, color: theme.colorScheme.outline),
+            Icon(
+              Icons.holiday_village_outlined,
+              size: 72,
+              color: theme.colorScheme.outline,
+            ),
             const SizedBox(height: 16),
-            Text('Todavía no tenés fincas',
-                style: theme.textTheme.titleMedium),
+            Text('Todavía no tenés fincas', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Creá tu primera finca con el botón de abajo.',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ],
         ),

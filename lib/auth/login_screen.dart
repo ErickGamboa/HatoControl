@@ -124,6 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Correo
                     TextFormField(
+                      key: const ValueKey('login.email'),
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
@@ -145,6 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Contraseña
                     TextFormField(
+                      key: const ValueKey('login.password'),
                       controller: _passCtrl,
                       obscureText: !_verPass,
                       decoration: InputDecoration(
@@ -152,11 +154,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
-                          icon: Icon(_verPass
-                              ? Icons.visibility_off
-                              : Icons.visibility),
-                          onPressed: () =>
-                              setState(() => _verPass = !_verPass),
+                          icon: Icon(
+                            _verPass ? Icons.visibility_off : Icons.visibility,
+                          ),
+                          onPressed: () => setState(() => _verPass = !_verPass),
                         ),
                       ),
                       validator: (v) {
@@ -172,6 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 24),
 
                     FilledButton(
+                      key: const ValueKey('login.submit'),
                       onPressed: _cargando ? null : _enviar,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -180,8 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : Text(_esRegistro ? 'Crear cuenta' : 'Entrar'),
                     ),
@@ -191,9 +192,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _cargando
                           ? null
                           : () => setState(() => _esRegistro = !_esRegistro),
-                      child: Text(_esRegistro
-                          ? '¿Ya tenés cuenta? Iniciá sesión'
-                          : '¿No tenés cuenta? Creá una'),
+                      child: Text(
+                        _esRegistro
+                            ? '¿Ya tenés cuenta? Iniciá sesión'
+                            : '¿No tenés cuenta? Creá una',
+                      ),
                     ),
 
                     // Acceso para personas a las que les compartieron una finca.
@@ -203,9 +206,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: _cargando
                             ? null
                             : () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => const InvitadoScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const InvitadoScreen(),
                                 ),
+                              ),
                         icon: const Icon(Icons.mark_email_read_outlined),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),

@@ -93,11 +93,12 @@ class PesajesRepository {
       final resultado = <AnimalConPeso>[];
       for (final a in animales) {
         // Los dos pesajes más recientes del animal.
-        final ultimos = await (db.select(db.pesajes)
-              ..where((t) => t.animalId.equals(a.id) & t.deletedAt.isNull())
-              ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
-              ..limit(2))
-            .get();
+        final ultimos =
+            await (db.select(db.pesajes)
+                  ..where((t) => t.animalId.equals(a.id) & t.deletedAt.isNull())
+                  ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
+                  ..limit(2))
+                .get();
 
         final pesoActual = ultimos.isNotEmpty ? ultimos.first.peso : null;
         double? gananciaDiaria;
@@ -107,11 +108,13 @@ class PesajesRepository {
             gananciaDiaria = (ultimos[0].peso - ultimos[1].peso) / dias;
           }
         }
-        resultado.add(AnimalConPeso(
-          animal: a,
-          pesoActual: pesoActual,
-          gananciaDiaria: gananciaDiaria,
-        ));
+        resultado.add(
+          AnimalConPeso(
+            animal: a,
+            pesoActual: pesoActual,
+            gananciaDiaria: gananciaDiaria,
+          ),
+        );
       }
       return resultado;
     });
@@ -120,11 +123,12 @@ class PesajesRepository {
   /// Busca un animal por su identificador (arete) dentro de una finca.
   /// Devuelve null si no existe.
   Future<AnimalRow?> buscarAnimal(String fincaId, String identificador) {
-    return (db.select(db.animales)
-          ..where((t) =>
+    return (db.select(db.animales)..where(
+          (t) =>
               t.fincaId.equals(fincaId) &
               t.identificador.equals(identificador) &
-              t.deletedAt.isNull()))
+              t.deletedAt.isNull(),
+        ))
         .getSingleOrNull();
   }
 
@@ -140,40 +144,57 @@ class PesajesRepository {
     final ahora = DateTime.now();
     final animalId = _uuid.v4();
     await db.transaction(() async {
-      await db.into(db.animales).insert(AnimalesCompanion.insert(
-            id: animalId,
-            fincaId: fincaId,
-            loteId: loteId,
-            identificador: identificador,
-            createdAt: ahora,
-            updatedAt: ahora,
-            pendiente: const Value(true),
-          ));
-      await db.into(db.pesajes).insert(PesajesCompanion.insert(
-            id: _uuid.v4(),
-            animalId: animalId,
-            peso: peso,
-            fecha: ahora,
-            registradoPor: Value(registradoPor),
-            createdAt: ahora,
-            updatedAt: ahora,
-            pendiente: const Value(true),
-          ));
+      await db
+          .into(db.animales)
+          .insert(
+            AnimalesCompanion.insert(
+              id: animalId,
+              fincaId: fincaId,
+              loteId: loteId,
+              identificador: identificador,
+              createdAt: ahora,
+              updatedAt: ahora,
+              pendiente: const Value(true),
+            ),
+          );
+      await db
+          .into(db.pesajes)
+          .insert(
+            PesajesCompanion.insert(
+              id: _uuid.v4(),
+              animalId: animalId,
+              peso: peso,
+              fecha: ahora,
+              registradoPor: Value(registradoPor),
+              createdAt: ahora,
+              updatedAt: ahora,
+              pendiente: const Value(true),
+            ),
+          );
     });
   }
 
   /// Stream con los pesajes de la finca registrados desde [desde] (inicio del
   /// día), cada uno con el lote del animal y la ganancia respecto al pesaje
   /// inmediatamente anterior. Más reciente primero.
-  Stream<List<PesajeHoy>> observarPesajesDelDia(String fincaId, DateTime desde) {
-    final consulta = db.select(db.pesajes).join([
-      innerJoin(db.animales, db.animales.id.equalsExp(db.pesajes.animalId)),
-      innerJoin(db.lotes, db.lotes.id.equalsExp(db.animales.loteId)),
-    ])
-      ..where(db.animales.fincaId.equals(fincaId) &
-          db.pesajes.deletedAt.isNull() &
-          db.pesajes.fecha.isBiggerOrEqualValue(desde))
-      ..orderBy([OrderingTerm.desc(db.pesajes.fecha)]);
+  Stream<List<PesajeHoy>> observarPesajesDelDia(
+    String fincaId,
+    DateTime desde,
+  ) {
+    final consulta =
+        db.select(db.pesajes).join([
+            innerJoin(
+              db.animales,
+              db.animales.id.equalsExp(db.pesajes.animalId),
+            ),
+            innerJoin(db.lotes, db.lotes.id.equalsExp(db.animales.loteId)),
+          ])
+          ..where(
+            db.animales.fincaId.equals(fincaId) &
+                db.pesajes.deletedAt.isNull() &
+                db.pesajes.fecha.isBiggerOrEqualValue(desde),
+          )
+          ..orderBy([OrderingTerm.desc(db.pesajes.fecha)]);
 
     return consulta.watch().asyncMap((filas) async {
       final resultado = <PesajeHoy>[];
@@ -182,24 +203,29 @@ class PesajesRepository {
         final a = fila.readTable(db.animales);
         final l = fila.readTable(db.lotes);
         // Peso del pesaje inmediatamente anterior a este (de ese animal).
-        final prev = await (db.select(db.pesajes)
-              ..where((t) =>
-                  t.animalId.equals(a.id) &
-                  t.deletedAt.isNull() &
-                  t.fecha.isSmallerThanValue(p.fecha))
-              ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
-              ..limit(1))
-            .getSingleOrNull();
-        resultado.add(PesajeHoy(
-          id: p.id,
-          identificador: a.identificador,
-          loteId: l.id,
-          loteNombre: l.nombre,
-          peso: p.peso,
-          fecha: p.fecha,
-          ganancia: prev == null ? null : p.peso - prev.peso,
-          dias: prev == null ? null : _diasCalendario(prev.fecha, p.fecha),
-        ));
+        final prev =
+            await (db.select(db.pesajes)
+                  ..where(
+                    (t) =>
+                        t.animalId.equals(a.id) &
+                        t.deletedAt.isNull() &
+                        t.fecha.isSmallerThanValue(p.fecha),
+                  )
+                  ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
+                  ..limit(1))
+                .getSingleOrNull();
+        resultado.add(
+          PesajeHoy(
+            id: p.id,
+            identificador: a.identificador,
+            loteId: l.id,
+            loteNombre: l.nombre,
+            peso: p.peso,
+            fecha: p.fecha,
+            ganancia: prev == null ? null : p.peso - prev.peso,
+            dias: prev == null ? null : _diasCalendario(prev.fecha, p.fecha),
+          ),
+        );
       }
       return resultado;
     });
@@ -218,16 +244,24 @@ class PesajesRepository {
       for (var i = 0; i < filas.length; i++) {
         final p = filas[i];
         if (i == 0) {
-          resultado.add(PesajeHistorial(
-              fecha: p.fecha, peso: p.peso, ganancia: null, dias: null));
+          resultado.add(
+            PesajeHistorial(
+              fecha: p.fecha,
+              peso: p.peso,
+              ganancia: null,
+              dias: null,
+            ),
+          );
         } else {
           final prev = filas[i - 1];
-          resultado.add(PesajeHistorial(
-            fecha: p.fecha,
-            peso: p.peso,
-            ganancia: p.peso - prev.peso,
-            dias: _diasCalendario(prev.fecha, p.fecha),
-          ));
+          resultado.add(
+            PesajeHistorial(
+              fecha: p.fecha,
+              peso: p.peso,
+              ganancia: p.peso - prev.peso,
+              dias: _diasCalendario(prev.fecha, p.fecha),
+            ),
+          );
         }
       }
       return resultado;
@@ -237,11 +271,12 @@ class PesajesRepository {
   /// Devuelve el peso del pesaje más reciente de un animal (o null si no tiene
   /// ninguno todavía). Sirve para calcular la ganancia respecto al anterior.
   Future<double?> ultimoPeso(String animalId) async {
-    final fila = await (db.select(db.pesajes)
-          ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
-          ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
-          ..limit(1))
-        .getSingleOrNull();
+    final fila =
+        await (db.select(db.pesajes)
+              ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
+              ..limit(1))
+            .getSingleOrNull();
     return fila?.peso;
   }
 
@@ -277,15 +312,19 @@ class PesajesRepository {
     required String registradoPor,
   }) async {
     final ahora = DateTime.now();
-    await db.into(db.pesajes).insert(PesajesCompanion.insert(
-          id: _uuid.v4(),
-          animalId: animalId,
-          peso: peso,
-          fecha: ahora,
-          registradoPor: Value(registradoPor),
-          createdAt: ahora,
-          updatedAt: ahora,
-          pendiente: const Value(true),
-        ));
+    await db
+        .into(db.pesajes)
+        .insert(
+          PesajesCompanion.insert(
+            id: _uuid.v4(),
+            animalId: animalId,
+            peso: peso,
+            fecha: ahora,
+            registradoPor: Value(registradoPor),
+            createdAt: ahora,
+            updatedAt: ahora,
+            pendiente: const Value(true),
+          ),
+        );
   }
 }

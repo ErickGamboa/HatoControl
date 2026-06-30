@@ -43,10 +43,12 @@ class _InvitadoScreenState extends State<InvitadoScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(texto),
-        backgroundColor: error ? Theme.of(context).colorScheme.error : null,
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(texto),
+          backgroundColor: error ? Theme.of(context).colorScheme.error : null,
+        ),
+      );
   }
 
   bool _emailValido(String e) =>
@@ -114,7 +116,9 @@ class _InvitadoScreenState extends State<InvitadoScreen> {
         if (uid != null) {
           try {
             await _sb.from('usuarios').update({'nombre': nombre}).eq('id', uid);
-          } catch (_) {/* no crítico */}
+          } catch (_) {
+            /* no crítico */
+          }
         }
       }
       if (!mounted) return;
@@ -128,8 +132,10 @@ class _InvitadoScreenState extends State<InvitadoScreen> {
           m.contains('expired') ||
           m.contains('invalid') ||
           m.contains('token')) {
-        _msg('El código no es correcto o ya venció. Pedí uno nuevo.',
-            error: true);
+        _msg(
+          'El código no es correcto o ya venció. Pedí uno nuevo.',
+          error: true,
+        );
       } else {
         _msg(traducirErrorAuth(e), error: true);
       }
@@ -164,13 +170,19 @@ class _InvitadoScreenState extends State<InvitadoScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(Icons.mark_email_read_outlined,
-            size: 64, color: theme.colorScheme.primary),
+        Icon(
+          Icons.mark_email_read_outlined,
+          size: 64,
+          color: theme.colorScheme.primary,
+        ),
         const SizedBox(height: 16),
-        Text('Te invitaron a una finca',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          'Te invitaron a una finca',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Escribí el mismo correo con el que te invitaron. Te enviaremos un '
@@ -200,7 +212,8 @@ class _InvitadoScreenState extends State<InvitadoScreen> {
               ? const SizedBox(
                   height: 20,
                   width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2))
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Enviar código'),
         ),
       ],
@@ -212,13 +225,19 @@ class _InvitadoScreenState extends State<InvitadoScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(Icons.password_outlined,
-            size: 64, color: theme.colorScheme.primary),
+        Icon(
+          Icons.password_outlined,
+          size: 64,
+          color: theme.colorScheme.primary,
+        ),
         const SizedBox(height: 16),
-        Text('Revisá tu correo',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          'Revisá tu correo',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Escribí el código de 6 dígitos que enviamos a $_email y creá tu '
@@ -258,8 +277,7 @@ class _InvitadoScreenState extends State<InvitadoScreen> {
             prefixIcon: const Icon(Icons.lock_outline),
             border: const OutlineInputBorder(),
             suffixIcon: IconButton(
-              icon: Icon(
-                  _verPass ? Icons.visibility_off : Icons.visibility),
+              icon: Icon(_verPass ? Icons.visibility_off : Icons.visibility),
               onPressed: () => setState(() => _verPass = !_verPass),
             ),
           ),
@@ -274,7 +292,8 @@ class _InvitadoScreenState extends State<InvitadoScreen> {
               ? const SizedBox(
                   height: 20,
                   width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2))
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Entrar'),
         ),
         const SizedBox(height: 12),

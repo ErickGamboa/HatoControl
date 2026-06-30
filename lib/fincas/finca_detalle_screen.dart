@@ -73,6 +73,7 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
             childAspectRatio: 1,
             children: [
               _BotonOpcion(
+                key: const ValueKey('fincaDetail.pesaje'),
                 icono: Image.asset(
                   'assets/iconos/pesaje.png',
                   width: 60,
@@ -83,6 +84,7 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
                 onTap: () => _abrir(PesajeScreen(finca: finca)),
               ),
               _BotonOpcion(
+                key: const ValueKey('fincaDetail.lotes'),
                 icono: Image.asset(
                   'assets/iconos/lotes.png',
                   width: 60,
@@ -103,6 +105,7 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
 /// Botón cuadrado con un ícono (widget) y etiqueta para el menú de la finca.
 class _BotonOpcion extends StatelessWidget {
   const _BotonOpcion({
+    super.key,
     required this.icono,
     required this.label,
     required this.onTap,
@@ -127,8 +130,9 @@ class _BotonOpcion extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               label,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -149,8 +153,9 @@ class _DialogoEditarFinca extends StatefulWidget {
 }
 
 class _DialogoEditarFincaState extends State<_DialogoEditarFinca> {
-  late final TextEditingController _ctrl =
-      TextEditingController(text: widget.finca.nombre);
+  late final TextEditingController _ctrl = TextEditingController(
+    text: widget.finca.nombre,
+  );
   String? _nuevaFoto;
 
   @override
@@ -181,12 +186,18 @@ class _DialogoEditarFincaState extends State<_DialogoEditarFinca> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.add_a_photo_outlined,
-              size: 36, color: theme.colorScheme.outline),
+          Icon(
+            Icons.add_a_photo_outlined,
+            size: 36,
+            color: theme.colorScheme.outline,
+          ),
           const SizedBox(height: 8),
-          Text('Agregar foto',
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.outline)),
+          Text(
+            'Agregar foto',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
         ],
       ),
     );

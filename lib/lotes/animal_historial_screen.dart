@@ -38,9 +38,12 @@ class AnimalHistorialScreen extends StatelessWidget {
           final historial = snapshot.data ?? const [];
           if (historial.isEmpty) {
             return Center(
-              child: Text('Este animal no tiene pesajes.',
-                  style: theme.textTheme.bodyLarge
-                      ?.copyWith(color: theme.colorScheme.outline)),
+              child: Text(
+                'Este animal no tiene pesajes.',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
             );
           }
 
@@ -63,9 +66,12 @@ class AnimalHistorialScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Aumento total desde que llegó',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onPrimaryContainer)),
+                    Text(
+                      'Aumento total desde que llegó',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       '${total >= 0 ? '+' : '-'}${_fmt(total)} kg',
@@ -79,41 +85,60 @@ class AnimalHistorialScreen extends StatelessWidget {
                       'Peso actual: ${_fmt(historial.last.peso)} kg · '
                       '${historial.length} pesaje(s)',
                       style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onPrimaryContainer),
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
                     ),
                   ],
                 ),
               ),
               // Encabezado de la tabla
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 color: theme.colorScheme.surfaceContainerHighest,
                 child: Row(
                   children: [
                     Expanded(
-                        flex: 4,
-                        child: Text('Fecha',
-                            style: theme.textTheme.labelLarge
-                                ?.copyWith(fontWeight: FontWeight.bold))),
+                      flex: 4,
+                      child: Text(
+                        'Fecha',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                     Expanded(
-                        flex: 3,
-                        child: Text('Peso',
-                            textAlign: TextAlign.end,
-                            style: theme.textTheme.labelLarge
-                                ?.copyWith(fontWeight: FontWeight.bold))),
+                      flex: 3,
+                      child: Text(
+                        'Peso',
+                        textAlign: TextAlign.end,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                     Expanded(
-                        flex: 3,
-                        child: Text('Aumento',
-                            textAlign: TextAlign.end,
-                            style: theme.textTheme.labelLarge
-                                ?.copyWith(fontWeight: FontWeight.bold))),
+                      flex: 3,
+                      child: Text(
+                        'Aumento',
+                        textAlign: TextAlign.end,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                     Expanded(
-                        flex: 3,
-                        child: Text('kg/día',
-                            textAlign: TextAlign.end,
-                            style: theme.textTheme.labelLarge
-                                ?.copyWith(fontWeight: FontWeight.bold))),
+                      flex: 3,
+                      child: Text(
+                        'kg/día',
+                        textAlign: TextAlign.end,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -125,29 +150,40 @@ class AnimalHistorialScreen extends StatelessWidget {
                     final p = filas[i];
                     return Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       child: Row(
                         children: [
                           Expanded(
                             flex: 4,
-                            child: Text(_fecha(p.fecha),
-                                style: const TextStyle(fontSize: 15)),
+                            child: Text(
+                              _fecha(p.fecha),
+                              style: const TextStyle(fontSize: 15),
+                            ),
                           ),
                           Expanded(
                             flex: 3,
-                            child: Text('${_fmt(p.peso)} kg',
-                                textAlign: TextAlign.end,
-                                style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600)),
+                            child: Text(
+                              '${_fmt(p.peso)} kg',
+                              textAlign: TextAlign.end,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                           Expanded(
-                              flex: 3,
-                              child: _Valor(valor: p.ganancia, entrada: true)),
+                            flex: 3,
+                            child: _Valor(valor: p.ganancia, entrada: true),
+                          ),
                           Expanded(
-                              flex: 3,
-                              child: _Valor(
-                                  valor: p.gananciaDiaria, entrada: false)),
+                            flex: 3,
+                            child: _Valor(
+                              valor: p.gananciaDiaria,
+                              entrada: false,
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -180,9 +216,11 @@ class _Valor extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (valor == null) {
-      return Text(entrada ? 'Entrada' : '—',
-          textAlign: TextAlign.end,
-          style: TextStyle(fontSize: 14, color: theme.colorScheme.outline));
+      return Text(
+        entrada ? 'Entrada' : '—',
+        textAlign: TextAlign.end,
+        style: TextStyle(fontSize: 14, color: theme.colorScheme.outline),
+      );
     }
     const verde = Color(0xFF2E7D32);
     const rojo = Color(0xFFC62828);
@@ -190,9 +228,13 @@ class _Valor extends StatelessWidget {
     final color = v > 0
         ? verde
         : v < 0
-            ? rojo
-            : theme.colorScheme.outline;
-    final signo = v > 0 ? '+' : v < 0 ? '-' : '';
+        ? rojo
+        : theme.colorScheme.outline;
+    final signo = v > 0
+        ? '+'
+        : v < 0
+        ? '-'
+        : '';
     return Text(
       '$signo${_fmt(v)} kg',
       textAlign: TextAlign.end,

@@ -18,14 +18,18 @@ class SuspendidaScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_outline,
-                    size: 80, color: theme.colorScheme.error),
+                Icon(
+                  Icons.lock_outline,
+                  size: 80,
+                  color: theme.colorScheme.error,
+                ),
                 const SizedBox(height: 24),
                 Text(
                   'Tu cuenta está suspendida',
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -40,7 +44,9 @@ class SuspendidaScreen extends StatelessWidget {
                   icon: const Icon(Icons.refresh),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 14),
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
                   ),
                   label: const Text('Actualizar'),
                 ),

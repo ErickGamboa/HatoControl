@@ -24,8 +24,8 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
   // Stream estable: se crea UNA sola vez. Si se recreara en cada build (al
   // teclear en el buscador), el StreamBuilder volvería a "cargando" y borraría
   // el campo de búsqueda (perdiendo foco y las lecturas del lector).
-  late final Stream<List<AnimalConPeso>> _stream =
-      pesajesRepo.observarAnimalesDeLote(widget.lote.id);
+  late final Stream<List<AnimalConPeso>> _stream = pesajesRepo
+      .observarAnimalesDeLote(widget.lote.id);
 
   @override
   void initState() {
@@ -62,9 +62,13 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
     if (!mounted) return;
 
     if (otros.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('No hay otros lotes en esta finca para mover el animal.'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No hay otros lotes en esta finca para mover el animal.',
+          ),
+        ),
+      );
       return;
     }
 
@@ -91,7 +95,8 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                   for (final l in otros)
                     ListTile(
                       leading: CircleAvatar(
-                          child: Text(l.numero?.toString() ?? '–')),
+                        child: Text(l.numero?.toString() ?? '–'),
+                      ),
                       title: Text(l.nombre),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => Navigator.pop(ctx, l.id),
@@ -107,12 +112,16 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
 
     if (destino == null) return;
     await pesajesRepo.moverAnimalDeLote(
-        animalId: animal.id, nuevoLoteId: destino);
+      animalId: animal.id,
+      nuevoLoteId: destino,
+    );
     syncService.sincronizar();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Animal "${animal.identificador}" movido de lote.'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Animal "${animal.identificador}" movido de lote.'),
+        ),
+      );
     }
   }
 
@@ -120,15 +129,20 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    Widget encabezado(String t, int flex,
-            {TextAlign align = TextAlign.start}) =>
-        Expanded(
-          flex: flex,
-          child: Text(t,
-              textAlign: align,
-              style: theme.textTheme.labelLarge
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-        );
+    Widget encabezado(
+      String t,
+      int flex, {
+      TextAlign align = TextAlign.start,
+    }) => Expanded(
+      flex: flex,
+      child: Text(
+        t,
+        textAlign: align,
+        style: theme.textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.lote.nombre)),
@@ -187,20 +201,25 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset('assets/iconos/lotes.png',
-                              width: 72,
-                              height: 72,
-                              color: theme.colorScheme.outline),
+                          Image.asset(
+                            'assets/iconos/lotes.png',
+                            width: 72,
+                            height: 72,
+                            color: theme.colorScheme.outline,
+                          ),
                           const SizedBox(height: 16),
-                          Text('Este lote no tiene animales',
-                              style: theme.textTheme.titleMedium),
+                          Text(
+                            'Este lote no tiene animales',
+                            style: theme.textTheme.titleMedium,
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'Los animales se agregan al registrar un pesaje '
                             'en la sección Pesaje.',
                             textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium
-                                ?.copyWith(color: theme.colorScheme.outline),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.outline,
+                            ),
                           ),
                         ],
                       ),
@@ -211,16 +230,21 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                 final animales = _filtro.isEmpty
                     ? todos
                     : todos
-                        .where((a) => a.animal.identificador
-                            .toLowerCase()
-                            .contains(_filtro.toLowerCase()))
-                        .toList();
+                          .where(
+                            (a) => a.animal.identificador
+                                .toLowerCase()
+                                .contains(_filtro.toLowerCase()),
+                          )
+                          .toList();
 
                 if (animales.isEmpty) {
                   return Center(
-                    child: Text('Sin resultados para "$_filtro"',
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(color: theme.colorScheme.outline)),
+                    child: Text(
+                      'Sin resultados para "$_filtro"',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
                   );
                 }
 
@@ -241,7 +265,9 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                             ),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
                               child: Row(
                                 children: [
                                   Expanded(
@@ -290,7 +316,9 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       color: theme.colorScheme.primaryContainer,
                       child: Text(
                         'Total de animales: ${todos.length}',

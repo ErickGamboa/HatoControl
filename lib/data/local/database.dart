@@ -71,7 +71,8 @@ class Fincas extends Table {
   // Foto: ruta del archivo local (sólo en este dispositivo) y bandera de si
   // falta subirla al servidor. fotoUrl guarda la URL pública ya subida.
   TextColumn get fotoLocalPath => text().nullable()();
-  BoolColumn get fotoPendiente => boolean().withDefault(const Constant(false))();
+  BoolColumn get fotoPendiente =>
+      boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -170,31 +171,35 @@ class SyncCursores extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_abrirConexion());
 
+  /// Constructor para pruebas: permite usar una base en memoria y mantener los
+  /// tests aislados del archivo SQLite real de la app.
+  AppDatabase.forExecutor(super.executor);
+
   @override
   int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            // v2: capa de Cuenta + licencias.
-            await m.createTable(planes);
-            await m.createTable(cuentas);
-            await m.addColumn(usuarios, usuarios.cuentaId);
-            await m.addColumn(fincas, fincas.cuentaId);
-          }
-          if (from < 3) {
-            // v3: foto de la finca (ruta local + bandera de subida pendiente).
-            await m.addColumn(fincas, fincas.fotoLocalPath);
-            await m.addColumn(fincas, fincas.fotoPendiente);
-          }
-          if (from < 4) {
-            // v4: fin de la prueba gratis de 7 días en la cuenta.
-            await m.addColumn(cuentas, cuentas.pruebaTermina);
-          }
-        },
-      );
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        // v2: capa de Cuenta + licencias.
+        await m.createTable(planes);
+        await m.createTable(cuentas);
+        await m.addColumn(usuarios, usuarios.cuentaId);
+        await m.addColumn(fincas, fincas.cuentaId);
+      }
+      if (from < 3) {
+        // v3: foto de la finca (ruta local + bandera de subida pendiente).
+        await m.addColumn(fincas, fincas.fotoLocalPath);
+        await m.addColumn(fincas, fincas.fotoPendiente);
+      }
+      if (from < 4) {
+        // v4: fin de la prueba gratis de 7 días en la cuenta.
+        await m.addColumn(cuentas, cuentas.pruebaTermina);
+      }
+    },
+  );
 }
 
 QueryExecutor _abrirConexion() {
