@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services.dart';
+
 /// Pantalla principal (provisional). Por ahora solo confirma que el login
 /// funciona y permite cerrar sesión. Aquí construiremos luego la lista de
 /// fincas.
@@ -19,7 +21,7 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             tooltip: 'Cerrar sesión',
             icon: const Icon(Icons.logout),
-            onPressed: () => Supabase.instance.client.auth.signOut(),
+            onPressed: cerrarSesion,
           ),
         ],
       ),

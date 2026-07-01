@@ -8,16 +8,21 @@ import '../services.dart';
 /// Pantalla para administrar el acceso a una finca: invitar personas por correo
 /// (como administrador) y ver/quitar a quienes ya tienen acceso.
 class CompartirFincaScreen extends StatefulWidget {
-  const CompartirFincaScreen({super.key, required this.finca});
+  const CompartirFincaScreen({
+    super.key,
+    required this.finca,
+    required this.usuarioId,
+  });
 
   final FincaRow finca;
+  final String usuarioId;
 
   @override
   State<CompartirFincaScreen> createState() => _CompartirFincaScreenState();
 }
 
 class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
-  String? get _miUsuarioId => supabase.auth.currentUser?.id;
+  String get _miUsuarioId => widget.usuarioId;
 
   void _mostrar(String mensaje) {
     if (!mounted) return;
@@ -28,6 +33,11 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
 
   /// Pide un correo y comparte la finca con esa persona como administrador.
   Future<void> _invitar() async {
+    if (!estadoConexion.hayConexion.value ||
+        supabase.auth.currentSession == null) {
+      _mostrar('Conectate a internet para compartir una finca.');
+      return;
+    }
     final email = await showDialog<String>(
       context: context,
       builder: (_) => const _DialogoCompartir(),
@@ -44,7 +54,7 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
       final status = data is Map ? data['status'] as String? : null;
       switch (status) {
         case 'agregado':
-          syncService.sincronizar();
+          sincronizarSiSePuede();
           _mostrar(
             'Listo. Compartiste la finca con $email '
             'como administrador.',
@@ -52,7 +62,7 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
         case 'ya_es_miembro':
           _mostrar('Esa persona ya tiene acceso a esta finca.');
         case 'invitado_nuevo':
-          syncService.sincronizar();
+          sincronizarSiSePuede();
           _mostrar(
             'Listo. Invitamos a $email. Pedile que abra HatoControl, '
             'toque "Me invitaron a una finca", escriba su correo y siga '
@@ -103,7 +113,7 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
     );
     if (confirmar != true) return;
     await fincasRepo.quitarAcceso(m.miembro.id);
-    syncService.sincronizar();
+    sincronizarSiSePuede();
     _mostrar('Listo. Le quitaste el acceso a $quien.');
   }
 

@@ -11,9 +11,10 @@ import '../services.dart';
 /// (modo HID) cuando este campo está enfocado.
 /// Abajo se muestran todos los pesajes de HOY, agrupados por lote en pestañas.
 class PesajeScreen extends StatefulWidget {
-  const PesajeScreen({super.key, required this.finca});
+  const PesajeScreen({super.key, required this.finca, required this.usuarioId});
 
   final FincaRow finca;
+  final String usuarioId;
 
   @override
   State<PesajeScreen> createState() => _PesajeScreenState();
@@ -26,7 +27,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
   final _pesoFocus = FocusNode();
   bool _guardando = false;
 
-  String get _usuarioId => supabase.auth.currentUser!.id;
+  String get _usuarioId => widget.usuarioId;
 
   /// Inicio del día de hoy (medianoche), para filtrar los pesajes de hoy.
   DateTime get _inicioDeHoy {
@@ -102,7 +103,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
           peso: peso,
           registradoPor: _usuarioId,
         );
-        syncService.sincronizar();
+        sincronizarSiSePuede();
         _exito('Pesaje registrado: $ident — ${_pesoFmt(peso)} kg');
       } else {
         await _animalNuevo(ident, peso);
@@ -182,7 +183,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
       peso: peso,
       registradoPor: _usuarioId,
     );
-    syncService.sincronizar();
+    sincronizarSiSePuede();
     _exito('Animal "$ident" creado y pesado: ${_pesoFmt(peso)} kg');
   }
 
@@ -455,7 +456,7 @@ class _TablaLote extends StatelessWidget {
                   );
                   if (ok == true) {
                     await pesajesRepo.eliminarPesaje(f.id);
-                    syncService.sincronizar();
+                    sincronizarSiSePuede();
                   }
                   // La lista se actualiza sola por el stream; devolvemos false
                   // para no duplicar la remoción del widget.

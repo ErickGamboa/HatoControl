@@ -115,7 +115,7 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
       animalId: animal.id,
       nuevoLoteId: destino,
     );
-    syncService.sincronizar();
+    sincronizarSiSePuede();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -1,4 +1,3 @@
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -14,15 +13,31 @@ Future<void> main() async {
     anonKey: SupabaseConfig.anonKey,
   );
 
+  await sesionLocalRepo.cargar();
+  await estadoConexion.iniciar(alRecuperarConexion: syncService.sincronizar);
+
+  final usuarioInicial = supabase.auth.currentUser;
+  if (usuarioInicial != null) {
+    await sesionLocalRepo.guardarUsuarioVerificado(
+      usuarioId: usuarioInicial.id,
+      email: usuarioInicial.email,
+      nombre: usuarioInicial.userMetadata?['nombre'] as String?,
+    );
+  }
+
   // Sincronizar: al arrancar, cuando VUELVA la conexión y al iniciar sesión.
-  syncService.sincronizar();
-  Connectivity().onConnectivityChanged.listen((resultados) {
-    final hayConexion = resultados.any((r) => r != ConnectivityResult.none);
-    if (hayConexion) syncService.sincronizar();
-  });
-  supabase.auth.onAuthStateChange.listen((estado) {
+  sincronizarSiSePuede();
+  supabase.auth.onAuthStateChange.listen((estado) async {
     if (estado.event == AuthChangeEvent.signedIn) {
-      syncService.sincronizar();
+      final usuario = estado.session?.user ?? supabase.auth.currentUser;
+      if (usuario != null) {
+        await sesionLocalRepo.guardarUsuarioVerificado(
+          usuarioId: usuario.id,
+          email: usuario.email,
+          nombre: usuario.userMetadata?['nombre'] as String?,
+        );
+      }
+      sincronizarSiSePuede();
     }
   });
 

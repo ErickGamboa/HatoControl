@@ -1,8 +1,25 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+bool esErrorRedAuth(Object e) {
+  final s = e is AuthException
+      ? e.message.toLowerCase()
+      : e.toString().toLowerCase();
+  return s.contains('socketexception') ||
+      s.contains('failed host') ||
+      s.contains('clientexception') ||
+      s.contains('network') ||
+      s.contains('no route to host') ||
+      s.contains('connection') ||
+      s.contains('timeout');
+}
+
 /// Traduce los errores de autenticación de Supabase (que vienen en inglés) a
 /// mensajes claros en español para mostrar al usuario.
 String traducirErrorAuth(Object e) {
+  if (esErrorRedAuth(e)) {
+    return 'No hay conexión a internet. Podés entrar sin conexión si ya usaste esta cuenta en este dispositivo.';
+  }
+
   if (e is AuthException) {
     // Primero por código (lo más confiable).
     switch (e.code) {
@@ -36,13 +53,5 @@ String traducirErrorAuth(Object e) {
     return 'No se pudo iniciar sesión. Intentá de nuevo.';
   }
 
-  // Errores que no son de Auth (típicamente red).
-  final s = e.toString().toLowerCase();
-  if (s.contains('socketexception') ||
-      s.contains('failed host') ||
-      s.contains('clientexception') ||
-      s.contains('network')) {
-    return 'No hay conexión a internet. Revisá tu conexión e intentá de nuevo.';
-  }
   return 'Ocurrió un error. Intentá de nuevo.';
 }

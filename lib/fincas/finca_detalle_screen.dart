@@ -11,9 +11,16 @@ import 'foto_picker.dart';
 
 /// Detalle de una finca: menú de opciones (botonera) + editar la finca.
 class FincaDetalleScreen extends StatefulWidget {
-  const FincaDetalleScreen({super.key, required this.finca});
+  const FincaDetalleScreen({
+    super.key,
+    required this.finca,
+    required this.usuarioId,
+    required this.sinConexion,
+  });
 
   final FincaRow finca;
+  final String usuarioId;
+  final bool sinConexion;
 
   @override
   State<FincaDetalleScreen> createState() => _FincaDetalleScreenState();
@@ -34,7 +41,7 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
       nombre: nombre,
       nuevaFotoLocalPath: nuevaFotoPath,
     );
-    syncService.sincronizar();
+    sincronizarSiSePuede();
   }
 
   void _abrir(Widget pantalla) {
@@ -56,7 +63,14 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
               IconButton(
                 tooltip: 'Compartir finca',
                 icon: const Icon(Icons.person_add_alt_1),
-                onPressed: () => _abrir(CompartirFincaScreen(finca: finca)),
+                onPressed: widget.sinConexion
+                    ? null
+                    : () => _abrir(
+                        CompartirFincaScreen(
+                          finca: finca,
+                          usuarioId: widget.usuarioId,
+                        ),
+                      ),
               ),
               IconButton(
                 tooltip: 'Editar finca',
@@ -81,7 +95,9 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
                   color: theme.colorScheme.primary,
                 ),
                 label: 'Pesaje',
-                onTap: () => _abrir(PesajeScreen(finca: finca)),
+                onTap: () => _abrir(
+                  PesajeScreen(finca: finca, usuarioId: widget.usuarioId),
+                ),
               ),
               _BotonOpcion(
                 key: const ValueKey('fincaDetail.lotes'),

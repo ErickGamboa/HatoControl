@@ -10,7 +10,14 @@ import 'foto_picker.dart';
 
 /// Lista de fincas del usuario, con opción de crear (con foto) y sincronizar.
 class FincasScreen extends StatefulWidget {
-  const FincasScreen({super.key});
+  const FincasScreen({
+    super.key,
+    required this.usuarioId,
+    required this.sinConexion,
+  });
+
+  final String usuarioId;
+  final bool sinConexion;
 
   @override
   State<FincasScreen> createState() => _FincasScreenState();
@@ -22,7 +29,7 @@ class _FincasScreenState extends State<FincasScreen> {
   @override
   void initState() {
     super.initState();
-    syncService.sincronizar();
+    sincronizarSiSePuede();
     _cargarEstado();
     syncService.sincronizando.addListener(_alCambiarSync);
   }
@@ -37,7 +44,7 @@ class _FincasScreenState extends State<FincasScreen> {
     if (!syncService.sincronizando.value) _cargarEstado();
   }
 
-  String get _usuarioId => supabase.auth.currentUser!.id;
+  String get _usuarioId => widget.usuarioId;
 
   Future<void> _cargarEstado() async {
     final estado = await fincasRepo.estadoLicencia(_usuarioId);
@@ -73,7 +80,7 @@ class _FincasScreenState extends State<FincasScreen> {
         creadaPor: _usuarioId,
         fotoLocalPath: fotoLocalPath,
       );
-      syncService.sincronizar();
+      sincronizarSiSePuede();
       await _cargarEstado();
     } on LimiteFincasException catch (e) {
       _mostrar(
@@ -92,29 +99,40 @@ class _FincasScreenState extends State<FincasScreen> {
         title: const Text('Mis fincas'),
         actions: [
           ValueListenableBuilder<bool>(
-            valueListenable: syncService.sincronizando,
-            builder: (context, sincronizando, _) {
-              if (sincronizando) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                );
-              }
-              return IconButton(
-                tooltip: 'Sincronizar',
-                icon: const Icon(Icons.sync),
-                onPressed: () => syncService.sincronizar(),
+            valueListenable: estadoConexion.hayConexion,
+            builder: (context, hayConexion, _) {
+              return ValueListenableBuilder<bool>(
+                valueListenable: syncService.sincronizando,
+                builder: (context, sincronizando, _) {
+                  if (sincronizando) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  }
+                  final puedeSincronizar =
+                      hayConexion && supabase.auth.currentSession != null;
+                  return IconButton(
+                    tooltip: puedeSincronizar
+                        ? 'Sincronizar'
+                        : 'Sin conexión para sincronizar',
+                    icon: const Icon(Icons.sync),
+                    onPressed: puedeSincronizar
+                        ? () => sincronizarSiSePuede()
+                        : null,
+                  );
+                },
               );
             },
           ),
           IconButton(
             tooltip: 'Cerrar sesión',
             icon: const Icon(Icons.logout),
-            onPressed: () => supabase.auth.signOut(),
+            onPressed: cerrarSesion,
           ),
         ],
       ),
@@ -126,6 +144,17 @@ class _FincasScreenState extends State<FincasScreen> {
       ),
       body: Column(
         children: [
+          ValueListenableBuilder<bool>(
+            valueListenable: estadoConexion.hayConexion,
+            builder: (context, hayConexion, _) {
+              if (hayConexion && !widget.sinConexion) {
+                return const SizedBox.shrink();
+              }
+              return _BannerSinConexion(
+                requiereSesionOnline: hayConexion && widget.sinConexion,
+              );
+            },
+          ),
           if (_estado != null) _BannerLicencia(estado: _estado!),
           Expanded(
             child: StreamBuilder<List<FincaRow>>(
@@ -146,7 +175,11 @@ class _FincasScreenState extends State<FincasScreen> {
                     finca: fincas[i],
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => FincaDetalleScreen(finca: fincas[i]),
+                        builder: (_) => FincaDetalleScreen(
+                          finca: fincas[i],
+                          usuarioId: _usuarioId,
+                          sinConexion: widget.sinConexion,
+                        ),
                       ),
                     ),
                   ),
@@ -416,6 +449,44 @@ class _BannerLicencia extends StatelessWidget {
             child: Text(
               'Plan ${estado.planNombre} · ${estado.usadas} de ${estado.limite} fincas',
               style: theme.textTheme.bodyMedium?.copyWith(color: textColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BannerSinConexion extends StatelessWidget {
+  const _BannerSinConexion({required this.requiereSesionOnline});
+
+  final bool requiereSesionOnline;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      color: theme.colorScheme.secondaryContainer,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Icon(
+            requiereSesionOnline
+                ? Icons.lock_clock_outlined
+                : Icons.cloud_off_outlined,
+            size: 20,
+            color: theme.colorScheme.onSecondaryContainer,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              requiereSesionOnline
+                  ? 'Entraste sin conexión. Iniciá sesión online para sincronizar los cambios pendientes.'
+                  : 'Sin conexión. Podés trabajar con datos guardados; los cambios quedarán pendientes.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+              ),
             ),
           ),
         ],

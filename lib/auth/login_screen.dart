@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/local/database.dart';
+import '../services.dart';
 import 'invitado_screen.dart';
 import 'mensajes_auth.dart';
 
@@ -21,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _esRegistro = false; // false = iniciar sesión, true = crear cuenta
   bool _cargando = false;
   bool _verPass = false;
+  bool _falloRedReciente = false;
 
   @override
   void dispose() {
@@ -45,6 +48,10 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
         // Si el proyecto exige confirmación por correo, no habrá sesión aún.
         final haySesion = auth.currentSession != null;
+        final usuario = auth.currentUser;
+        if (haySesion && usuario != null) {
+          await _guardarSesionOnline(usuario);
+        }
         _mostrarMensaje(
           haySesion
               ? '¡Cuenta creada! Bienvenido.'
@@ -56,15 +63,46 @@ class _LoginScreenState extends State<LoginScreen> {
           email: _emailCtrl.text.trim(),
           password: _passCtrl.text,
         );
+        final usuario = auth.currentUser;
+        if (usuario != null) {
+          await _guardarSesionOnline(usuario);
+        }
         // El AuthGate detecta la sesión y cambia de pantalla solo.
       }
+      _falloRedReciente = false;
     } on AuthException catch (e) {
+      _falloRedReciente = esErrorRedAuth(e);
+      if (_falloRedReciente && !_esRegistro) {
+        final entroOffline = await sesionLocalRepo.activarOfflineParaEmail(
+          _emailCtrl.text,
+        );
+        if (entroOffline) return;
+      }
       if (mounted) _mostrarMensaje(traducirErrorAuth(e), error: true);
     } catch (e) {
+      _falloRedReciente = esErrorRedAuth(e);
+      if (_falloRedReciente && !_esRegistro) {
+        final entroOffline = await sesionLocalRepo.activarOfflineParaEmail(
+          _emailCtrl.text,
+        );
+        if (entroOffline) return;
+      }
       if (mounted) _mostrarMensaje(traducirErrorAuth(e), error: true);
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
+  }
+
+  Future<void> _guardarSesionOnline(User usuario) {
+    return sesionLocalRepo.guardarUsuarioVerificado(
+      usuarioId: usuario.id,
+      email: usuario.email,
+      nombre: usuario.userMetadata?['nombre'] as String?,
+    );
+  }
+
+  Future<void> _entrarSinConexion() async {
+    await sesionLocalRepo.activarOffline();
   }
 
   void _mostrarMensaje(String texto, {bool error = false}) {
@@ -199,6 +237,25 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
+                    if (!_esRegistro)
+                      ValueListenableBuilder<SesionLocalRow?>(
+                        valueListenable: sesionLocalRepo.sesion,
+                        builder: (context, sesionLocal, _) {
+                          return ValueListenableBuilder<bool>(
+                            valueListenable: estadoConexion.hayConexion,
+                            builder: (context, hayConexion, _) {
+                              return OfflineLoginAction(
+                                sesionLocal: sesionLocal,
+                                hayConexion: hayConexion,
+                                falloRedReciente: _falloRedReciente,
+                                cargando: _cargando,
+                                onEntrarSinConexion: _entrarSinConexion,
+                              );
+                            },
+                          );
+                        },
+                      ),
+
                     // Acceso para personas a las que les compartieron una finca.
                     if (!_esRegistro) ...[
                       const Divider(height: 24),
@@ -224,6 +281,65 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class OfflineLoginAction extends StatelessWidget {
+  const OfflineLoginAction({
+    super.key,
+    required this.sesionLocal,
+    required this.hayConexion,
+    required this.falloRedReciente,
+    required this.cargando,
+    required this.onEntrarSinConexion,
+  });
+
+  final SesionLocalRow? sesionLocal;
+  final bool hayConexion;
+  final bool falloRedReciente;
+  final bool cargando;
+  final VoidCallback onEntrarSinConexion;
+
+  @override
+  Widget build(BuildContext context) {
+    final sesion = sesionLocal;
+    if (sesion == null) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final usuario = sesion.email ?? sesion.nombre;
+    final necesitaAyudaOffline = !hayConexion || falloRedReciente;
+    final textoAyuda = necesitaAyudaOffline
+        ? 'Usarás los datos guardados en este dispositivo. '
+              'La sincronización se retomará cuando vuelva internet.'
+        : 'Disponible para trabajar con datos guardados si no tenés internet.';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const ValueKey('login.offline'),
+          onPressed: cargando ? null : onEntrarSinConexion,
+          icon: const Icon(Icons.cloud_off_outlined),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          label: Text(
+            usuario == null
+                ? 'Entrar sin conexión'
+                : 'Entrar sin conexión como $usuario',
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          textoAyuda,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.outline,
+          ),
+        ),
+      ],
     );
   }
 }

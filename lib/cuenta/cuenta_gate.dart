@@ -13,7 +13,14 @@ import 'suspendida_screen.dart';
 /// Es reactivo: cuando el admin la reactiva o le asigna un plan (y se
 /// sincroniza), la pantalla cambia sola.
 class CuentaGate extends StatefulWidget {
-  const CuentaGate({super.key});
+  const CuentaGate({
+    super.key,
+    required this.usuarioId,
+    required this.sinConexion,
+  });
+
+  final String usuarioId;
+  final bool sinConexion;
 
   @override
   State<CuentaGate> createState() => _CuentaGateState();
@@ -24,15 +31,13 @@ class _CuentaGateState extends State<CuentaGate> {
   void initState() {
     super.initState();
     // Asegurar que bajamos el estado actual de la cuenta.
-    syncService.sincronizar();
+    sincronizarSiSePuede();
   }
-
-  String get _usuarioId => supabase.auth.currentUser!.id;
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<CuentaRow?>(
-      stream: cuentasRepo.observarMiCuenta(_usuarioId),
+      stream: cuentasRepo.observarMiCuenta(widget.usuarioId),
       builder: (context, snapshot) {
         final cuenta = snapshot.data;
         // Mientras no conocemos la cuenta (aún sin sincronizar), dejamos entrar;
@@ -52,7 +57,10 @@ class _CuentaGateState extends State<CuentaGate> {
             return const SuscripcionScreen();
           }
         }
-        return const FincasScreen();
+        return FincasScreen(
+          usuarioId: widget.usuarioId,
+          sinConexion: widget.sinConexion,
+        );
       },
     );
   }

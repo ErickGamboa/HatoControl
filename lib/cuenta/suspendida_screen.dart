@@ -40,7 +40,7 @@ class SuspendidaScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 FilledButton.icon(
-                  onPressed: () => syncService.sincronizar(),
+                  onPressed: () => sincronizarSiSePuede(),
                   icon: const Icon(Icons.refresh),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
@@ -52,7 +52,7 @@ class SuspendidaScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 TextButton.icon(
-                  onPressed: () => supabase.auth.signOut(),
+                  onPressed: cerrarSesion,
                   icon: const Icon(Icons.logout),
                   label: const Text('Cerrar sesión'),
                 ),

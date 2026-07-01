@@ -155,6 +155,22 @@ class SyncCursores extends Table {
   Set<Column> get primaryKey => {tabla};
 }
 
+/// Identidad verificada localmente para permitir entrar sin conexión después
+/// de un inicio de sesión exitoso en este dispositivo.
+@DataClassName('SesionLocalRow')
+class SesionesLocales extends Table {
+  TextColumn get id => text()(); // fila única: 'actual'
+  TextColumn get usuarioId => text()();
+  TextColumn get email => text().nullable()();
+  TextColumn get nombre => text().nullable()();
+  DateTimeColumn get ultimoLoginOnline => dateTime()();
+  BoolColumn get offlineActiva =>
+      boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Planes,
@@ -166,6 +182,7 @@ class SyncCursores extends Table {
     Animales,
     Pesajes,
     SyncCursores,
+    SesionesLocales,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -176,7 +193,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -197,6 +214,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) {
         // v4: fin de la prueba gratis de 7 días en la cuenta.
         await m.addColumn(cuentas, cuentas.pruebaTermina);
+      }
+      if (from < 5) {
+        // v5: identidad local para entrar sin conexión tras login online.
+        await m.createTable(sesionesLocales);
       }
     },
   );

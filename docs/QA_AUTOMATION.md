@@ -86,8 +86,43 @@ dart run build_runner build --delete-conflicting-outputs
 - App handles no connection on startup.
 - Account suspended screen works if server marks account suspended.
 
+### Offline login evaluators
+- `test/auth/login_screen_offline_action_test.dart` must keep passing. It is
+  the regression test for the iPhone case where `connectivity_plus` reports a
+  connection but Supabase cannot be reached: a cached user must still see
+  `Entrar sin conexión`.
+- `test/auth/mensajes_auth_test.dart` must keep passing. Supabase auth errors
+  caused by network failures must be treated as offline-capable failures, not
+  as incorrect credentials.
+- `test/repositories/sesion_local_repository_test.dart` must keep passing. It
+  protects the local verified-user state machine: save after online login,
+  activate offline entry, and clear local access on explicit sign-out.
+- `integration_test/offline_login_cached_session_test.dart` must keep passing
+  on at least one local device target. It validates the cached user id through
+  account, finca, lote, and pesaje flows with pending local writes.
+
+Run the offline-login evaluator set:
+
+```bash
+flutter test test/auth test/repositories/sesion_local_repository_test.dart
+flutter test -d macos integration_test/offline_login_cached_session_test.dart
+```
+
+On a physical iPhone, Flutter may fail before tests run if macOS has not granted
+Local Network access to the terminal/IDE. Grant it in System Settings > Privacy
+& Security > Local Network, then rerun with:
+
+```bash
+flutter test -d "iPhone (5)" integration_test/offline_login_cached_session_test.dart
+```
+
+Keyboard `TUIKeyboardContentView` unsatisfiable-constraint logs are iOS system
+keyboard noise unless paired with a Flutter exception or app process crash.
+
 ### Offline-first
 - Turn off network.
+- Confirm a previously logged-in user can see and tap `Entrar sin conexión`
+  from the login screen.
 - Create finca, lote, animal, and pesaje.
 - Reopen app: data still appears.
 - Turn network on: sync uploads pending rows.

@@ -4391,6 +4391,434 @@ class SyncCursoresCompanion extends UpdateCompanion<SyncCursorRow> {
   }
 }
 
+class $SesionesLocalesTable extends SesionesLocales
+    with TableInfo<$SesionesLocalesTable, SesionLocalRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SesionesLocalesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _usuarioIdMeta = const VerificationMeta(
+    'usuarioId',
+  );
+  @override
+  late final GeneratedColumn<String> usuarioId = GeneratedColumn<String>(
+    'usuario_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _emailMeta = const VerificationMeta('email');
+  @override
+  late final GeneratedColumn<String> email = GeneratedColumn<String>(
+    'email',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nombreMeta = const VerificationMeta('nombre');
+  @override
+  late final GeneratedColumn<String> nombre = GeneratedColumn<String>(
+    'nombre',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ultimoLoginOnlineMeta = const VerificationMeta(
+    'ultimoLoginOnline',
+  );
+  @override
+  late final GeneratedColumn<DateTime> ultimoLoginOnline =
+      GeneratedColumn<DateTime>(
+        'ultimo_login_online',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _offlineActivaMeta = const VerificationMeta(
+    'offlineActiva',
+  );
+  @override
+  late final GeneratedColumn<bool> offlineActiva = GeneratedColumn<bool>(
+    'offline_activa',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("offline_activa" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    usuarioId,
+    email,
+    nombre,
+    ultimoLoginOnline,
+    offlineActiva,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sesiones_locales';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SesionLocalRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('usuario_id')) {
+      context.handle(
+        _usuarioIdMeta,
+        usuarioId.isAcceptableOrUnknown(data['usuario_id']!, _usuarioIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_usuarioIdMeta);
+    }
+    if (data.containsKey('email')) {
+      context.handle(
+        _emailMeta,
+        email.isAcceptableOrUnknown(data['email']!, _emailMeta),
+      );
+    }
+    if (data.containsKey('nombre')) {
+      context.handle(
+        _nombreMeta,
+        nombre.isAcceptableOrUnknown(data['nombre']!, _nombreMeta),
+      );
+    }
+    if (data.containsKey('ultimo_login_online')) {
+      context.handle(
+        _ultimoLoginOnlineMeta,
+        ultimoLoginOnline.isAcceptableOrUnknown(
+          data['ultimo_login_online']!,
+          _ultimoLoginOnlineMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ultimoLoginOnlineMeta);
+    }
+    if (data.containsKey('offline_activa')) {
+      context.handle(
+        _offlineActivaMeta,
+        offlineActiva.isAcceptableOrUnknown(
+          data['offline_activa']!,
+          _offlineActivaMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SesionLocalRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SesionLocalRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      usuarioId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}usuario_id'],
+      )!,
+      email: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}email'],
+      ),
+      nombre: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nombre'],
+      ),
+      ultimoLoginOnline: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}ultimo_login_online'],
+      )!,
+      offlineActiva: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}offline_activa'],
+      )!,
+    );
+  }
+
+  @override
+  $SesionesLocalesTable createAlias(String alias) {
+    return $SesionesLocalesTable(attachedDatabase, alias);
+  }
+}
+
+class SesionLocalRow extends DataClass implements Insertable<SesionLocalRow> {
+  final String id;
+  final String usuarioId;
+  final String? email;
+  final String? nombre;
+  final DateTime ultimoLoginOnline;
+  final bool offlineActiva;
+  const SesionLocalRow({
+    required this.id,
+    required this.usuarioId,
+    this.email,
+    this.nombre,
+    required this.ultimoLoginOnline,
+    required this.offlineActiva,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['usuario_id'] = Variable<String>(usuarioId);
+    if (!nullToAbsent || email != null) {
+      map['email'] = Variable<String>(email);
+    }
+    if (!nullToAbsent || nombre != null) {
+      map['nombre'] = Variable<String>(nombre);
+    }
+    map['ultimo_login_online'] = Variable<DateTime>(ultimoLoginOnline);
+    map['offline_activa'] = Variable<bool>(offlineActiva);
+    return map;
+  }
+
+  SesionesLocalesCompanion toCompanion(bool nullToAbsent) {
+    return SesionesLocalesCompanion(
+      id: Value(id),
+      usuarioId: Value(usuarioId),
+      email: email == null && nullToAbsent
+          ? const Value.absent()
+          : Value(email),
+      nombre: nombre == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nombre),
+      ultimoLoginOnline: Value(ultimoLoginOnline),
+      offlineActiva: Value(offlineActiva),
+    );
+  }
+
+  factory SesionLocalRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SesionLocalRow(
+      id: serializer.fromJson<String>(json['id']),
+      usuarioId: serializer.fromJson<String>(json['usuarioId']),
+      email: serializer.fromJson<String?>(json['email']),
+      nombre: serializer.fromJson<String?>(json['nombre']),
+      ultimoLoginOnline: serializer.fromJson<DateTime>(
+        json['ultimoLoginOnline'],
+      ),
+      offlineActiva: serializer.fromJson<bool>(json['offlineActiva']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'usuarioId': serializer.toJson<String>(usuarioId),
+      'email': serializer.toJson<String?>(email),
+      'nombre': serializer.toJson<String?>(nombre),
+      'ultimoLoginOnline': serializer.toJson<DateTime>(ultimoLoginOnline),
+      'offlineActiva': serializer.toJson<bool>(offlineActiva),
+    };
+  }
+
+  SesionLocalRow copyWith({
+    String? id,
+    String? usuarioId,
+    Value<String?> email = const Value.absent(),
+    Value<String?> nombre = const Value.absent(),
+    DateTime? ultimoLoginOnline,
+    bool? offlineActiva,
+  }) => SesionLocalRow(
+    id: id ?? this.id,
+    usuarioId: usuarioId ?? this.usuarioId,
+    email: email.present ? email.value : this.email,
+    nombre: nombre.present ? nombre.value : this.nombre,
+    ultimoLoginOnline: ultimoLoginOnline ?? this.ultimoLoginOnline,
+    offlineActiva: offlineActiva ?? this.offlineActiva,
+  );
+  SesionLocalRow copyWithCompanion(SesionesLocalesCompanion data) {
+    return SesionLocalRow(
+      id: data.id.present ? data.id.value : this.id,
+      usuarioId: data.usuarioId.present ? data.usuarioId.value : this.usuarioId,
+      email: data.email.present ? data.email.value : this.email,
+      nombre: data.nombre.present ? data.nombre.value : this.nombre,
+      ultimoLoginOnline: data.ultimoLoginOnline.present
+          ? data.ultimoLoginOnline.value
+          : this.ultimoLoginOnline,
+      offlineActiva: data.offlineActiva.present
+          ? data.offlineActiva.value
+          : this.offlineActiva,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SesionLocalRow(')
+          ..write('id: $id, ')
+          ..write('usuarioId: $usuarioId, ')
+          ..write('email: $email, ')
+          ..write('nombre: $nombre, ')
+          ..write('ultimoLoginOnline: $ultimoLoginOnline, ')
+          ..write('offlineActiva: $offlineActiva')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    usuarioId,
+    email,
+    nombre,
+    ultimoLoginOnline,
+    offlineActiva,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SesionLocalRow &&
+          other.id == this.id &&
+          other.usuarioId == this.usuarioId &&
+          other.email == this.email &&
+          other.nombre == this.nombre &&
+          other.ultimoLoginOnline == this.ultimoLoginOnline &&
+          other.offlineActiva == this.offlineActiva);
+}
+
+class SesionesLocalesCompanion extends UpdateCompanion<SesionLocalRow> {
+  final Value<String> id;
+  final Value<String> usuarioId;
+  final Value<String?> email;
+  final Value<String?> nombre;
+  final Value<DateTime> ultimoLoginOnline;
+  final Value<bool> offlineActiva;
+  final Value<int> rowid;
+  const SesionesLocalesCompanion({
+    this.id = const Value.absent(),
+    this.usuarioId = const Value.absent(),
+    this.email = const Value.absent(),
+    this.nombre = const Value.absent(),
+    this.ultimoLoginOnline = const Value.absent(),
+    this.offlineActiva = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SesionesLocalesCompanion.insert({
+    required String id,
+    required String usuarioId,
+    this.email = const Value.absent(),
+    this.nombre = const Value.absent(),
+    required DateTime ultimoLoginOnline,
+    this.offlineActiva = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       usuarioId = Value(usuarioId),
+       ultimoLoginOnline = Value(ultimoLoginOnline);
+  static Insertable<SesionLocalRow> custom({
+    Expression<String>? id,
+    Expression<String>? usuarioId,
+    Expression<String>? email,
+    Expression<String>? nombre,
+    Expression<DateTime>? ultimoLoginOnline,
+    Expression<bool>? offlineActiva,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (usuarioId != null) 'usuario_id': usuarioId,
+      if (email != null) 'email': email,
+      if (nombre != null) 'nombre': nombre,
+      if (ultimoLoginOnline != null) 'ultimo_login_online': ultimoLoginOnline,
+      if (offlineActiva != null) 'offline_activa': offlineActiva,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SesionesLocalesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? usuarioId,
+    Value<String?>? email,
+    Value<String?>? nombre,
+    Value<DateTime>? ultimoLoginOnline,
+    Value<bool>? offlineActiva,
+    Value<int>? rowid,
+  }) {
+    return SesionesLocalesCompanion(
+      id: id ?? this.id,
+      usuarioId: usuarioId ?? this.usuarioId,
+      email: email ?? this.email,
+      nombre: nombre ?? this.nombre,
+      ultimoLoginOnline: ultimoLoginOnline ?? this.ultimoLoginOnline,
+      offlineActiva: offlineActiva ?? this.offlineActiva,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (usuarioId.present) {
+      map['usuario_id'] = Variable<String>(usuarioId.value);
+    }
+    if (email.present) {
+      map['email'] = Variable<String>(email.value);
+    }
+    if (nombre.present) {
+      map['nombre'] = Variable<String>(nombre.value);
+    }
+    if (ultimoLoginOnline.present) {
+      map['ultimo_login_online'] = Variable<DateTime>(ultimoLoginOnline.value);
+    }
+    if (offlineActiva.present) {
+      map['offline_activa'] = Variable<bool>(offlineActiva.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SesionesLocalesCompanion(')
+          ..write('id: $id, ')
+          ..write('usuarioId: $usuarioId, ')
+          ..write('email: $email, ')
+          ..write('nombre: $nombre, ')
+          ..write('ultimoLoginOnline: $ultimoLoginOnline, ')
+          ..write('offlineActiva: $offlineActiva, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4403,6 +4831,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AnimalesTable animales = $AnimalesTable(this);
   late final $PesajesTable pesajes = $PesajesTable(this);
   late final $SyncCursoresTable syncCursores = $SyncCursoresTable(this);
+  late final $SesionesLocalesTable sesionesLocales = $SesionesLocalesTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4417,6 +4848,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     animales,
     pesajes,
     syncCursores,
+    sesionesLocales,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -6615,6 +7047,235 @@ typedef $$SyncCursoresTableProcessedTableManager =
       SyncCursorRow,
       PrefetchHooks Function()
     >;
+typedef $$SesionesLocalesTableCreateCompanionBuilder =
+    SesionesLocalesCompanion Function({
+      required String id,
+      required String usuarioId,
+      Value<String?> email,
+      Value<String?> nombre,
+      required DateTime ultimoLoginOnline,
+      Value<bool> offlineActiva,
+      Value<int> rowid,
+    });
+typedef $$SesionesLocalesTableUpdateCompanionBuilder =
+    SesionesLocalesCompanion Function({
+      Value<String> id,
+      Value<String> usuarioId,
+      Value<String?> email,
+      Value<String?> nombre,
+      Value<DateTime> ultimoLoginOnline,
+      Value<bool> offlineActiva,
+      Value<int> rowid,
+    });
+
+class $$SesionesLocalesTableFilterComposer
+    extends Composer<_$AppDatabase, $SesionesLocalesTable> {
+  $$SesionesLocalesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get usuarioId => $composableBuilder(
+    column: $table.usuarioId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get ultimoLoginOnline => $composableBuilder(
+    column: $table.ultimoLoginOnline,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get offlineActiva => $composableBuilder(
+    column: $table.offlineActiva,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SesionesLocalesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SesionesLocalesTable> {
+  $$SesionesLocalesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get usuarioId => $composableBuilder(
+    column: $table.usuarioId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get ultimoLoginOnline => $composableBuilder(
+    column: $table.ultimoLoginOnline,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get offlineActiva => $composableBuilder(
+    column: $table.offlineActiva,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SesionesLocalesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SesionesLocalesTable> {
+  $$SesionesLocalesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get usuarioId =>
+      $composableBuilder(column: $table.usuarioId, builder: (column) => column);
+
+  GeneratedColumn<String> get email =>
+      $composableBuilder(column: $table.email, builder: (column) => column);
+
+  GeneratedColumn<String> get nombre =>
+      $composableBuilder(column: $table.nombre, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get ultimoLoginOnline => $composableBuilder(
+    column: $table.ultimoLoginOnline,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get offlineActiva => $composableBuilder(
+    column: $table.offlineActiva,
+    builder: (column) => column,
+  );
+}
+
+class $$SesionesLocalesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SesionesLocalesTable,
+          SesionLocalRow,
+          $$SesionesLocalesTableFilterComposer,
+          $$SesionesLocalesTableOrderingComposer,
+          $$SesionesLocalesTableAnnotationComposer,
+          $$SesionesLocalesTableCreateCompanionBuilder,
+          $$SesionesLocalesTableUpdateCompanionBuilder,
+          (
+            SesionLocalRow,
+            BaseReferences<
+              _$AppDatabase,
+              $SesionesLocalesTable,
+              SesionLocalRow
+            >,
+          ),
+          SesionLocalRow,
+          PrefetchHooks Function()
+        > {
+  $$SesionesLocalesTableTableManager(
+    _$AppDatabase db,
+    $SesionesLocalesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SesionesLocalesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SesionesLocalesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SesionesLocalesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> usuarioId = const Value.absent(),
+                Value<String?> email = const Value.absent(),
+                Value<String?> nombre = const Value.absent(),
+                Value<DateTime> ultimoLoginOnline = const Value.absent(),
+                Value<bool> offlineActiva = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SesionesLocalesCompanion(
+                id: id,
+                usuarioId: usuarioId,
+                email: email,
+                nombre: nombre,
+                ultimoLoginOnline: ultimoLoginOnline,
+                offlineActiva: offlineActiva,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String usuarioId,
+                Value<String?> email = const Value.absent(),
+                Value<String?> nombre = const Value.absent(),
+                required DateTime ultimoLoginOnline,
+                Value<bool> offlineActiva = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SesionesLocalesCompanion.insert(
+                id: id,
+                usuarioId: usuarioId,
+                email: email,
+                nombre: nombre,
+                ultimoLoginOnline: ultimoLoginOnline,
+                offlineActiva: offlineActiva,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SesionesLocalesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SesionesLocalesTable,
+      SesionLocalRow,
+      $$SesionesLocalesTableFilterComposer,
+      $$SesionesLocalesTableOrderingComposer,
+      $$SesionesLocalesTableAnnotationComposer,
+      $$SesionesLocalesTableCreateCompanionBuilder,
+      $$SesionesLocalesTableUpdateCompanionBuilder,
+      (
+        SesionLocalRow,
+        BaseReferences<_$AppDatabase, $SesionesLocalesTable, SesionLocalRow>,
+      ),
+      SesionLocalRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6637,4 +7298,6 @@ class $AppDatabaseManager {
       $$PesajesTableTableManager(_db, _db.pesajes);
   $$SyncCursoresTableTableManager get syncCursores =>
       $$SyncCursoresTableTableManager(_db, _db.syncCursores);
+  $$SesionesLocalesTableTableManager get sesionesLocales =>
+      $$SesionesLocalesTableTableManager(_db, _db.sesionesLocales);
 }

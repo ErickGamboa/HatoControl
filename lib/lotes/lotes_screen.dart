@@ -81,7 +81,7 @@ class LotesScreen extends StatelessWidget {
         numero: numero,
       );
     }
-    syncService.sincronizar();
+    sincronizarSiSePuede();
   }
 
   @override
