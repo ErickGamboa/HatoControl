@@ -44,6 +44,24 @@ class AnimalSanidadTab extends StatelessWidget {
     sincronizarSiSePuede();
   }
 
+  Future<void> _repetirUltimo(BuildContext context) async {
+    final ok = await repo.repetirUltimoEvento(
+      animalId: animal.id,
+      responsableId: responsableId,
+    );
+    if (!context.mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay tratamientos previos.')),
+      );
+      return;
+    }
+    sincronizarSiSePuede();
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Tratamiento repetido.')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -100,6 +118,16 @@ class AnimalSanidadTab extends StatelessWidget {
               },
             );
           },
+        ),
+        Positioned(
+          right: 16,
+          bottom: 80,
+          child: FloatingActionButton.small(
+            heroTag: 'repeat_sanidad',
+            onPressed: () => _repetirUltimo(context),
+            tooltip: 'Repetir último tratamiento',
+            child: const Icon(Icons.replay),
+          ),
         ),
         Positioned(
           right: 16,

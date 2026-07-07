@@ -97,6 +97,43 @@ Run the sanidad evaluator set:
 flutter test test/repositories/sanidad_repository_test.dart
 ```
 
+## Corral evaluator set (módulo 3c)
+
+- `test/corral/corral_screen_test.dart` — arete + peso + guardar (≤3 taps).
+
+```bash
+flutter test test/corral
+```
+
+## Ventas / economía evaluator set (módulo 4)
+
+- `test/estadisticas/estadisticas_economicas_test.dart` — utilidad, margen,
+  rentabilidad; fixture roadmap (₡520k + ₡95k + ₡18k → ₡147k on ₡780k venta).
+- `test/repositories/ventas_repository_test.dart` — venta, resumen con sanidad,
+  repetir último evento.
+- `test/lotes/animal_ficha_screen_test.dart` — pestaña Economía.
+
+```bash
+flutter test test/estadisticas/estadisticas_economicas_test.dart test/repositories/ventas_repository_test.dart test/lotes/animal_ficha_screen_test.dart
+```
+
+## Demo dataset + visible tour
+
+Offline mock finca with realistic data (pesajes, dietas, sanidad, venta/rentabilidad):
+
+| Command | What it does |
+|---------|----------------|
+| `./scripts/run_demo.sh macos` | Run app with `SEED_DEMO=1` → **Hacienda Demo HatoControl** |
+| `./scripts/run_demo_tour.sh macos` | Automated slow tour (integration test) |
+
+Demo animals: **1001** (corral + pesajes), **1002** (economía), **3001** (vendido).
+
+```bash
+flutter test test/demo/demo_seed_test.dart
+flutter test -d macos integration_test/demo_tour_test.dart \
+  --dart-define=SEED_DEMO=1 --dart-define=HATO_E2E_SLOW_MS=900
+```
+
 ## CI
 `.github/workflows/ci.yml` runs on macOS: format, analyze, unit tests, and
 **macOS integration tests** (app smoke + offline flows). Reference:

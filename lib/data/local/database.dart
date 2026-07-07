@@ -118,6 +118,11 @@ class Animales extends Table {
   TextColumn get fincaId => text()();
   TextColumn get loteId => text()();
   TextColumn get identificador => text()();
+
+  /// activo | vendido | muerto (D-08)
+  TextColumn get estado => text().withDefault(const Constant('activo'))();
+  RealColumn get precioCompra => real().nullable()();
+  DateTimeColumn get fechaCompra => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -203,6 +208,41 @@ class EventosSanitarios extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Venta de un animal (Module 4). Al registrar, el animal pasa a estado vendido.
+@DataClassName('VentaRow')
+class Ventas extends Table {
+  TextColumn get id => text()();
+  TextColumn get animalId => text()();
+  DateTimeColumn get fecha => dateTime()();
+  RealColumn get precio => real()();
+  TextColumn get comprador => text().nullable()();
+  TextColumn get observaciones => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Otros costos directos del animal (Module 4).
+@DataClassName('CostoOtroRow')
+class CostosOtros extends Table {
+  TextColumn get id => text()();
+  TextColumn get animalId => text()();
+  TextColumn get concepto => text()();
+  RealColumn get monto => real()();
+  DateTimeColumn get fecha => dateTime()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DataClassName('PesajeRow')
 class Pesajes extends Table {
   TextColumn get id => text()();
@@ -261,6 +301,8 @@ class SesionesLocales extends Table {
     LoteDietas,
     MovimientosLote,
     EventosSanitarios,
+    Ventas,
+    CostosOtros,
     SyncCursores,
     SesionesLocales,
   ],
@@ -273,7 +315,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -316,6 +358,17 @@ class AppDatabase extends _$AppDatabase {
       if (from < 8) {
         // v8: eventos sanitarios por animal.
         await m.createTable(eventosSanitarios);
+      }
+      if (from < 9) {
+        // v9: economía — compra, venta, otros costos, estado del animal.
+        await m.addColumn(animales, animales.estado);
+        await m.addColumn(animales, animales.precioCompra);
+        await m.addColumn(animales, animales.fechaCompra);
+        await customStatement(
+          "UPDATE animales SET estado = 'activo' WHERE estado IS NULL",
+        );
+        await m.createTable(ventas);
+        await m.createTable(costosOtros);
       }
     },
   );

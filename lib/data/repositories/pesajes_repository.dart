@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../estadisticas/estadisticas_pesajes.dart';
 import '../local/database.dart';
+import 'ventas_repository.dart';
 
 /// Un animal con su peso actual (último pesaje) y su ganancia por día (entre
 /// los dos últimos pesajes). Ambos null si no hay datos suficientes.
@@ -92,7 +93,12 @@ class PesajesRepository {
   /// peso actual (el pesaje más reciente). Se actualiza solo al cambiar datos.
   Stream<List<AnimalConPeso>> observarAnimalesDeLote(String loteId) {
     final consulta = db.select(db.animales)
-      ..where((t) => t.loteId.equals(loteId) & t.deletedAt.isNull())
+      ..where(
+        (t) =>
+            t.loteId.equals(loteId) &
+            t.deletedAt.isNull() &
+            t.estado.equals(EstadoAnimal.activo),
+      )
       ..orderBy([(t) => OrderingTerm.asc(t.identificador)]);
 
     return consulta.watch().asyncMap((animales) async {
@@ -124,6 +130,18 @@ class PesajesRepository {
       }
       return resultado;
     });
+  }
+
+  /// Busca un animal activo por arete dentro de una finca (corral / pesaje).
+  Future<AnimalRow?> buscarAnimalActivo(String fincaId, String identificador) {
+    return (db.select(db.animales)..where(
+          (t) =>
+              t.fincaId.equals(fincaId) &
+              t.identificador.equals(identificador) &
+              t.deletedAt.isNull() &
+              t.estado.equals(EstadoAnimal.activo),
+        ))
+        .getSingleOrNull();
   }
 
   /// Busca un animal por su identificador (arete) dentro de una finca.

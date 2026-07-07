@@ -1,6 +1,9 @@
 -- HatoControl — Module 2: dietas, lote_dietas, movimientos_lote
 -- Run in Supabase SQL Editor (project geocoundyilwxrnbhcqu).
--- Requires existing helpers: private.es_miembro(finca_id, user_id).
+--
+-- PREREQUISITE (run first if you get "private.es_miembro does not exist"):
+--   docs/supabase_bootstrap_rls_helpers.sql
+-- See docs/SUPABASE_SQL_ORDER.md for full order and diagnostics.
 
 -- ---------------------------------------------------------------- dietas
 CREATE TABLE IF NOT EXISTS public.dietas (

@@ -69,6 +69,13 @@ flutter test -d macos integration_test/supabase_e2e_test.dart \
   --dart-define=HATO_E2E_PASSWORD=...
 ```
 
+Demo mode (mock finca with all modules, offline):
+
+```bash
+./scripts/run_demo.sh macos          # explore manually
+./scripts/run_demo_tour.sh macos     # automated visible tour
+```
+
 ## Platform notes / Notas de plataforma
 
 ### macOS / iPhone

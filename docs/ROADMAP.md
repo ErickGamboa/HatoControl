@@ -181,55 +181,40 @@ Per-animal applications (D-04). Run `docs/supabase_module3_sanidad.sql` before s
 - [x] `SanidadRepository`: registrar, historial, batch por lote, sugerencias.
 - [x] Evaluator: `test/repositories/sanidad_repository_test.dart`.
 
-### 3b. Hoja de vida del animal — **partial 2026-07-07**
+### 3b. Hoja de vida del animal — **shipped 2026-07-07**
 
-- [x] `AnimalFichaScreen` with tabs: General, Pesajes, Sanidad, Dietas.
+- [x] `AnimalFichaScreen` with tabs: General, Pesajes, Sanidad, Dietas, Economía.
 - [x] Dietas tab derived from `movimientos_lote` + `lote_dietas` (D-05).
 - [x] Batch sanidad from lote screen (vaccine icon in app bar).
-- [ ] Venta/Costos tab (module 4).
+- [x] Economía tab: compra, venta, costos, rentabilidad (Module 4 UI).
+- [x] Repeat-last-treatment on Sanidad tab and Corral.
+- [x] Widget tests: `test/lotes/animal_ficha_screen_test.dart`.
 
-### 3c. Pantalla de trabajo (Corral) / Work screen
+### 3c. Pantalla de trabajo (Corral) / Work screen — **shipped 2026-07-07**
 
 Main field screen, optimized for minimum touches (the existing RFID/ear-tag
 keyboard-scanner flow in `PesajeScreen` is the pattern to extend):
 
-- [ ] Single entry point: scan/type arete → animal card → quick actions:
-      nuevo pesaje, aplicar medicamento/tratamiento (with "repeat last
-      treatment" one-tap), mover de lote.
-- [ ] Batch mode: apply the same sanidad event to a whole lote.
-- [ ] Everything offline-capable by construction (repositories only).
-- [ ] Evaluator: widget test for the minimum-touch flow (scan → weight →
-      save in ≤3 interactions), repository batch tests.
+- [x] `CorralScreen`: scan/type arete → animal card → pesaje, sanidad,
+      repetir último, mover de lote, hoja de vida.
+- [x] Batch mode from corral app bar (tratamiento al lote).
+- [x] Entry from finca detail grid; `PesajeScreen` retained for legacy flow.
+- [x] Evaluator: `test/corral/corral_screen_test.dart` (scan → weight → save).
 
-## Module 4 — Ventas y costos / Sales and economics
+## Module 4 — Ventas y costos / Sales and economics — **local app shipped 2026-07-07**
 
 Closes the economic cycle. Per animal: precio de compra, costos de
 alimentación (derived from dietas), costos sanitarios (derived from sanidad),
 otros costos, precio de venta → costo total, utilidad, margen, rentabilidad.
 
-Data model (see D-06, D-07):
-- Animal acquisition: add `precio_compra`, `fecha_compra` (nullable) to
-  `animales` — simple, or an `eventos_economicos` table if more cost types
-  emerge. Start simple.
-- `ventas` — id, animal_id, fecha, precio, comprador?, observaciones,
-  timestamps + sync columns. Selling an animal also soft-retires it from the
-  active inventory (estado — see D-08).
-- `costos_otros` — id, animal_id, concepto, monto, fecha (for "otros costos").
-
-Derived math (pure functions, heavily unit-tested):
-- Costo alimentación = Σ over the animal's lote/diet periods of
-  (días en periodo × costo_animal_dia de la dieta vigente).
-- Costo sanitario = Σ `eventos_sanitarios.costo`.
-- Utilidad = venta − (compra + alimentación + sanidad + otros).
-- Margen y rentabilidad as percentages.
-
-- [ ] Schema + sync + RLS + docs.
-- [ ] `VentasRepository` / `CostosRepository` with the derived math.
-- [ ] UI: Venta/Costos tab in the hoja de vida; finca-level sales summary.
-- [ ] Evaluator: golden unit tests for the cost breakdown example
-      (compra ₡520 000 + alimentación ₡95 000 + medicamentos ₡18 000 →
-      utilidad ₡147 000 on venta ₡780 000), partial-data cases (no compra
-      price, no dieta assigned), currency rounding.
+- [x] Drift v9: `animales.estado`, `precio_compra`, `fecha_compra`; `ventas`;
+      `costos_otros`; sync mappers.
+- [ ] Supabase tables/RLS applied (SQL: `docs/supabase_module4_ventas.sql`).
+- [x] `VentasRepository` + `estadisticas_economicas.dart` (pure math).
+- [x] UI: Economía tab in hoja de vida; venta marca animal `vendido`.
+- [x] Evaluators: `test/estadisticas/estadisticas_economicas_test.dart`,
+      `test/repositories/ventas_repository_test.dart`.
+- [ ] Finca-level sales summary (later).
 
 ## Cross-cutting tracks / Pistas transversales
 

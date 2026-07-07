@@ -1,6 +1,6 @@
 -- HatoControl — Module 3: eventos_sanitarios
 -- Run in Supabase SQL Editor after Module 2 script.
--- Requires: private.es_miembro(finca_id, user_id) via animales.finca_id.
+-- Prerequisite: docs/supabase_bootstrap_rls_helpers.sql (private.es_miembro).
 
 CREATE TABLE IF NOT EXISTS public.eventos_sanitarios (
   id uuid PRIMARY KEY,

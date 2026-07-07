@@ -160,6 +160,34 @@ class SanidadRepository {
     return animales.length;
   }
 
+  /// Último evento sanitario del animal (para repetir en corral).
+  Future<EventoSanitarioRow?> ultimoEvento(String animalId) async {
+    return (db.select(db.eventosSanitarios)
+          ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// Repite el último tratamiento con la misma ficha (producto, tipo, dosis).
+  Future<bool> repetirUltimoEvento({
+    required String animalId,
+    String? responsableId,
+  }) async {
+    final ultimo = await ultimoEvento(animalId);
+    if (ultimo == null) return false;
+    await registrarEvento(
+      animalId: animalId,
+      tipo: ultimo.tipo,
+      producto: ultimo.producto,
+      dosis: ultimo.dosis,
+      observaciones: ultimo.observaciones,
+      costo: ultimo.costo,
+      responsableId: responsableId,
+    );
+    return true;
+  }
+
   /// Borrado suave de un evento.
   Future<void> eliminarEvento(String eventoId) async {
     await (db.update(

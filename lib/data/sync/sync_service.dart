@@ -62,6 +62,8 @@ class SyncService {
     await _paso(_subirAnimales);
     await _paso(_subirMovimientosLote);
     await _paso(_subirEventosSanitarios);
+    await _paso(_subirVentas);
+    await _paso(_subirCostosOtros);
     await _paso(_subirPesajes);
     // Fotos: después de la membresía (la RLS de update exige ser admin).
     await _paso(_subirFotosFincas);
@@ -77,6 +79,8 @@ class SyncService {
     await _paso(_bajarAnimales);
     await _paso(_bajarMovimientosLote);
     await _paso(_bajarEventosSanitarios);
+    await _paso(_bajarVentas);
+    await _paso(_bajarCostosOtros);
     await _paso(_bajarPesajes);
   }
 
@@ -250,6 +254,9 @@ class SyncService {
         'finca_id': a.fincaId,
         'lote_id': a.loteId,
         'identificador': a.identificador,
+        'estado': a.estado,
+        'precio_compra': a.precioCompra,
+        'fecha_compra': a.fechaCompra?.toIso8601String(),
         'created_at': a.createdAt.toIso8601String(),
         'deleted_at': a.deletedAt?.toIso8601String(),
       },
@@ -308,6 +315,55 @@ class SyncService {
       marcarSubida: (id) =>
           (db.update(db.eventosSanitarios)..where((t) => t.id.equals(id)))
               .write(const EventosSanitariosCompanion(pendiente: Value(false))),
+    );
+  }
+
+  Future<void> _subirVentas() async {
+    final pendientes = await (db.select(
+      db.ventas,
+    )..where((t) => t.pendiente.equals(true))).get();
+    await _subirPendientes<VentaRow>(
+      tabla: 'ventas',
+      filas: pendientes,
+      id: (v) => v.id,
+      datos: (v) => {
+        'id': v.id,
+        'animal_id': v.animalId,
+        'fecha': v.fecha.toIso8601String(),
+        'precio': v.precio,
+        'comprador': v.comprador,
+        'observaciones': v.observaciones,
+        'created_at': v.createdAt.toIso8601String(),
+        'deleted_at': v.deletedAt?.toIso8601String(),
+      },
+      marcarSubida: (id) =>
+          (db.update(db.ventas)..where((t) => t.id.equals(id))).write(
+            const VentasCompanion(pendiente: Value(false)),
+          ),
+    );
+  }
+
+  Future<void> _subirCostosOtros() async {
+    final pendientes = await (db.select(
+      db.costosOtros,
+    )..where((t) => t.pendiente.equals(true))).get();
+    await _subirPendientes<CostoOtroRow>(
+      tabla: 'costos_otros',
+      filas: pendientes,
+      id: (c) => c.id,
+      datos: (c) => {
+        'id': c.id,
+        'animal_id': c.animalId,
+        'concepto': c.concepto,
+        'monto': c.monto,
+        'fecha': c.fecha.toIso8601String(),
+        'created_at': c.createdAt.toIso8601String(),
+        'deleted_at': c.deletedAt?.toIso8601String(),
+      },
+      marcarSubida: (id) =>
+          (db.update(db.costosOtros)..where((t) => t.id.equals(id))).write(
+            const CostosOtrosCompanion(pendiente: Value(false)),
+          ),
     );
   }
 
@@ -436,6 +492,16 @@ class SyncService {
       case 'eventos_sanitarios':
         final fila = await (db.select(
           db.eventosSanitarios,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'ventas':
+        final fila = await (db.select(
+          db.ventas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'costos_otros':
+        final fila = await (db.select(
+          db.costosOtros,
         )..where((t) => t.id.equals(id))).getSingleOrNull();
         return fila?.pendiente ?? false;
       case 'pesajes':
@@ -753,6 +819,13 @@ class SyncService {
               fincaId: r['finca_id'] as String,
               loteId: r['lote_id'] as String,
               identificador: r['identificador'] as String,
+              estado: r['estado'] as String? ?? 'activo',
+              precioCompra: r['precio_compra'] != null
+                  ? (r['precio_compra'] as num).toDouble()
+                  : null,
+              fechaCompra: r['fecha_compra'] != null
+                  ? DateTime.parse(r['fecha_compra'] as String)
+                  : null,
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: u,
               deletedAt: r['deleted_at'] != null
@@ -841,6 +914,79 @@ class SyncService {
     }
     if (!retuvoCambioLocal && maxU != null) {
       await _guardarCursor('eventos_sanitarios', maxU);
+    }
+  }
+
+  Future<void> _bajarVentas() async {
+    final cursor = await _leerCursor('ventas');
+    final filas = await _consultar('ventas', cursor);
+    DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
+    for (final r in filas) {
+      final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('ventas', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
+      await db
+          .into(db.ventas)
+          .insertOnConflictUpdate(
+            VentaRow(
+              id: id,
+              animalId: r['animal_id'] as String,
+              fecha: DateTime.parse(r['fecha'] as String),
+              precio: (r['precio'] as num).toDouble(),
+              comprador: r['comprador'] as String?,
+              observaciones: r['observaciones'] as String?,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
+      if (maxU == null || u.isAfter(maxU)) maxU = u;
+    }
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('ventas', maxU);
+    }
+  }
+
+  Future<void> _bajarCostosOtros() async {
+    final cursor = await _leerCursor('costos_otros');
+    final filas = await _consultar('costos_otros', cursor);
+    DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
+    for (final r in filas) {
+      final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('costos_otros', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
+      await db
+          .into(db.costosOtros)
+          .insertOnConflictUpdate(
+            CostoOtroRow(
+              id: id,
+              animalId: r['animal_id'] as String,
+              concepto: r['concepto'] as String,
+              monto: (r['monto'] as num).toDouble(),
+              fecha: DateTime.parse(r['fecha'] as String),
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
+      if (maxU == null || u.isAfter(maxU)) maxU = u;
+    }
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('costos_otros', maxU);
     }
   }
 

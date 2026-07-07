@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../data/local/database.dart';
+import '../corral/corral_screen.dart';
 import '../dietas/dietas_screen.dart';
 import '../lotes/lotes_screen.dart';
 import '../pesaje/pesaje_screen.dart';
@@ -87,6 +88,18 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
             crossAxisSpacing: 16,
             childAspectRatio: 1,
             children: [
+              _BotonOpcion(
+                key: const ValueKey('fincaDetail.corral'),
+                icono: Icon(
+                  Icons.agriculture_outlined,
+                  size: 60,
+                  color: theme.colorScheme.primary,
+                ),
+                label: 'Corral',
+                onTap: () => _abrir(
+                  CorralScreen(finca: finca, usuarioId: widget.usuarioId),
+                ),
+              ),
               _BotonOpcion(
                 key: const ValueKey('fincaDetail.pesaje'),
                 icono: Image.asset(
