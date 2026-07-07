@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../data/local/database.dart';
+import '../dietas/dietas_screen.dart';
 import '../lotes/lotes_screen.dart';
 import '../pesaje/pesaje_screen.dart';
 import '../services.dart';
@@ -109,6 +110,16 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
                 ),
                 label: 'Lotes',
                 onTap: () => _abrir(LotesScreen(finca: finca)),
+              ),
+              _BotonOpcion(
+                key: const ValueKey('fincaDetail.dietas'),
+                icono: Icon(
+                  Icons.restaurant_menu,
+                  size: 60,
+                  color: theme.colorScheme.primary,
+                ),
+                label: 'Dietas',
+                onTap: () => _abrir(DietasScreen(finca: finca)),
               ),
             ],
           ),

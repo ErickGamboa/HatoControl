@@ -127,6 +127,60 @@ class Animales extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Catálogo de dietas por finca (D-02, D-03).
+@DataClassName('DietaRow')
+class Dietas extends Table {
+  TextColumn get id => text()();
+  TextColumn get fincaId => text()();
+  TextColumn get nombre => text()();
+  TextColumn get descripcion => text().nullable()();
+  RealColumn get costoAnimalDia => real()();
+  TextColumn get moneda => text().withDefault(const Constant('CRC'))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Historial de asignación de dieta a un lote. `hasta` null = vigente.
+/// `costoAnimalDiaSnapshot` congela el costo al asignar (D-02).
+@DataClassName('LoteDietaRow')
+class LoteDietas extends Table {
+  TextColumn get id => text()();
+  TextColumn get loteId => text()();
+  TextColumn get dietaId => text()();
+  DateTimeColumn get desde => dateTime()();
+  DateTimeColumn get hasta => dateTime().nullable()();
+  RealColumn get costoAnimalDiaSnapshot => real()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Historial de movimientos de un animal entre lotes (D-05).
+@DataClassName('MovimientoLoteRow')
+class MovimientosLote extends Table {
+  TextColumn get id => text()();
+  TextColumn get animalId => text()();
+  TextColumn get loteOrigen => text().nullable()();
+  TextColumn get loteDestino => text()();
+  DateTimeColumn get fecha => dateTime()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DataClassName('PesajeRow')
 class Pesajes extends Table {
   TextColumn get id => text()();
@@ -181,6 +235,9 @@ class SesionesLocales extends Table {
     Lotes,
     Animales,
     Pesajes,
+    Dietas,
+    LoteDietas,
+    MovimientosLote,
     SyncCursores,
     SesionesLocales,
   ],
@@ -193,7 +250,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -226,6 +283,12 @@ class AppDatabase extends _$AppDatabase {
         // v6: alinear la base local con las restricciones únicas del servidor
         // para evitar duplicados que luego quedan reintentando en sync.
         await _crearIndicesUnicosLocales();
+      }
+      if (from < 7) {
+        // v7: dietas, asignaciones lote-dieta y movimientos entre lotes.
+        await m.createTable(dietas);
+        await m.createTable(loteDietas);
+        await m.createTable(movimientosLote);
       }
     },
   );

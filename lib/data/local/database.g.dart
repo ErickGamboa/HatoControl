@@ -4167,6 +4167,1808 @@ class PesajesCompanion extends UpdateCompanion<PesajeRow> {
   }
 }
 
+class $DietasTable extends Dietas with TableInfo<$DietasTable, DietaRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DietasTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fincaIdMeta = const VerificationMeta(
+    'fincaId',
+  );
+  @override
+  late final GeneratedColumn<String> fincaId = GeneratedColumn<String>(
+    'finca_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nombreMeta = const VerificationMeta('nombre');
+  @override
+  late final GeneratedColumn<String> nombre = GeneratedColumn<String>(
+    'nombre',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descripcionMeta = const VerificationMeta(
+    'descripcion',
+  );
+  @override
+  late final GeneratedColumn<String> descripcion = GeneratedColumn<String>(
+    'descripcion',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _costoAnimalDiaMeta = const VerificationMeta(
+    'costoAnimalDia',
+  );
+  @override
+  late final GeneratedColumn<double> costoAnimalDia = GeneratedColumn<double>(
+    'costo_animal_dia',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _monedaMeta = const VerificationMeta('moneda');
+  @override
+  late final GeneratedColumn<String> moneda = GeneratedColumn<String>(
+    'moneda',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('CRC'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    fincaId,
+    nombre,
+    descripcion,
+    costoAnimalDia,
+    moneda,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'dietas';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DietaRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('finca_id')) {
+      context.handle(
+        _fincaIdMeta,
+        fincaId.isAcceptableOrUnknown(data['finca_id']!, _fincaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fincaIdMeta);
+    }
+    if (data.containsKey('nombre')) {
+      context.handle(
+        _nombreMeta,
+        nombre.isAcceptableOrUnknown(data['nombre']!, _nombreMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nombreMeta);
+    }
+    if (data.containsKey('descripcion')) {
+      context.handle(
+        _descripcionMeta,
+        descripcion.isAcceptableOrUnknown(
+          data['descripcion']!,
+          _descripcionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('costo_animal_dia')) {
+      context.handle(
+        _costoAnimalDiaMeta,
+        costoAnimalDia.isAcceptableOrUnknown(
+          data['costo_animal_dia']!,
+          _costoAnimalDiaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_costoAnimalDiaMeta);
+    }
+    if (data.containsKey('moneda')) {
+      context.handle(
+        _monedaMeta,
+        moneda.isAcceptableOrUnknown(data['moneda']!, _monedaMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DietaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DietaRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      fincaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}finca_id'],
+      )!,
+      nombre: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nombre'],
+      )!,
+      descripcion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}descripcion'],
+      ),
+      costoAnimalDia: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}costo_animal_dia'],
+      )!,
+      moneda: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}moneda'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $DietasTable createAlias(String alias) {
+    return $DietasTable(attachedDatabase, alias);
+  }
+}
+
+class DietaRow extends DataClass implements Insertable<DietaRow> {
+  final String id;
+  final String fincaId;
+  final String nombre;
+  final String? descripcion;
+  final double costoAnimalDia;
+  final String moneda;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const DietaRow({
+    required this.id,
+    required this.fincaId,
+    required this.nombre,
+    this.descripcion,
+    required this.costoAnimalDia,
+    required this.moneda,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['finca_id'] = Variable<String>(fincaId);
+    map['nombre'] = Variable<String>(nombre);
+    if (!nullToAbsent || descripcion != null) {
+      map['descripcion'] = Variable<String>(descripcion);
+    }
+    map['costo_animal_dia'] = Variable<double>(costoAnimalDia);
+    map['moneda'] = Variable<String>(moneda);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  DietasCompanion toCompanion(bool nullToAbsent) {
+    return DietasCompanion(
+      id: Value(id),
+      fincaId: Value(fincaId),
+      nombre: Value(nombre),
+      descripcion: descripcion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(descripcion),
+      costoAnimalDia: Value(costoAnimalDia),
+      moneda: Value(moneda),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory DietaRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DietaRow(
+      id: serializer.fromJson<String>(json['id']),
+      fincaId: serializer.fromJson<String>(json['fincaId']),
+      nombre: serializer.fromJson<String>(json['nombre']),
+      descripcion: serializer.fromJson<String?>(json['descripcion']),
+      costoAnimalDia: serializer.fromJson<double>(json['costoAnimalDia']),
+      moneda: serializer.fromJson<String>(json['moneda']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'fincaId': serializer.toJson<String>(fincaId),
+      'nombre': serializer.toJson<String>(nombre),
+      'descripcion': serializer.toJson<String?>(descripcion),
+      'costoAnimalDia': serializer.toJson<double>(costoAnimalDia),
+      'moneda': serializer.toJson<String>(moneda),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  DietaRow copyWith({
+    String? id,
+    String? fincaId,
+    String? nombre,
+    Value<String?> descripcion = const Value.absent(),
+    double? costoAnimalDia,
+    String? moneda,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => DietaRow(
+    id: id ?? this.id,
+    fincaId: fincaId ?? this.fincaId,
+    nombre: nombre ?? this.nombre,
+    descripcion: descripcion.present ? descripcion.value : this.descripcion,
+    costoAnimalDia: costoAnimalDia ?? this.costoAnimalDia,
+    moneda: moneda ?? this.moneda,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  DietaRow copyWithCompanion(DietasCompanion data) {
+    return DietaRow(
+      id: data.id.present ? data.id.value : this.id,
+      fincaId: data.fincaId.present ? data.fincaId.value : this.fincaId,
+      nombre: data.nombre.present ? data.nombre.value : this.nombre,
+      descripcion: data.descripcion.present
+          ? data.descripcion.value
+          : this.descripcion,
+      costoAnimalDia: data.costoAnimalDia.present
+          ? data.costoAnimalDia.value
+          : this.costoAnimalDia,
+      moneda: data.moneda.present ? data.moneda.value : this.moneda,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DietaRow(')
+          ..write('id: $id, ')
+          ..write('fincaId: $fincaId, ')
+          ..write('nombre: $nombre, ')
+          ..write('descripcion: $descripcion, ')
+          ..write('costoAnimalDia: $costoAnimalDia, ')
+          ..write('moneda: $moneda, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    fincaId,
+    nombre,
+    descripcion,
+    costoAnimalDia,
+    moneda,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DietaRow &&
+          other.id == this.id &&
+          other.fincaId == this.fincaId &&
+          other.nombre == this.nombre &&
+          other.descripcion == this.descripcion &&
+          other.costoAnimalDia == this.costoAnimalDia &&
+          other.moneda == this.moneda &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class DietasCompanion extends UpdateCompanion<DietaRow> {
+  final Value<String> id;
+  final Value<String> fincaId;
+  final Value<String> nombre;
+  final Value<String?> descripcion;
+  final Value<double> costoAnimalDia;
+  final Value<String> moneda;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const DietasCompanion({
+    this.id = const Value.absent(),
+    this.fincaId = const Value.absent(),
+    this.nombre = const Value.absent(),
+    this.descripcion = const Value.absent(),
+    this.costoAnimalDia = const Value.absent(),
+    this.moneda = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DietasCompanion.insert({
+    required String id,
+    required String fincaId,
+    required String nombre,
+    this.descripcion = const Value.absent(),
+    required double costoAnimalDia,
+    this.moneda = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       fincaId = Value(fincaId),
+       nombre = Value(nombre),
+       costoAnimalDia = Value(costoAnimalDia),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<DietaRow> custom({
+    Expression<String>? id,
+    Expression<String>? fincaId,
+    Expression<String>? nombre,
+    Expression<String>? descripcion,
+    Expression<double>? costoAnimalDia,
+    Expression<String>? moneda,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fincaId != null) 'finca_id': fincaId,
+      if (nombre != null) 'nombre': nombre,
+      if (descripcion != null) 'descripcion': descripcion,
+      if (costoAnimalDia != null) 'costo_animal_dia': costoAnimalDia,
+      if (moneda != null) 'moneda': moneda,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DietasCompanion copyWith({
+    Value<String>? id,
+    Value<String>? fincaId,
+    Value<String>? nombre,
+    Value<String?>? descripcion,
+    Value<double>? costoAnimalDia,
+    Value<String>? moneda,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return DietasCompanion(
+      id: id ?? this.id,
+      fincaId: fincaId ?? this.fincaId,
+      nombre: nombre ?? this.nombre,
+      descripcion: descripcion ?? this.descripcion,
+      costoAnimalDia: costoAnimalDia ?? this.costoAnimalDia,
+      moneda: moneda ?? this.moneda,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (fincaId.present) {
+      map['finca_id'] = Variable<String>(fincaId.value);
+    }
+    if (nombre.present) {
+      map['nombre'] = Variable<String>(nombre.value);
+    }
+    if (descripcion.present) {
+      map['descripcion'] = Variable<String>(descripcion.value);
+    }
+    if (costoAnimalDia.present) {
+      map['costo_animal_dia'] = Variable<double>(costoAnimalDia.value);
+    }
+    if (moneda.present) {
+      map['moneda'] = Variable<String>(moneda.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DietasCompanion(')
+          ..write('id: $id, ')
+          ..write('fincaId: $fincaId, ')
+          ..write('nombre: $nombre, ')
+          ..write('descripcion: $descripcion, ')
+          ..write('costoAnimalDia: $costoAnimalDia, ')
+          ..write('moneda: $moneda, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LoteDietasTable extends LoteDietas
+    with TableInfo<$LoteDietasTable, LoteDietaRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LoteDietasTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _loteIdMeta = const VerificationMeta('loteId');
+  @override
+  late final GeneratedColumn<String> loteId = GeneratedColumn<String>(
+    'lote_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dietaIdMeta = const VerificationMeta(
+    'dietaId',
+  );
+  @override
+  late final GeneratedColumn<String> dietaId = GeneratedColumn<String>(
+    'dieta_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _desdeMeta = const VerificationMeta('desde');
+  @override
+  late final GeneratedColumn<DateTime> desde = GeneratedColumn<DateTime>(
+    'desde',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hastaMeta = const VerificationMeta('hasta');
+  @override
+  late final GeneratedColumn<DateTime> hasta = GeneratedColumn<DateTime>(
+    'hasta',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _costoAnimalDiaSnapshotMeta =
+      const VerificationMeta('costoAnimalDiaSnapshot');
+  @override
+  late final GeneratedColumn<double> costoAnimalDiaSnapshot =
+      GeneratedColumn<double>(
+        'costo_animal_dia_snapshot',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    loteId,
+    dietaId,
+    desde,
+    hasta,
+    costoAnimalDiaSnapshot,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'lote_dietas';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LoteDietaRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('lote_id')) {
+      context.handle(
+        _loteIdMeta,
+        loteId.isAcceptableOrUnknown(data['lote_id']!, _loteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_loteIdMeta);
+    }
+    if (data.containsKey('dieta_id')) {
+      context.handle(
+        _dietaIdMeta,
+        dietaId.isAcceptableOrUnknown(data['dieta_id']!, _dietaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dietaIdMeta);
+    }
+    if (data.containsKey('desde')) {
+      context.handle(
+        _desdeMeta,
+        desde.isAcceptableOrUnknown(data['desde']!, _desdeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_desdeMeta);
+    }
+    if (data.containsKey('hasta')) {
+      context.handle(
+        _hastaMeta,
+        hasta.isAcceptableOrUnknown(data['hasta']!, _hastaMeta),
+      );
+    }
+    if (data.containsKey('costo_animal_dia_snapshot')) {
+      context.handle(
+        _costoAnimalDiaSnapshotMeta,
+        costoAnimalDiaSnapshot.isAcceptableOrUnknown(
+          data['costo_animal_dia_snapshot']!,
+          _costoAnimalDiaSnapshotMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_costoAnimalDiaSnapshotMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LoteDietaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LoteDietaRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      loteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lote_id'],
+      )!,
+      dietaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}dieta_id'],
+      )!,
+      desde: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}desde'],
+      )!,
+      hasta: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}hasta'],
+      ),
+      costoAnimalDiaSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}costo_animal_dia_snapshot'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $LoteDietasTable createAlias(String alias) {
+    return $LoteDietasTable(attachedDatabase, alias);
+  }
+}
+
+class LoteDietaRow extends DataClass implements Insertable<LoteDietaRow> {
+  final String id;
+  final String loteId;
+  final String dietaId;
+  final DateTime desde;
+  final DateTime? hasta;
+  final double costoAnimalDiaSnapshot;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const LoteDietaRow({
+    required this.id,
+    required this.loteId,
+    required this.dietaId,
+    required this.desde,
+    this.hasta,
+    required this.costoAnimalDiaSnapshot,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['lote_id'] = Variable<String>(loteId);
+    map['dieta_id'] = Variable<String>(dietaId);
+    map['desde'] = Variable<DateTime>(desde);
+    if (!nullToAbsent || hasta != null) {
+      map['hasta'] = Variable<DateTime>(hasta);
+    }
+    map['costo_animal_dia_snapshot'] = Variable<double>(costoAnimalDiaSnapshot);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  LoteDietasCompanion toCompanion(bool nullToAbsent) {
+    return LoteDietasCompanion(
+      id: Value(id),
+      loteId: Value(loteId),
+      dietaId: Value(dietaId),
+      desde: Value(desde),
+      hasta: hasta == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hasta),
+      costoAnimalDiaSnapshot: Value(costoAnimalDiaSnapshot),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory LoteDietaRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LoteDietaRow(
+      id: serializer.fromJson<String>(json['id']),
+      loteId: serializer.fromJson<String>(json['loteId']),
+      dietaId: serializer.fromJson<String>(json['dietaId']),
+      desde: serializer.fromJson<DateTime>(json['desde']),
+      hasta: serializer.fromJson<DateTime?>(json['hasta']),
+      costoAnimalDiaSnapshot: serializer.fromJson<double>(
+        json['costoAnimalDiaSnapshot'],
+      ),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'loteId': serializer.toJson<String>(loteId),
+      'dietaId': serializer.toJson<String>(dietaId),
+      'desde': serializer.toJson<DateTime>(desde),
+      'hasta': serializer.toJson<DateTime?>(hasta),
+      'costoAnimalDiaSnapshot': serializer.toJson<double>(
+        costoAnimalDiaSnapshot,
+      ),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  LoteDietaRow copyWith({
+    String? id,
+    String? loteId,
+    String? dietaId,
+    DateTime? desde,
+    Value<DateTime?> hasta = const Value.absent(),
+    double? costoAnimalDiaSnapshot,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => LoteDietaRow(
+    id: id ?? this.id,
+    loteId: loteId ?? this.loteId,
+    dietaId: dietaId ?? this.dietaId,
+    desde: desde ?? this.desde,
+    hasta: hasta.present ? hasta.value : this.hasta,
+    costoAnimalDiaSnapshot:
+        costoAnimalDiaSnapshot ?? this.costoAnimalDiaSnapshot,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  LoteDietaRow copyWithCompanion(LoteDietasCompanion data) {
+    return LoteDietaRow(
+      id: data.id.present ? data.id.value : this.id,
+      loteId: data.loteId.present ? data.loteId.value : this.loteId,
+      dietaId: data.dietaId.present ? data.dietaId.value : this.dietaId,
+      desde: data.desde.present ? data.desde.value : this.desde,
+      hasta: data.hasta.present ? data.hasta.value : this.hasta,
+      costoAnimalDiaSnapshot: data.costoAnimalDiaSnapshot.present
+          ? data.costoAnimalDiaSnapshot.value
+          : this.costoAnimalDiaSnapshot,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoteDietaRow(')
+          ..write('id: $id, ')
+          ..write('loteId: $loteId, ')
+          ..write('dietaId: $dietaId, ')
+          ..write('desde: $desde, ')
+          ..write('hasta: $hasta, ')
+          ..write('costoAnimalDiaSnapshot: $costoAnimalDiaSnapshot, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    loteId,
+    dietaId,
+    desde,
+    hasta,
+    costoAnimalDiaSnapshot,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoteDietaRow &&
+          other.id == this.id &&
+          other.loteId == this.loteId &&
+          other.dietaId == this.dietaId &&
+          other.desde == this.desde &&
+          other.hasta == this.hasta &&
+          other.costoAnimalDiaSnapshot == this.costoAnimalDiaSnapshot &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class LoteDietasCompanion extends UpdateCompanion<LoteDietaRow> {
+  final Value<String> id;
+  final Value<String> loteId;
+  final Value<String> dietaId;
+  final Value<DateTime> desde;
+  final Value<DateTime?> hasta;
+  final Value<double> costoAnimalDiaSnapshot;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const LoteDietasCompanion({
+    this.id = const Value.absent(),
+    this.loteId = const Value.absent(),
+    this.dietaId = const Value.absent(),
+    this.desde = const Value.absent(),
+    this.hasta = const Value.absent(),
+    this.costoAnimalDiaSnapshot = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LoteDietasCompanion.insert({
+    required String id,
+    required String loteId,
+    required String dietaId,
+    required DateTime desde,
+    this.hasta = const Value.absent(),
+    required double costoAnimalDiaSnapshot,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       loteId = Value(loteId),
+       dietaId = Value(dietaId),
+       desde = Value(desde),
+       costoAnimalDiaSnapshot = Value(costoAnimalDiaSnapshot),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<LoteDietaRow> custom({
+    Expression<String>? id,
+    Expression<String>? loteId,
+    Expression<String>? dietaId,
+    Expression<DateTime>? desde,
+    Expression<DateTime>? hasta,
+    Expression<double>? costoAnimalDiaSnapshot,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (loteId != null) 'lote_id': loteId,
+      if (dietaId != null) 'dieta_id': dietaId,
+      if (desde != null) 'desde': desde,
+      if (hasta != null) 'hasta': hasta,
+      if (costoAnimalDiaSnapshot != null)
+        'costo_animal_dia_snapshot': costoAnimalDiaSnapshot,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LoteDietasCompanion copyWith({
+    Value<String>? id,
+    Value<String>? loteId,
+    Value<String>? dietaId,
+    Value<DateTime>? desde,
+    Value<DateTime?>? hasta,
+    Value<double>? costoAnimalDiaSnapshot,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return LoteDietasCompanion(
+      id: id ?? this.id,
+      loteId: loteId ?? this.loteId,
+      dietaId: dietaId ?? this.dietaId,
+      desde: desde ?? this.desde,
+      hasta: hasta ?? this.hasta,
+      costoAnimalDiaSnapshot:
+          costoAnimalDiaSnapshot ?? this.costoAnimalDiaSnapshot,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (loteId.present) {
+      map['lote_id'] = Variable<String>(loteId.value);
+    }
+    if (dietaId.present) {
+      map['dieta_id'] = Variable<String>(dietaId.value);
+    }
+    if (desde.present) {
+      map['desde'] = Variable<DateTime>(desde.value);
+    }
+    if (hasta.present) {
+      map['hasta'] = Variable<DateTime>(hasta.value);
+    }
+    if (costoAnimalDiaSnapshot.present) {
+      map['costo_animal_dia_snapshot'] = Variable<double>(
+        costoAnimalDiaSnapshot.value,
+      );
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoteDietasCompanion(')
+          ..write('id: $id, ')
+          ..write('loteId: $loteId, ')
+          ..write('dietaId: $dietaId, ')
+          ..write('desde: $desde, ')
+          ..write('hasta: $hasta, ')
+          ..write('costoAnimalDiaSnapshot: $costoAnimalDiaSnapshot, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MovimientosLoteTable extends MovimientosLote
+    with TableInfo<$MovimientosLoteTable, MovimientoLoteRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MovimientosLoteTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _animalIdMeta = const VerificationMeta(
+    'animalId',
+  );
+  @override
+  late final GeneratedColumn<String> animalId = GeneratedColumn<String>(
+    'animal_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _loteOrigenMeta = const VerificationMeta(
+    'loteOrigen',
+  );
+  @override
+  late final GeneratedColumn<String> loteOrigen = GeneratedColumn<String>(
+    'lote_origen',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _loteDestinoMeta = const VerificationMeta(
+    'loteDestino',
+  );
+  @override
+  late final GeneratedColumn<String> loteDestino = GeneratedColumn<String>(
+    'lote_destino',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fechaMeta = const VerificationMeta('fecha');
+  @override
+  late final GeneratedColumn<DateTime> fecha = GeneratedColumn<DateTime>(
+    'fecha',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    animalId,
+    loteOrigen,
+    loteDestino,
+    fecha,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'movimientos_lote';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MovimientoLoteRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('animal_id')) {
+      context.handle(
+        _animalIdMeta,
+        animalId.isAcceptableOrUnknown(data['animal_id']!, _animalIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_animalIdMeta);
+    }
+    if (data.containsKey('lote_origen')) {
+      context.handle(
+        _loteOrigenMeta,
+        loteOrigen.isAcceptableOrUnknown(data['lote_origen']!, _loteOrigenMeta),
+      );
+    }
+    if (data.containsKey('lote_destino')) {
+      context.handle(
+        _loteDestinoMeta,
+        loteDestino.isAcceptableOrUnknown(
+          data['lote_destino']!,
+          _loteDestinoMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_loteDestinoMeta);
+    }
+    if (data.containsKey('fecha')) {
+      context.handle(
+        _fechaMeta,
+        fecha.isAcceptableOrUnknown(data['fecha']!, _fechaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fechaMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MovimientoLoteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MovimientoLoteRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      animalId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}animal_id'],
+      )!,
+      loteOrigen: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lote_origen'],
+      ),
+      loteDestino: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lote_destino'],
+      )!,
+      fecha: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $MovimientosLoteTable createAlias(String alias) {
+    return $MovimientosLoteTable(attachedDatabase, alias);
+  }
+}
+
+class MovimientoLoteRow extends DataClass
+    implements Insertable<MovimientoLoteRow> {
+  final String id;
+  final String animalId;
+  final String? loteOrigen;
+  final String loteDestino;
+  final DateTime fecha;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const MovimientoLoteRow({
+    required this.id,
+    required this.animalId,
+    this.loteOrigen,
+    required this.loteDestino,
+    required this.fecha,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['animal_id'] = Variable<String>(animalId);
+    if (!nullToAbsent || loteOrigen != null) {
+      map['lote_origen'] = Variable<String>(loteOrigen);
+    }
+    map['lote_destino'] = Variable<String>(loteDestino);
+    map['fecha'] = Variable<DateTime>(fecha);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  MovimientosLoteCompanion toCompanion(bool nullToAbsent) {
+    return MovimientosLoteCompanion(
+      id: Value(id),
+      animalId: Value(animalId),
+      loteOrigen: loteOrigen == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loteOrigen),
+      loteDestino: Value(loteDestino),
+      fecha: Value(fecha),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory MovimientoLoteRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MovimientoLoteRow(
+      id: serializer.fromJson<String>(json['id']),
+      animalId: serializer.fromJson<String>(json['animalId']),
+      loteOrigen: serializer.fromJson<String?>(json['loteOrigen']),
+      loteDestino: serializer.fromJson<String>(json['loteDestino']),
+      fecha: serializer.fromJson<DateTime>(json['fecha']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'animalId': serializer.toJson<String>(animalId),
+      'loteOrigen': serializer.toJson<String?>(loteOrigen),
+      'loteDestino': serializer.toJson<String>(loteDestino),
+      'fecha': serializer.toJson<DateTime>(fecha),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  MovimientoLoteRow copyWith({
+    String? id,
+    String? animalId,
+    Value<String?> loteOrigen = const Value.absent(),
+    String? loteDestino,
+    DateTime? fecha,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => MovimientoLoteRow(
+    id: id ?? this.id,
+    animalId: animalId ?? this.animalId,
+    loteOrigen: loteOrigen.present ? loteOrigen.value : this.loteOrigen,
+    loteDestino: loteDestino ?? this.loteDestino,
+    fecha: fecha ?? this.fecha,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  MovimientoLoteRow copyWithCompanion(MovimientosLoteCompanion data) {
+    return MovimientoLoteRow(
+      id: data.id.present ? data.id.value : this.id,
+      animalId: data.animalId.present ? data.animalId.value : this.animalId,
+      loteOrigen: data.loteOrigen.present
+          ? data.loteOrigen.value
+          : this.loteOrigen,
+      loteDestino: data.loteDestino.present
+          ? data.loteDestino.value
+          : this.loteDestino,
+      fecha: data.fecha.present ? data.fecha.value : this.fecha,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MovimientoLoteRow(')
+          ..write('id: $id, ')
+          ..write('animalId: $animalId, ')
+          ..write('loteOrigen: $loteOrigen, ')
+          ..write('loteDestino: $loteDestino, ')
+          ..write('fecha: $fecha, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    animalId,
+    loteOrigen,
+    loteDestino,
+    fecha,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MovimientoLoteRow &&
+          other.id == this.id &&
+          other.animalId == this.animalId &&
+          other.loteOrigen == this.loteOrigen &&
+          other.loteDestino == this.loteDestino &&
+          other.fecha == this.fecha &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class MovimientosLoteCompanion extends UpdateCompanion<MovimientoLoteRow> {
+  final Value<String> id;
+  final Value<String> animalId;
+  final Value<String?> loteOrigen;
+  final Value<String> loteDestino;
+  final Value<DateTime> fecha;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const MovimientosLoteCompanion({
+    this.id = const Value.absent(),
+    this.animalId = const Value.absent(),
+    this.loteOrigen = const Value.absent(),
+    this.loteDestino = const Value.absent(),
+    this.fecha = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MovimientosLoteCompanion.insert({
+    required String id,
+    required String animalId,
+    this.loteOrigen = const Value.absent(),
+    required String loteDestino,
+    required DateTime fecha,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       animalId = Value(animalId),
+       loteDestino = Value(loteDestino),
+       fecha = Value(fecha),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<MovimientoLoteRow> custom({
+    Expression<String>? id,
+    Expression<String>? animalId,
+    Expression<String>? loteOrigen,
+    Expression<String>? loteDestino,
+    Expression<DateTime>? fecha,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (animalId != null) 'animal_id': animalId,
+      if (loteOrigen != null) 'lote_origen': loteOrigen,
+      if (loteDestino != null) 'lote_destino': loteDestino,
+      if (fecha != null) 'fecha': fecha,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MovimientosLoteCompanion copyWith({
+    Value<String>? id,
+    Value<String>? animalId,
+    Value<String?>? loteOrigen,
+    Value<String>? loteDestino,
+    Value<DateTime>? fecha,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return MovimientosLoteCompanion(
+      id: id ?? this.id,
+      animalId: animalId ?? this.animalId,
+      loteOrigen: loteOrigen ?? this.loteOrigen,
+      loteDestino: loteDestino ?? this.loteDestino,
+      fecha: fecha ?? this.fecha,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (animalId.present) {
+      map['animal_id'] = Variable<String>(animalId.value);
+    }
+    if (loteOrigen.present) {
+      map['lote_origen'] = Variable<String>(loteOrigen.value);
+    }
+    if (loteDestino.present) {
+      map['lote_destino'] = Variable<String>(loteDestino.value);
+    }
+    if (fecha.present) {
+      map['fecha'] = Variable<DateTime>(fecha.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MovimientosLoteCompanion(')
+          ..write('id: $id, ')
+          ..write('animalId: $animalId, ')
+          ..write('loteOrigen: $loteOrigen, ')
+          ..write('loteDestino: $loteDestino, ')
+          ..write('fecha: $fecha, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SyncCursoresTable extends SyncCursores
     with TableInfo<$SyncCursoresTable, SyncCursorRow> {
   @override
@@ -4830,6 +6632,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LotesTable lotes = $LotesTable(this);
   late final $AnimalesTable animales = $AnimalesTable(this);
   late final $PesajesTable pesajes = $PesajesTable(this);
+  late final $DietasTable dietas = $DietasTable(this);
+  late final $LoteDietasTable loteDietas = $LoteDietasTable(this);
+  late final $MovimientosLoteTable movimientosLote = $MovimientosLoteTable(
+    this,
+  );
   late final $SyncCursoresTable syncCursores = $SyncCursoresTable(this);
   late final $SesionesLocalesTable sesionesLocales = $SesionesLocalesTable(
     this,
@@ -4847,6 +6654,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     lotes,
     animales,
     pesajes,
+    dietas,
+    loteDietas,
+    movimientosLote,
     syncCursores,
     sesionesLocales,
   ];
@@ -6902,6 +8712,882 @@ typedef $$PesajesTableProcessedTableManager =
       PesajeRow,
       PrefetchHooks Function()
     >;
+typedef $$DietasTableCreateCompanionBuilder =
+    DietasCompanion Function({
+      required String id,
+      required String fincaId,
+      required String nombre,
+      Value<String?> descripcion,
+      required double costoAnimalDia,
+      Value<String> moneda,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$DietasTableUpdateCompanionBuilder =
+    DietasCompanion Function({
+      Value<String> id,
+      Value<String> fincaId,
+      Value<String> nombre,
+      Value<String?> descripcion,
+      Value<double> costoAnimalDia,
+      Value<String> moneda,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$DietasTableFilterComposer
+    extends Composer<_$AppDatabase, $DietasTable> {
+  $$DietasTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fincaId => $composableBuilder(
+    column: $table.fincaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get descripcion => $composableBuilder(
+    column: $table.descripcion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get costoAnimalDia => $composableBuilder(
+    column: $table.costoAnimalDia,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get moneda => $composableBuilder(
+    column: $table.moneda,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DietasTableOrderingComposer
+    extends Composer<_$AppDatabase, $DietasTable> {
+  $$DietasTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fincaId => $composableBuilder(
+    column: $table.fincaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get descripcion => $composableBuilder(
+    column: $table.descripcion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get costoAnimalDia => $composableBuilder(
+    column: $table.costoAnimalDia,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get moneda => $composableBuilder(
+    column: $table.moneda,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DietasTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DietasTable> {
+  $$DietasTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fincaId =>
+      $composableBuilder(column: $table.fincaId, builder: (column) => column);
+
+  GeneratedColumn<String> get nombre =>
+      $composableBuilder(column: $table.nombre, builder: (column) => column);
+
+  GeneratedColumn<String> get descripcion => $composableBuilder(
+    column: $table.descripcion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get costoAnimalDia => $composableBuilder(
+    column: $table.costoAnimalDia,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get moneda =>
+      $composableBuilder(column: $table.moneda, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$DietasTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DietasTable,
+          DietaRow,
+          $$DietasTableFilterComposer,
+          $$DietasTableOrderingComposer,
+          $$DietasTableAnnotationComposer,
+          $$DietasTableCreateCompanionBuilder,
+          $$DietasTableUpdateCompanionBuilder,
+          (DietaRow, BaseReferences<_$AppDatabase, $DietasTable, DietaRow>),
+          DietaRow,
+          PrefetchHooks Function()
+        > {
+  $$DietasTableTableManager(_$AppDatabase db, $DietasTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DietasTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DietasTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DietasTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> fincaId = const Value.absent(),
+                Value<String> nombre = const Value.absent(),
+                Value<String?> descripcion = const Value.absent(),
+                Value<double> costoAnimalDia = const Value.absent(),
+                Value<String> moneda = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DietasCompanion(
+                id: id,
+                fincaId: fincaId,
+                nombre: nombre,
+                descripcion: descripcion,
+                costoAnimalDia: costoAnimalDia,
+                moneda: moneda,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String fincaId,
+                required String nombre,
+                Value<String?> descripcion = const Value.absent(),
+                required double costoAnimalDia,
+                Value<String> moneda = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DietasCompanion.insert(
+                id: id,
+                fincaId: fincaId,
+                nombre: nombre,
+                descripcion: descripcion,
+                costoAnimalDia: costoAnimalDia,
+                moneda: moneda,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DietasTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DietasTable,
+      DietaRow,
+      $$DietasTableFilterComposer,
+      $$DietasTableOrderingComposer,
+      $$DietasTableAnnotationComposer,
+      $$DietasTableCreateCompanionBuilder,
+      $$DietasTableUpdateCompanionBuilder,
+      (DietaRow, BaseReferences<_$AppDatabase, $DietasTable, DietaRow>),
+      DietaRow,
+      PrefetchHooks Function()
+    >;
+typedef $$LoteDietasTableCreateCompanionBuilder =
+    LoteDietasCompanion Function({
+      required String id,
+      required String loteId,
+      required String dietaId,
+      required DateTime desde,
+      Value<DateTime?> hasta,
+      required double costoAnimalDiaSnapshot,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$LoteDietasTableUpdateCompanionBuilder =
+    LoteDietasCompanion Function({
+      Value<String> id,
+      Value<String> loteId,
+      Value<String> dietaId,
+      Value<DateTime> desde,
+      Value<DateTime?> hasta,
+      Value<double> costoAnimalDiaSnapshot,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$LoteDietasTableFilterComposer
+    extends Composer<_$AppDatabase, $LoteDietasTable> {
+  $$LoteDietasTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get loteId => $composableBuilder(
+    column: $table.loteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dietaId => $composableBuilder(
+    column: $table.dietaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get desde => $composableBuilder(
+    column: $table.desde,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get hasta => $composableBuilder(
+    column: $table.hasta,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get costoAnimalDiaSnapshot => $composableBuilder(
+    column: $table.costoAnimalDiaSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LoteDietasTableOrderingComposer
+    extends Composer<_$AppDatabase, $LoteDietasTable> {
+  $$LoteDietasTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get loteId => $composableBuilder(
+    column: $table.loteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dietaId => $composableBuilder(
+    column: $table.dietaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get desde => $composableBuilder(
+    column: $table.desde,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get hasta => $composableBuilder(
+    column: $table.hasta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get costoAnimalDiaSnapshot => $composableBuilder(
+    column: $table.costoAnimalDiaSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LoteDietasTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LoteDietasTable> {
+  $$LoteDietasTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get loteId =>
+      $composableBuilder(column: $table.loteId, builder: (column) => column);
+
+  GeneratedColumn<String> get dietaId =>
+      $composableBuilder(column: $table.dietaId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get desde =>
+      $composableBuilder(column: $table.desde, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get hasta =>
+      $composableBuilder(column: $table.hasta, builder: (column) => column);
+
+  GeneratedColumn<double> get costoAnimalDiaSnapshot => $composableBuilder(
+    column: $table.costoAnimalDiaSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$LoteDietasTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LoteDietasTable,
+          LoteDietaRow,
+          $$LoteDietasTableFilterComposer,
+          $$LoteDietasTableOrderingComposer,
+          $$LoteDietasTableAnnotationComposer,
+          $$LoteDietasTableCreateCompanionBuilder,
+          $$LoteDietasTableUpdateCompanionBuilder,
+          (
+            LoteDietaRow,
+            BaseReferences<_$AppDatabase, $LoteDietasTable, LoteDietaRow>,
+          ),
+          LoteDietaRow,
+          PrefetchHooks Function()
+        > {
+  $$LoteDietasTableTableManager(_$AppDatabase db, $LoteDietasTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LoteDietasTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LoteDietasTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LoteDietasTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> loteId = const Value.absent(),
+                Value<String> dietaId = const Value.absent(),
+                Value<DateTime> desde = const Value.absent(),
+                Value<DateTime?> hasta = const Value.absent(),
+                Value<double> costoAnimalDiaSnapshot = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LoteDietasCompanion(
+                id: id,
+                loteId: loteId,
+                dietaId: dietaId,
+                desde: desde,
+                hasta: hasta,
+                costoAnimalDiaSnapshot: costoAnimalDiaSnapshot,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String loteId,
+                required String dietaId,
+                required DateTime desde,
+                Value<DateTime?> hasta = const Value.absent(),
+                required double costoAnimalDiaSnapshot,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LoteDietasCompanion.insert(
+                id: id,
+                loteId: loteId,
+                dietaId: dietaId,
+                desde: desde,
+                hasta: hasta,
+                costoAnimalDiaSnapshot: costoAnimalDiaSnapshot,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LoteDietasTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LoteDietasTable,
+      LoteDietaRow,
+      $$LoteDietasTableFilterComposer,
+      $$LoteDietasTableOrderingComposer,
+      $$LoteDietasTableAnnotationComposer,
+      $$LoteDietasTableCreateCompanionBuilder,
+      $$LoteDietasTableUpdateCompanionBuilder,
+      (
+        LoteDietaRow,
+        BaseReferences<_$AppDatabase, $LoteDietasTable, LoteDietaRow>,
+      ),
+      LoteDietaRow,
+      PrefetchHooks Function()
+    >;
+typedef $$MovimientosLoteTableCreateCompanionBuilder =
+    MovimientosLoteCompanion Function({
+      required String id,
+      required String animalId,
+      Value<String?> loteOrigen,
+      required String loteDestino,
+      required DateTime fecha,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$MovimientosLoteTableUpdateCompanionBuilder =
+    MovimientosLoteCompanion Function({
+      Value<String> id,
+      Value<String> animalId,
+      Value<String?> loteOrigen,
+      Value<String> loteDestino,
+      Value<DateTime> fecha,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$MovimientosLoteTableFilterComposer
+    extends Composer<_$AppDatabase, $MovimientosLoteTable> {
+  $$MovimientosLoteTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get animalId => $composableBuilder(
+    column: $table.animalId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get loteOrigen => $composableBuilder(
+    column: $table.loteOrigen,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get loteDestino => $composableBuilder(
+    column: $table.loteDestino,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MovimientosLoteTableOrderingComposer
+    extends Composer<_$AppDatabase, $MovimientosLoteTable> {
+  $$MovimientosLoteTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get animalId => $composableBuilder(
+    column: $table.animalId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get loteOrigen => $composableBuilder(
+    column: $table.loteOrigen,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get loteDestino => $composableBuilder(
+    column: $table.loteDestino,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MovimientosLoteTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MovimientosLoteTable> {
+  $$MovimientosLoteTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get animalId =>
+      $composableBuilder(column: $table.animalId, builder: (column) => column);
+
+  GeneratedColumn<String> get loteOrigen => $composableBuilder(
+    column: $table.loteOrigen,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get loteDestino => $composableBuilder(
+    column: $table.loteDestino,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get fecha =>
+      $composableBuilder(column: $table.fecha, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$MovimientosLoteTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MovimientosLoteTable,
+          MovimientoLoteRow,
+          $$MovimientosLoteTableFilterComposer,
+          $$MovimientosLoteTableOrderingComposer,
+          $$MovimientosLoteTableAnnotationComposer,
+          $$MovimientosLoteTableCreateCompanionBuilder,
+          $$MovimientosLoteTableUpdateCompanionBuilder,
+          (
+            MovimientoLoteRow,
+            BaseReferences<
+              _$AppDatabase,
+              $MovimientosLoteTable,
+              MovimientoLoteRow
+            >,
+          ),
+          MovimientoLoteRow,
+          PrefetchHooks Function()
+        > {
+  $$MovimientosLoteTableTableManager(
+    _$AppDatabase db,
+    $MovimientosLoteTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MovimientosLoteTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MovimientosLoteTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MovimientosLoteTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> animalId = const Value.absent(),
+                Value<String?> loteOrigen = const Value.absent(),
+                Value<String> loteDestino = const Value.absent(),
+                Value<DateTime> fecha = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MovimientosLoteCompanion(
+                id: id,
+                animalId: animalId,
+                loteOrigen: loteOrigen,
+                loteDestino: loteDestino,
+                fecha: fecha,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String animalId,
+                Value<String?> loteOrigen = const Value.absent(),
+                required String loteDestino,
+                required DateTime fecha,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MovimientosLoteCompanion.insert(
+                id: id,
+                animalId: animalId,
+                loteOrigen: loteOrigen,
+                loteDestino: loteDestino,
+                fecha: fecha,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MovimientosLoteTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MovimientosLoteTable,
+      MovimientoLoteRow,
+      $$MovimientosLoteTableFilterComposer,
+      $$MovimientosLoteTableOrderingComposer,
+      $$MovimientosLoteTableAnnotationComposer,
+      $$MovimientosLoteTableCreateCompanionBuilder,
+      $$MovimientosLoteTableUpdateCompanionBuilder,
+      (
+        MovimientoLoteRow,
+        BaseReferences<_$AppDatabase, $MovimientosLoteTable, MovimientoLoteRow>,
+      ),
+      MovimientoLoteRow,
+      PrefetchHooks Function()
+    >;
 typedef $$SyncCursoresTableCreateCompanionBuilder =
     SyncCursoresCompanion Function({
       required String tabla,
@@ -7296,6 +9982,12 @@ class $AppDatabaseManager {
       $$AnimalesTableTableManager(_db, _db.animales);
   $$PesajesTableTableManager get pesajes =>
       $$PesajesTableTableManager(_db, _db.pesajes);
+  $$DietasTableTableManager get dietas =>
+      $$DietasTableTableManager(_db, _db.dietas);
+  $$LoteDietasTableTableManager get loteDietas =>
+      $$LoteDietasTableTableManager(_db, _db.loteDietas);
+  $$MovimientosLoteTableTableManager get movimientosLote =>
+      $$MovimientosLoteTableTableManager(_db, _db.movimientosLote);
   $$SyncCursoresTableTableManager get syncCursores =>
       $$SyncCursoresTableTableManager(_db, _db.syncCursores);
   $$SesionesLocalesTableTableManager get sesionesLocales =>

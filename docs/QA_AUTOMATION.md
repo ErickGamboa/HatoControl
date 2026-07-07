@@ -73,6 +73,18 @@ Run the historial evaluator set:
 flutter test test/estadisticas test/lotes test/repositories/pesajes_repository_test.dart
 ```
 
+## Dietas evaluator set (módulo 2)
+
+- `test/repositories/dietas_repository_test.dart` — CRUD dietas, asignación con
+  costo congelado, movimientos_lote en crear/mover animal.
+- Apply server schema: `docs/supabase_module2_dietas.sql` in Supabase SQL Editor.
+
+Run the dietas evaluator set:
+
+```bash
+flutter test test/repositories/dietas_repository_test.dart
+```
+
 ## CI
 `.github/workflows/ci.yml` is committed (format check, analyze, test on a
 macOS runner). Reference copy:

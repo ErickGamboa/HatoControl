@@ -182,6 +182,20 @@ class PesajesRepository {
               pendiente: const Value(true),
             ),
           );
+      await db
+          .into(db.movimientosLote)
+          .insert(
+            MovimientosLoteCompanion.insert(
+              id: _uuid.v4(),
+              animalId: animalId,
+              loteOrigen: const Value(null),
+              loteDestino: loteId,
+              fecha: ahora,
+              createdAt: ahora,
+              updatedAt: ahora,
+              pendiente: const Value(true),
+            ),
+          );
     });
   }
 
@@ -316,18 +330,41 @@ class PesajesRepository {
     return fila?.peso;
   }
 
-  /// Mueve un animal a otro lote. Queda pendiente para sincronizar.
+  /// Mueve un animal a otro lote y registra el movimiento (D-05). Queda
+  /// pendiente para sincronizar.
   Future<void> moverAnimalDeLote({
     required String animalId,
     required String nuevoLoteId,
   }) async {
-    await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
-      AnimalesCompanion(
-        loteId: Value(nuevoLoteId),
-        updatedAt: Value(DateTime.now()),
-        pendiente: const Value(true),
-      ),
-    );
+    final animal = await (db.select(
+      db.animales,
+    )..where((t) => t.id.equals(animalId))).getSingle();
+    if (animal.loteId == nuevoLoteId) return;
+
+    final ahora = DateTime.now();
+    await db.transaction(() async {
+      await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
+        AnimalesCompanion(
+          loteId: Value(nuevoLoteId),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+      await db
+          .into(db.movimientosLote)
+          .insert(
+            MovimientosLoteCompanion.insert(
+              id: _uuid.v4(),
+              animalId: animalId,
+              loteOrigen: Value(animal.loteId),
+              loteDestino: nuevoLoteId,
+              fecha: ahora,
+              createdAt: ahora,
+              updatedAt: ahora,
+              pendiente: const Value(true),
+            ),
+          );
+    });
   }
 
   /// Elimina (borrado suave) un pesaje. Queda pendiente para sincronizar.

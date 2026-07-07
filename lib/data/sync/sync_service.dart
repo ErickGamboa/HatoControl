@@ -57,7 +57,10 @@ class SyncService {
     await _paso(_subirFincas);
     await _paso(_subirMiembros);
     await _paso(_subirLotes);
+    await _paso(_subirDietas);
+    await _paso(_subirLoteDietas);
     await _paso(_subirAnimales);
+    await _paso(_subirMovimientosLote);
     await _paso(_subirPesajes);
     // Fotos: después de la membresía (la RLS de update exige ser admin).
     await _paso(_subirFotosFincas);
@@ -68,7 +71,10 @@ class SyncService {
     await _paso(_bajarFincas);
     await _paso(_bajarMiembros);
     await _paso(_bajarLotes);
+    await _paso(_bajarDietas);
+    await _paso(_bajarLoteDietas);
     await _paso(_bajarAnimales);
+    await _paso(_bajarMovimientosLote);
     await _paso(_bajarPesajes);
   }
 
@@ -179,6 +185,56 @@ class SyncService {
     );
   }
 
+  Future<void> _subirDietas() async {
+    final pendientes = await (db.select(
+      db.dietas,
+    )..where((t) => t.pendiente.equals(true))).get();
+    await _subirPendientes<DietaRow>(
+      tabla: 'dietas',
+      filas: pendientes,
+      id: (d) => d.id,
+      datos: (d) => {
+        'id': d.id,
+        'finca_id': d.fincaId,
+        'nombre': d.nombre,
+        'descripcion': d.descripcion,
+        'costo_animal_dia': d.costoAnimalDia,
+        'moneda': d.moneda,
+        'created_at': d.createdAt.toIso8601String(),
+        'deleted_at': d.deletedAt?.toIso8601String(),
+      },
+      marcarSubida: (id) =>
+          (db.update(db.dietas)..where((t) => t.id.equals(id))).write(
+            const DietasCompanion(pendiente: Value(false)),
+          ),
+    );
+  }
+
+  Future<void> _subirLoteDietas() async {
+    final pendientes = await (db.select(
+      db.loteDietas,
+    )..where((t) => t.pendiente.equals(true))).get();
+    await _subirPendientes<LoteDietaRow>(
+      tabla: 'lote_dietas',
+      filas: pendientes,
+      id: (a) => a.id,
+      datos: (a) => {
+        'id': a.id,
+        'lote_id': a.loteId,
+        'dieta_id': a.dietaId,
+        'desde': a.desde.toIso8601String(),
+        'hasta': a.hasta?.toIso8601String(),
+        'costo_animal_dia_snapshot': a.costoAnimalDiaSnapshot,
+        'created_at': a.createdAt.toIso8601String(),
+        'deleted_at': a.deletedAt?.toIso8601String(),
+      },
+      marcarSubida: (id) =>
+          (db.update(db.loteDietas)..where((t) => t.id.equals(id))).write(
+            const LoteDietasCompanion(pendiente: Value(false)),
+          ),
+    );
+  }
+
   Future<void> _subirAnimales() async {
     final pendientes = await (db.select(
       db.animales,
@@ -198,6 +254,30 @@ class SyncService {
       marcarSubida: (id) =>
           (db.update(db.animales)..where((t) => t.id.equals(id))).write(
             const AnimalesCompanion(pendiente: Value(false)),
+          ),
+    );
+  }
+
+  Future<void> _subirMovimientosLote() async {
+    final pendientes = await (db.select(
+      db.movimientosLote,
+    )..where((t) => t.pendiente.equals(true))).get();
+    await _subirPendientes<MovimientoLoteRow>(
+      tabla: 'movimientos_lote',
+      filas: pendientes,
+      id: (m) => m.id,
+      datos: (m) => {
+        'id': m.id,
+        'animal_id': m.animalId,
+        'lote_origen': m.loteOrigen,
+        'lote_destino': m.loteDestino,
+        'fecha': m.fecha.toIso8601String(),
+        'created_at': m.createdAt.toIso8601String(),
+        'deleted_at': m.deletedAt?.toIso8601String(),
+      },
+      marcarSubida: (id) =>
+          (db.update(db.movimientosLote)..where((t) => t.id.equals(id))).write(
+            const MovimientosLoteCompanion(pendiente: Value(false)),
           ),
     );
   }
@@ -304,9 +384,24 @@ class SyncService {
           db.lotes,
         )..where((t) => t.id.equals(id))).getSingleOrNull();
         return fila?.pendiente ?? false;
+      case 'dietas':
+        final fila = await (db.select(
+          db.dietas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'lote_dietas':
+        final fila = await (db.select(
+          db.loteDietas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
       case 'animales':
         final fila = await (db.select(
           db.animales,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'movimientos_lote':
+        final fila = await (db.select(
+          db.movimientosLote,
         )..where((t) => t.id.equals(id))).getSingleOrNull();
         return fila?.pendiente ?? false;
       case 'pesajes':
@@ -527,6 +622,83 @@ class SyncService {
     }
   }
 
+  Future<void> _bajarDietas() async {
+    final cursor = await _leerCursor('dietas');
+    final filas = await _consultar('dietas', cursor);
+    DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
+    for (final r in filas) {
+      final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('dietas', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
+      await db
+          .into(db.dietas)
+          .insertOnConflictUpdate(
+            DietaRow(
+              id: id,
+              fincaId: r['finca_id'] as String,
+              nombre: r['nombre'] as String,
+              descripcion: r['descripcion'] as String?,
+              costoAnimalDia: (r['costo_animal_dia'] as num).toDouble(),
+              moneda: r['moneda'] as String? ?? 'CRC',
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
+      if (maxU == null || u.isAfter(maxU)) maxU = u;
+    }
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('dietas', maxU);
+    }
+  }
+
+  Future<void> _bajarLoteDietas() async {
+    final cursor = await _leerCursor('lote_dietas');
+    final filas = await _consultar('lote_dietas', cursor);
+    DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
+    for (final r in filas) {
+      final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('lote_dietas', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
+      await db
+          .into(db.loteDietas)
+          .insertOnConflictUpdate(
+            LoteDietaRow(
+              id: id,
+              loteId: r['lote_id'] as String,
+              dietaId: r['dieta_id'] as String,
+              desde: DateTime.parse(r['desde'] as String),
+              hasta: r['hasta'] != null
+                  ? DateTime.parse(r['hasta'] as String)
+                  : null,
+              costoAnimalDiaSnapshot: (r['costo_animal_dia_snapshot'] as num)
+                  .toDouble(),
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
+      if (maxU == null || u.isAfter(maxU)) maxU = u;
+    }
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('lote_dietas', maxU);
+    }
+  }
+
   Future<void> _bajarAnimales() async {
     final cursor = await _leerCursor('animales');
     final filas = await _consultar('animales', cursor);
@@ -559,6 +731,42 @@ class SyncService {
     }
     if (!retuvoCambioLocal && maxU != null) {
       await _guardarCursor('animales', maxU);
+    }
+  }
+
+  Future<void> _bajarMovimientosLote() async {
+    final cursor = await _leerCursor('movimientos_lote');
+    final filas = await _consultar('movimientos_lote', cursor);
+    DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
+    for (final r in filas) {
+      final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('movimientos_lote', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
+      await db
+          .into(db.movimientosLote)
+          .insertOnConflictUpdate(
+            MovimientoLoteRow(
+              id: id,
+              animalId: r['animal_id'] as String,
+              loteOrigen: r['lote_origen'] as String?,
+              loteDestino: r['lote_destino'] as String,
+              fecha: DateTime.parse(r['fecha'] as String),
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
+      if (maxU == null || u.isAfter(maxU)) maxU = u;
+    }
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('movimientos_lote', maxU);
     }
   }
 

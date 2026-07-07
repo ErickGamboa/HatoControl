@@ -4,6 +4,8 @@ Software as a Service para manejo de hato ganadero. Offline-first: base **SQLite
 con Drift** y una **capa de sincronización propia** hacia Supabase (Postgres).
 
 Módulos de esta primera etapa: **fincas, lotes, inventario (animales), pesaje**.
+Módulo 2 (dietas + movimientos de lote) documentado abajo; aplicar SQL en
+`docs/supabase_module2_dietas.sql` en Supabase antes de sincronizar.
 
 > **Estado:** tablas + seguridad (RLS) aplicadas en Supabase (`geocoundyilwxrnbhcqu`).
 > Funciones auxiliares en el esquema `private` (`es_miembro`, `es_admin`, `comparte_finca`,
@@ -129,6 +131,50 @@ Cálculos derivados (no se guardan, se calculan; ver
   agrupan por fecha de calendario ("jornadas"); por período se calcula
   cantidad de animales, peso promedio/mínimo/máximo, ganancia promedio y
   kg/día promedio, comparando cada animal contra su propio pesaje anterior.
+
+### dietas — catálogo por finca (módulo 2)
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid (PK) | |
+| finca_id | uuid → fincas.id | |
+| nombre | text | |
+| descripcion | text | opcional |
+| costo_animal_dia | numeric | ₡ por animal por día (D-02) |
+| moneda | text | default `CRC` (D-07) |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+| deleted_at | timestamptz | borrado suave |
+
+### lote_dietas — historial de asignación dieta ↔ lote
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid (PK) | |
+| lote_id | uuid → lotes.id | |
+| dieta_id | uuid → dietas.id | |
+| desde | timestamptz | inicio de vigencia |
+| hasta | timestamptz | null = vigente |
+| costo_animal_dia_snapshot | numeric | costo congelado al asignar |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+| deleted_at | timestamptz | |
+
+Reglas:
+- Solo una asignación vigente (`hasta IS NULL`) por lote.
+- Reasignar cierra la anterior y abre una nueva en la misma transacción local.
+
+### movimientos_lote — historial de cambios de lote (D-05)
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid (PK) | |
+| animal_id | uuid → animales.id | |
+| lote_origen | uuid → lotes.id | null en ingreso inicial |
+| lote_destino | uuid → lotes.id | |
+| fecha | timestamptz | |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+| deleted_at | timestamptz | |
+
+Se escribe al crear animal (origen null) y al mover de lote.
 
 ## Roles y permisos (resumen)
 - **admin:** todo en su finca + agregar/quitar usuarios y asignarles rol (admin u operario).

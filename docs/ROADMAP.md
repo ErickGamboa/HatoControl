@@ -159,20 +159,16 @@ Data model (details and open questions in D-02, D-03):
   answer "¿con cuál dieta crecieron más rápido?" and to compute feeding cost
   per animal later (module 4).
 
-Work items:
-- [ ] Drift tables + migration + `SyncService` mappers + Supabase tables/RLS
-      + `docs/MODELO_DATOS.md` update.
-- [ ] `DietasRepository`: CRUD dietas, asignar dieta a lote (closes previous
-      assignment and opens new one in one transaction), dieta vigente de un
-      lote, historial de dietas de un lote.
-- [ ] UI: dietas catalog per finca; assign/change diet from lote screen; show
-      dieta vigente + kg/día promedio del lote side by side (the "Lote A —
-      Concentrado Premium — 0.82 kg/día — ₡180/animal/día" card).
-- [ ] Comparison view (later in this module): kg/día promedio per dieta
-      across lotes/periods.
-- [ ] Evaluator: assignment history invariants (no overlapping vigencias for
-      one lote; reassignment closes previous row), cost math unit tests, sync
-      round-trip test with fake gateway.
+Work items — **local app shipped 2026-07-07**; run `docs/supabase_module2_dietas.sql`
+on Supabase before enabling sync to production:
+- [x] Drift tables + migration v7 + `SyncService` mappers + `MODELO_DATOS.md`.
+- [ ] Supabase tables/RLS applied (SQL script ready for you).
+- [x] `DietasRepository`: CRUD, asignar dieta (cierra anterior + snapshot),
+      dieta vigente, historial.
+- [x] `movimientos_lote` written on create animal and move lote (D-05).
+- [x] UI: `DietasScreen` in finca menu; dieta vigente + kg/día card on lote.
+- [ ] Comparison view across lotes/dietas (later in module 2).
+- [x] Evaluator: `test/repositories/dietas_repository_test.dart`.
 
 ## Module 3 — Sanidad + Hoja de vida + Corral
 
