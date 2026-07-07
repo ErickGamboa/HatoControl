@@ -4,6 +4,7 @@ import '../data/local/database.dart';
 import '../data/repositories/pesajes_repository.dart';
 import '../services.dart';
 import 'animal_historial_screen.dart';
+import 'lote_historial_screen.dart';
 
 /// Lista los animales de un lote (con su peso actual) y permite buscarlos.
 /// Al tocar un animal se abre su historial de pesajes.
@@ -145,7 +146,20 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.lote.nombre)),
+      appBar: AppBar(
+        title: Text(widget.lote.nombre),
+        actions: [
+          IconButton(
+            tooltip: 'Historial del lote',
+            icon: const Icon(Icons.query_stats),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => LoteHistorialScreen(lote: widget.lote),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           // Buscador (fuera del StreamBuilder: nunca pierde el foco)

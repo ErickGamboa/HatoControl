@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services.dart';
+import 'support_contact_card.dart';
 
 /// Pantalla que se muestra cuando la cuenta del usuario está suspendida.
 /// Puede iniciar sesión, pero no accede a sus datos hasta que se reactive.
@@ -37,6 +38,10 @@ class SuspendidaScreen extends StatelessWidget {
                   'Comunicate con soporte para reactivar tu cuenta.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 28),
+                const SupportContactCard(
+                  titulo: 'Contactanos para reactivar tu cuenta',
                 ),
                 const SizedBox(height: 32),
                 FilledButton.icon(

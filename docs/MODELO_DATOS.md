@@ -118,11 +118,17 @@ Reglas:
 | registrado_por | uuid → usuarios.id | |
 | created_at | timestamptz | |
 
-Cálculos derivados (no se guardan, se calculan):
+Cálculos derivados (no se guardan, se calculan; ver
+`lib/data/estadisticas/estadisticas_pesajes.dart`):
 - **Peso actual** del animal = su último pesaje.
 - **Aumento entre pesajes** = peso − peso anterior.
 - **Aumento total desde que llegó** = último peso − primer peso (el de entrada).
-- **Ganancia diaria (kg/día)** opcional, usando las fechas.
+- **Ganancia diaria (kg/día)** usando días de CALENDARIO entre fechas.
+- **Ganancia promedio global** = (último − primero) / días de calendario.
+- **Resumen por lote** (D-01): los pesajes de los animales del lote se
+  agrupan por fecha de calendario ("jornadas"); por período se calcula
+  cantidad de animales, peso promedio/mínimo/máximo, ganancia promedio y
+  kg/día promedio, comparando cada animal contra su propio pesaje anterior.
 
 ## Roles y permisos (resumen)
 - **admin:** todo en su finca + agregar/quitar usuarios y asignarles rol (admin u operario).

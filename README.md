@@ -21,8 +21,10 @@ Flutter UI → Repositories → Drift/SQLite
 
 Useful docs:
 - `AGENTS.md` — guide and guardrails for coding agents
+- `docs/ROADMAP.md` — product roadmap: módulos (historial, dietas, sanidad, corral, ventas), order, and quality bar
+- `docs/DECISIONES.md` — decision log: decisions made and decisions still open per module
 - `docs/MODELO_DATOS.md` — domain model and Supabase assumptions
-- `docs/ARCHITECTURE_REVIEW.md` — architecture review and roadmap
+- `docs/ARCHITECTURE_REVIEW.md` — technical architecture review and hardening roadmap
 - `docs/QA_AUTOMATION.md` — test plan, invariants, and manual QA checklist
 
 ## Local setup / Configuración local
@@ -55,6 +57,23 @@ flutter run -d <device-id>
 For iPhone you also need Xcode installed, an Apple Development Team selected for the iOS Runner target, and a trusted developer profile on the iPhone.
 
 The repository currently includes generated Flutter platform folders for iOS, Android, web, and macOS.
+
+### App Store / TestFlight (iOS)
+
+Prerequisites: Apple Developer Program membership, App Store Connect app record for bundle ID `cr.co.hatoControl`.
+
+1. Regenerate launcher icons if the logo changed:
+   ```bash
+   dart run flutter_launcher_icons
+   ```
+2. Build a release IPA:
+   ```bash
+   flutter build ipa --release
+   ```
+3. Upload from Xcode (**Product → Archive → Distribute App**) or with `xcrun altool`.
+4. Start with **TestFlight** internal testing, then external beta, before submitting for App Store review.
+
+Store listing still needed outside the repo: screenshots, privacy policy URL, support URL, and App Privacy answers in App Store Connect. Support contact email is configured in `lib/config/support_config.dart`.
 
 ### Windows / Android from Windows
 

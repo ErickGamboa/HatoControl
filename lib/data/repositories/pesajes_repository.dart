@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../estadisticas/estadisticas_pesajes.dart';
 import '../local/database.dart';
 
 /// Un animal con su peso actual (último pesaje) y su ganancia por día (entre
@@ -65,6 +66,14 @@ class PesajeHistorial {
   }
 }
 
+/// Se lanza cuando se intenta registrar un animal con un identificador que ya
+/// existe activo dentro de la misma finca.
+class AnimalDuplicadoException implements Exception {
+  const AnimalDuplicadoException(this.identificador);
+
+  final String identificador;
+}
+
 /// Acceso a animales y pesajes (base local; el sync corre por separado).
 class PesajesRepository {
   PesajesRepository(this.db);
@@ -76,11 +85,8 @@ class PesajesRepository {
   /// ayer a hoy = 1 día aunque hayan pasado menos de 24 horas reales. Usar
   /// `inDays` de la diferencia contaría bloques completos de 24 h (ayer 3pm →
   /// hoy 10am = 0), y el kg/día nunca aparecería.
-  static int _diasCalendario(DateTime anterior, DateTime actual) {
-    final a = DateTime(anterior.year, anterior.month, anterior.day);
-    final b = DateTime(actual.year, actual.month, actual.day);
-    return b.difference(a).inDays;
-  }
+  static int _diasCalendario(DateTime anterior, DateTime actual) =>
+      diasCalendario(anterior, actual);
 
   /// Stream reactivo con los animales (no borrados) de un lote, cada uno con su
   /// peso actual (el pesaje más reciente). Se actualiza solo al cambiar datos.
@@ -141,6 +147,11 @@ class PesajesRepository {
     required double peso,
     required String registradoPor,
   }) async {
+    final existente = await buscarAnimal(fincaId, identificador);
+    if (existente != null) {
+      throw AnimalDuplicadoException(identificador);
+    }
+
     final ahora = DateTime.now();
     final animalId = _uuid.v4();
     await db.transaction(() async {
@@ -265,6 +276,31 @@ class PesajesRepository {
         }
       }
       return resultado;
+    });
+  }
+
+  /// Stream con el resumen del lote por jornadas de pesaje (D-01: se agrupa
+  /// por fecha de calendario). Cada período compara cada animal contra su
+  /// propio pesaje anterior. Orden cronológico (más antiguo primero).
+  ///
+  /// Incluye los pesajes de los animales que están HOY en el lote (no
+  /// borrados); ver D-05 para el historial de movimientos entre lotes.
+  Stream<List<PeriodoLote>> observarResumenLote(String loteId) {
+    final consulta =
+        db.select(db.pesajes).join([
+          innerJoin(db.animales, db.animales.id.equalsExp(db.pesajes.animalId)),
+        ])..where(
+          db.animales.loteId.equals(loteId) &
+              db.animales.deletedAt.isNull() &
+              db.pesajes.deletedAt.isNull(),
+        );
+
+    return consulta.watch().map((filas) {
+      final pesajes = filas.map((fila) {
+        final p = fila.readTable(db.pesajes);
+        return (animalId: p.animalId, fecha: p.fecha, peso: p.peso);
+      }).toList();
+      return resumenPorPeriodos(pesajes);
     });
   }
 

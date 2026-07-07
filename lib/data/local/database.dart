@@ -193,11 +193,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (m) => m.createAll(),
+    onCreate: (m) async {
+      await m.createAll();
+      await _crearIndicesUnicosLocales();
+    },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         // v2: capa de Cuenta + licencias.
@@ -219,8 +222,28 @@ class AppDatabase extends _$AppDatabase {
         // v5: identidad local para entrar sin conexión tras login online.
         await m.createTable(sesionesLocales);
       }
+      if (from < 6) {
+        // v6: alinear la base local con las restricciones únicas del servidor
+        // para evitar duplicados que luego quedan reintentando en sync.
+        await _crearIndicesUnicosLocales();
+      }
     },
   );
+
+  Future<void> _crearIndicesUnicosLocales() async {
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS '
+      'idx_finca_miembros_finca_usuario_activos '
+      'ON finca_miembros (finca_id, usuario_id) '
+      'WHERE deleted_at IS NULL',
+    );
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS '
+      'idx_animales_finca_identificador_activos '
+      'ON animales (finca_id, identificador) '
+      'WHERE deleted_at IS NULL',
+    );
+  }
 }
 
 QueryExecutor _abrirConexion() {

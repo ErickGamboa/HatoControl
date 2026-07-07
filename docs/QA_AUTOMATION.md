@@ -36,13 +36,46 @@
 - Current weight is the latest non-deleted pesaje.
 - Daily gain uses calendar-day difference, not exact 24-hour blocks.
 
+### Historial y estadísticas (módulo 1)
+- Global average gain = (last peso − first peso) / calendar days; null with
+  fewer than two pesajes or when first and last fall on the same day.
+- Lote periods group pesajes by calendar date (D-01); each animal is compared
+  only against its own previous pesaje.
+- Animals without a previous pesaje count in the headcount but never in the
+  gain averages.
+- Soft-deleted pesajes and animals from other lotes are excluded from lote
+  aggregates.
+
 ### Sync cursors
 - Cursors are per table.
 - A cursor must not advance past rows that were not applied locally.
 - Downloads must preserve local-only fields such as `fotoLocalPath` and `fotoPendiente`.
 
-## Suggested CI
-Create `.github/workflows/ci.yml` when GitHub is used:
+## Historial evaluator set (módulo 1)
+
+These tests protect the weight-history math and screens. Keep them passing:
+
+- `test/estadisticas/estadisticas_pesajes_test.dart` — pure math: calendar
+  days, global average gain edge cases, and lote period aggregation fixtures
+  (animal added mid-period, missed weighing, same-day duplicates, weight
+  loss).
+- `test/repositories/pesajes_repository_test.dart` — includes
+  `observarResumenLote` filtering (other lotes and soft-deleted pesajes
+  excluded).
+- `test/lotes/animal_historial_screen_test.dart` — Días column, per-row
+  ganancia and kg/día, global average, and evolution chart render.
+- `test/lotes/lote_historial_screen_test.dart` — period table (count,
+  promedio, ganancia, kg/día) and average-weight chart render.
+
+Run the historial evaluator set:
+
+```bash
+flutter test test/estadisticas test/lotes test/repositories/pesajes_repository_test.dart
+```
+
+## CI
+`.github/workflows/ci.yml` is committed (format check, analyze, test on a
+macOS runner). Reference copy:
 
 ```yaml
 name: CI

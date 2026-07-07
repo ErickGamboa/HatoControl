@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../local/database.dart';
+import 'sync_remote_gateway.dart';
 
 /// Motor de sincronización entre la base local (Drift/SQLite) y Supabase.
 ///
@@ -20,11 +20,11 @@ import '../local/database.dart';
 /// Por ahora sincroniza `fincas` y `finca_miembros`. Al construir las demás
 /// pantallas agregaremos lotes, animales y pesajes con el mismo patrón.
 class SyncService {
-  SyncService(this.db);
+  SyncService(this.db, {SyncRemoteGateway? remote})
+    : _remote = remote ?? SupabaseSyncRemoteGateway();
 
   final AppDatabase db;
-
-  SupabaseClient get _sb => Supabase.instance.client;
+  final SyncRemoteGateway _remote;
 
   /// Para que la UI pueda mostrar un indicador de "sincronizando…".
   final ValueNotifier<bool> sincronizando = ValueNotifier(false);
@@ -32,7 +32,7 @@ class SyncService {
   bool _enCurso = false;
 
   Future<void> sincronizar() async {
-    if (_sb.auth.currentUser == null) return; // sin sesión, nada que hacer
+    if (!_remote.tieneUsuario) return; // sin sesión, nada que hacer
     if (_enCurso) return; // evitar solapamientos
     _enCurso = true;
     sincronizando.value = true;
@@ -51,7 +51,8 @@ class SyncService {
 
   Future<void> _ejecutarSync() async {
     // Cada paso va aislado: si uno falla (p. ej. un registro con conflicto),
-    // los demás igual se ejecutan. Así un problema al SUBIR nunca impide BAJAR.
+    // los demás igual se ejecutan. Al BAJAR protegemos filas con cambios
+    // locales pendientes para no pisarlas con una copia vieja del servidor.
     // Subir primero (para no pisar cambios locales al bajar).
     await _paso(_subirFincas);
     await _paso(_subirMiembros);
@@ -131,27 +132,6 @@ class SyncService {
     );
   }
 
-  /// Sube una fila al servidor: ACTUALIZA primero y, si no existía (0 filas),
-  /// INSERTA. El orden importa: hacer update-first evita disparar validaciones
-  /// de INSERT (como el límite de fincas) al editar filas que ya existen.
-  /// Tampoco usamos `upsert` porque evalúa también la RLS de UPDATE y puede
-  /// bloquear inserciones nuevas legítimas.
-  Future<void> _insertarOActualizar(
-    String tabla,
-    String id,
-    Map<String, dynamic> datos,
-  ) async {
-    final actualizadas = await _sb
-        .from(tabla)
-        .update(datos)
-        .eq('id', id)
-        .select();
-    if ((actualizadas as List).isEmpty) {
-      // No existía en el servidor → es una fila nueva.
-      await _sb.from(tabla).insert(datos);
-    }
-  }
-
   /// Sube filas pendientes con resiliencia POR FILA: si una falla (conflicto,
   /// red, RLS, etc.) se registra y se sigue con las demás — una fila con
   /// problema NUNCA bloquea ni descarta al resto. Cada fila se marca como
@@ -167,7 +147,7 @@ class SyncService {
   }) async {
     for (final fila in filas) {
       try {
-        await _insertarOActualizar(tabla, id(fila), datos(fila));
+        await _remote.insertarOActualizar(tabla, id(fila), datos(fila));
         await marcarSubida(id(fila));
       } catch (e) {
         debugPrint(
@@ -250,7 +230,7 @@ class SyncService {
   /// Function `subir-foto-finca` (que valida al usuario y escribe con permisos
   /// de servidor), guarda la URL pública devuelta y limpia la bandera.
   Future<void> _subirFotosFincas() async {
-    if (_sb.auth.currentSession == null) return;
+    if (!_remote.tieneSesion) return;
 
     final conFoto =
         await (db.select(db.fincas)..where(
@@ -271,12 +251,10 @@ class SyncService {
       }
       try {
         final bytes = await archivo.readAsBytes();
-        final res = await _sb.functions.invoke(
-          'subir-foto-finca',
-          body: {'finca_id': f.id, 'imagen_base64': base64Encode(bytes)},
+        final url = await _remote.subirFotoFinca(
+          fincaId: f.id,
+          imagenBase64: base64Encode(bytes),
         );
-        final data = res.data;
-        final url = data is Map ? data['url'] as String? : null;
         if (url != null && url.isNotEmpty) {
           await (db.update(db.fincas)..where((t) => t.id.equals(f.id))).write(
             FincasCompanion(
@@ -293,6 +271,53 @@ class SyncService {
   }
 
   // ---------------------------------------------------------------- BAJAR
+
+  /// Indica si una fila local todavía tiene cambios sin subir.
+  ///
+  /// Las descargas nunca deben borrar `pendiente=true`: si una subida falló y
+  /// luego baja una versión vieja del servidor, se perdería el cambio local.
+  @visibleForTesting
+  Future<bool> tieneCambiosLocalesPendientes(String tabla, String id) async {
+    switch (tabla) {
+      case 'cuentas':
+        final fila = await (db.select(
+          db.cuentas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'usuarios':
+        final fila = await (db.select(
+          db.usuarios,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'fincas':
+        final fila = await (db.select(
+          db.fincas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'finca_miembros':
+        final fila = await (db.select(
+          db.fincaMiembros,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'lotes':
+        final fila = await (db.select(
+          db.lotes,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'animales':
+        final fila = await (db.select(
+          db.animales,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'pesajes':
+        final fila = await (db.select(
+          db.pesajes,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      default:
+        return false;
+    }
+  }
 
   /// Catálogo de licencias (solo lectura). No usa borrado suave.
   Future<void> _bajarPlanes() async {
@@ -320,13 +345,19 @@ class SyncService {
     final cursor = await _leerCursor('cuentas');
     final filas = await _consultar('cuentas', cursor);
     DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('cuentas', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
       await db
           .into(db.cuentas)
           .insertOnConflictUpdate(
             CuentaRow(
-              id: r['id'] as String,
+              id: id,
               nombre: r['nombre'] as String,
               duenoId: r['dueno_id'] as String,
               plan: r['plan'] as String,
@@ -344,7 +375,9 @@ class SyncService {
           );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
-    if (maxU != null) await _guardarCursor('cuentas', maxU);
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('cuentas', maxU);
+    }
   }
 
   /// Perfiles de usuario (el propio + compañeros de finca). Trae `cuenta_id`,
@@ -353,13 +386,19 @@ class SyncService {
     final cursor = await _leerCursor('usuarios');
     final filas = await _consultar('usuarios', cursor);
     DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('usuarios', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
       await db
           .into(db.usuarios)
           .insertOnConflictUpdate(
             UsuarioRow(
-              id: r['id'] as String,
+              id: id,
               nombre: r['nombre'] as String?,
               email: r['email'] as String?,
               cuentaId: r['cuenta_id'] as String?,
@@ -370,15 +409,23 @@ class SyncService {
           );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
-    if (maxU != null) await _guardarCursor('usuarios', maxU);
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('usuarios', maxU);
+    }
   }
 
   Future<void> _bajarFincas() async {
     final cursor = await _leerCursor('fincas');
     final filas = await _consultar('fincas', cursor);
     DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('fincas', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
       final deletedAt = r['deleted_at'] != null
           ? DateTime.parse(r['deleted_at'] as String)
           : null;
@@ -386,7 +433,7 @@ class SyncService {
       // Solo columnas del servidor; NO tocamos fotoLocalPath/fotoPendiente
       // (son locales) para no perder una foto aún sin subir.
       FincasCompanion datosServidor({required bool conId}) => FincasCompanion(
-        id: conId ? Value(r['id'] as String) : const Value.absent(),
+        id: conId ? Value(id) : const Value.absent(),
         nombre: Value(r['nombre'] as String),
         fotoUrl: Value(r['foto_url'] as String?),
         creadaPor: Value(r['creada_por'] as String),
@@ -405,20 +452,28 @@ class SyncService {
           );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
-    if (maxU != null) await _guardarCursor('fincas', maxU);
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('fincas', maxU);
+    }
   }
 
   Future<void> _bajarMiembros() async {
     final cursor = await _leerCursor('finca_miembros');
     final filas = await _consultar('finca_miembros', cursor);
     DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('finca_miembros', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
       await db
           .into(db.fincaMiembros)
           .insertOnConflictUpdate(
             FincaMiembroRow(
-              id: r['id'] as String,
+              id: id,
               fincaId: r['finca_id'] as String,
               usuarioId: r['usuario_id'] as String,
               rol: r['rol'] as String,
@@ -432,20 +487,28 @@ class SyncService {
           );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
-    if (maxU != null) await _guardarCursor('finca_miembros', maxU);
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('finca_miembros', maxU);
+    }
   }
 
   Future<void> _bajarLotes() async {
     final cursor = await _leerCursor('lotes');
     final filas = await _consultar('lotes', cursor);
     DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('lotes', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
       await db
           .into(db.lotes)
           .insertOnConflictUpdate(
             LoteRow(
-              id: r['id'] as String,
+              id: id,
               fincaId: r['finca_id'] as String,
               nombre: r['nombre'] as String,
               numero: r['numero'] as int?,
@@ -459,20 +522,28 @@ class SyncService {
           );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
-    if (maxU != null) await _guardarCursor('lotes', maxU);
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('lotes', maxU);
+    }
   }
 
   Future<void> _bajarAnimales() async {
     final cursor = await _leerCursor('animales');
     final filas = await _consultar('animales', cursor);
     DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('animales', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
       await db
           .into(db.animales)
           .insertOnConflictUpdate(
             AnimalRow(
-              id: r['id'] as String,
+              id: id,
               fincaId: r['finca_id'] as String,
               loteId: r['lote_id'] as String,
               identificador: r['identificador'] as String,
@@ -486,20 +557,28 @@ class SyncService {
           );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
-    if (maxU != null) await _guardarCursor('animales', maxU);
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('animales', maxU);
+    }
   }
 
   Future<void> _bajarPesajes() async {
     final cursor = await _leerCursor('pesajes');
     final filas = await _consultar('pesajes', cursor);
     DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
     for (final r in filas) {
       final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('pesajes', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
       await db
           .into(db.pesajes)
           .insertOnConflictUpdate(
             PesajeRow(
-              id: r['id'] as String,
+              id: id,
               animalId: r['animal_id'] as String,
               peso: (r['peso'] as num).toDouble(),
               fecha: DateTime.parse(r['fecha'] as String),
@@ -514,21 +593,16 @@ class SyncService {
           );
       if (maxU == null || u.isAfter(maxU)) maxU = u;
     }
-    if (maxU != null) await _guardarCursor('pesajes', maxU);
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('pesajes', maxU);
+    }
   }
 
-  /// Trae del servidor las filas con updated_at > cursor (o todas si es null).
   Future<List<Map<String, dynamic>>> _consultar(
     String tabla,
     DateTime? cursor,
   ) async {
-    final base = _sb.from(tabla).select();
-    final res = cursor == null
-        ? await base.order('updated_at', ascending: true)
-        : await base
-              .gt('updated_at', cursor.toIso8601String())
-              .order('updated_at', ascending: true);
-    return (res as List).cast<Map<String, dynamic>>();
+    return _remote.consultar(tabla, cursor);
   }
 
   // -------------------------------------------------------------- MARCADORES

@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Hato Control necesita la cámara para tomar fotos de tus fincas.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Hato Control necesita acceder a tus fotos para elegir imágenes de fincas.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

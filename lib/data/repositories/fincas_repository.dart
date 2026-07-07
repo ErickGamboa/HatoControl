@@ -72,9 +72,14 @@ class FincasRepository {
           )
           ..orderBy([OrderingTerm.asc(db.fincas.nombre)]);
 
-    return consulta.watch().map(
-      (filas) => filas.map((f) => f.readTable(db.fincas)).toList(),
-    );
+    return consulta.watch().map((filas) {
+      final porId = <String, FincaRow>{};
+      for (final fila in filas) {
+        final finca = fila.readTable(db.fincas);
+        porId[finca.id] = finca;
+      }
+      return porId.values.toList();
+    });
   }
 
   /// Stream con una finca por id (para mostrar datos en vivo). null si no existe.
