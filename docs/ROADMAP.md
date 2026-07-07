@@ -268,8 +268,8 @@ The offline+sync behavior must stay "super good" as tables multiply:
 - Business math (gains, aggregates, costs) must be pure functions — that is
   what makes the evaluator suites fast and deterministic.
 - Widget tests use injected fake repositories; no Supabase in unit/widget CI.
-- Integration tests extend `offline_local_flow_test.dart` per module:
-  offline create → reopen → sync.
+- Integration tests extend `test/integration/offline_local_flow_test.dart` per
+  module: offline create → reopen → sync.
 
 ## Suggested order / Orden sugerido
 

@@ -7,7 +7,7 @@ import '../data/repositories/pesajes_repository.dart';
 
 /// Pestaña de historial de pesajes (reutilizable en ficha del animal).
 class AnimalPesajesTab extends StatelessWidget {
-  AnimalPesajesTab({super.key, required this.animal, required this.repo});
+  const AnimalPesajesTab({super.key, required this.animal, required this.repo});
 
   final AnimalRow animal;
   final PesajesRepository repo;

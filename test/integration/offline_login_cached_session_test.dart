@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hato_control/data/local/database.dart';
@@ -7,11 +6,10 @@ import 'package:hato_control/data/repositories/fincas_repository.dart';
 import 'package:hato_control/data/repositories/lotes_repository.dart';
 import 'package:hato_control/data/repositories/pesajes_repository.dart';
 import 'package:hato_control/data/repositories/sesion_local_repository.dart';
-import 'package:integration_test/integration_test.dart';
+
+import '../support/local_db_seed.dart';
 
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-
   late AppDatabase db;
   late SesionLocalRepository sesionRepo;
   late CuentasRepository cuentasRepo;
@@ -32,13 +30,13 @@ void main() {
     await db.close();
   });
 
-  testWidgets(
+  test(
     'cached offline login usa el usuario verificado para datos locales',
-    (tester) async {
+    () async {
       const usuarioId = 'user-offline-1';
       final now = DateTime(2026, 1, 1);
 
-      await _seedCuenta(db, usuarioId: usuarioId, now: now);
+      await seedCuentaLocal(db, usuarioId: usuarioId, now: now);
       await sesionRepo.guardarUsuarioVerificado(
         usuarioId: usuarioId,
         email: 'offline@example.com',
@@ -85,46 +83,4 @@ void main() {
       expect(await sesionRepo.obtener(), isNull);
     },
   );
-}
-
-Future<void> _seedCuenta(
-  AppDatabase db, {
-  required String usuarioId,
-  required DateTime now,
-}) async {
-  await db
-      .into(db.planes)
-      .insert(
-        PlanesCompanion.insert(
-          codigo: 'pro',
-          nombre: 'Pro',
-          limiteFincas: 20,
-          updatedAt: now,
-        ),
-      );
-  await db
-      .into(db.cuentas)
-      .insert(
-        CuentasCompanion.insert(
-          id: 'account-offline-1',
-          nombre: 'Cuenta offline',
-          duenoId: usuarioId,
-          plan: 'pro',
-          estado: 'activa',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-  await db
-      .into(db.usuarios)
-      .insert(
-        UsuariosCompanion.insert(
-          id: usuarioId,
-          nombre: const Value('Usuario Offline'),
-          email: const Value('offline@example.com'),
-          cuentaId: const Value('account-offline-1'),
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
 }

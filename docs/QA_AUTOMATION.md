@@ -98,34 +98,64 @@ flutter test test/repositories/sanidad_repository_test.dart
 ```
 
 ## CI
-`.github/workflows/ci.yml` is committed (format check, analyze, test on a
-macOS runner). Reference copy:
+`.github/workflows/ci.yml` runs on macOS: format, analyze, unit tests, and
+**macOS integration tests** (app smoke + offline flows). Reference:
 
 ```yaml
-name: CI
-on:
-  pull_request:
-  push:
-    branches: [ main ]
-jobs:
-  flutter:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-      - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test
-      - run: flutter analyze
-      - run: flutter test
+- run: flutter test
+- run: flutter test -d macos integration_test/app_smoke_test.dart
+```
+
+## Integration test tiers
+
+| Tier | Files | Needs device | Runs in CI |
+|------|-------|--------------|------------|
+| **Offline flows** | `test/integration/offline_*.dart` | No (VM / `flutter test`) | Yes (via `flutter test`) |
+| **Device smoke** | `integration_test/app_smoke_test.dart` | Yes (macOS) | Yes |
+| **Supabase e2e** | `integration_test/supabase_e2e_test.dart` | Yes + credentials | Manual / staging |
+
+Offline multi-module flows run in the normal test suite (no simulator required):
+
+```bash
+flutter test test/integration
+```
+
+Device verification (macOS build + simulator smoke):
+
+```bash
+./scripts/verify_platforms.sh
+```
+
+Run Supabase e2e (visible steps on simulator):
+
+```bash
+flutter test -d "iPhone 17" integration_test/supabase_e2e_test.dart \
+  --dart-define=HATO_E2E_EMAIL=... \
+  --dart-define=HATO_E2E_PASSWORD=... \
+  --dart-define=HATO_E2E_SLOW_MS=650
+```
+
+Shared device helpers: `integration_test/helpers/integration_helpers.dart`.
+Offline seed data: `test/support/local_db_seed.dart`.
+
+## Offline flow tests (`test/integration/`)
+
+- `offline_local_flow_test.dart` — finca, lote, animal, pesajes; all `pendiente=true`.
+- `offline_login_cached_session_test.dart` — sesión offline verificada + datos locales.
+- `offline_modules_flow_test.dart` — dietas, movimientos_lote, sanidad individual y batch.
+
+Run the offline flow set:
+
+```bash
+flutter test test/integration
 ```
 
 ## Local QA commands
 
 ```bash
+./scripts/test.sh
 flutter pub get
-dart format lib test
+dart format lib test integration_test
 flutter analyze
 flutter test
 ```
@@ -155,22 +185,13 @@ dart run build_runner build --delete-conflicting-outputs
   protects the local verified-user state machine: save after online login,
   activate offline entry, and clear local access on explicit sign-out.
 - `integration_test/offline_login_cached_session_test.dart` must keep passing
-  on at least one local device target. It validates the cached user id through
-  account, finca, lote, and pesaje flows with pending local writes.
+  as `test/integration/offline_login_cached_session_test.dart` (VM suite).
 
 Run the offline-login evaluator set:
 
 ```bash
 flutter test test/auth test/repositories/sesion_local_repository_test.dart
-flutter test -d macos integration_test/offline_login_cached_session_test.dart
-```
-
-On a physical iPhone, Flutter may fail before tests run if macOS has not granted
-Local Network access to the terminal/IDE. Grant it in System Settings > Privacy
-& Security > Local Network, then rerun with:
-
-```bash
-flutter test -d "iPhone (5)" integration_test/offline_login_cached_session_test.dart
+flutter test test/integration/offline_login_cached_session_test.dart
 ```
 
 Keyboard `TUIKeyboardContentView` unsatisfiable-constraint logs are iOS system

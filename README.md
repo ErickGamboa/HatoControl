@@ -2,6 +2,8 @@
 
 Flutter app for cattle farm management. The app is designed as **offline-first**: data is written to a local Drift/SQLite database first and later synchronized with Supabase.
 
+**Canonical repo:** `/Users/mainor/Developer/HatoControlRun` (this folder). An older Desktop experiments clone was archived on 2026-07-07 under `~/Developer/_archive/`; do not use it for development.
+
 ## Main modules
 - Auth and account/licensing
 - Fincas and shared finca members
@@ -41,9 +43,30 @@ flutter run
 Quality checks / comandos de calidad:
 
 ```bash
+./scripts/test.sh
+```
+
+Or manually:
+
+```bash
 dart format lib test integration_test
 flutter analyze
 flutter test
+```
+
+Platform build + integration (macOS + iOS simulator):
+
+```bash
+chmod +x scripts/*.sh   # once
+./scripts/verify_platforms.sh
+```
+
+Optional Supabase e2e (requires seeded test user):
+
+```bash
+flutter test -d macos integration_test/supabase_e2e_test.dart \
+  --dart-define=HATO_E2E_EMAIL=... \
+  --dart-define=HATO_E2E_PASSWORD=...
 ```
 
 ## Platform notes / Notas de plataforma
