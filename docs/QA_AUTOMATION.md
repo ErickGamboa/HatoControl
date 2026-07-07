@@ -85,6 +85,18 @@ Run the dietas evaluator set:
 flutter test test/repositories/dietas_repository_test.dart
 ```
 
+## Sanidad evaluator set (módulo 3)
+
+- `test/repositories/sanidad_repository_test.dart` — registro individual,
+  batch por lote, borrado suave, sugerencias de producto.
+- Apply server schema: `docs/supabase_module3_sanidad.sql` in Supabase SQL Editor.
+
+Run the sanidad evaluator set:
+
+```bash
+flutter test test/repositories/sanidad_repository_test.dart
+```
+
 ## CI
 `.github/workflows/ci.yml` is committed (format check, analyze, test on a
 macOS runner). Reference copy:

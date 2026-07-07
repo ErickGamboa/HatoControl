@@ -7,6 +7,7 @@ import 'data/repositories/dietas_repository.dart';
 import 'data/repositories/fincas_repository.dart';
 import 'data/repositories/lotes_repository.dart';
 import 'data/repositories/pesajes_repository.dart';
+import 'data/repositories/sanidad_repository.dart';
 import 'data/repositories/sesion_local_repository.dart';
 import 'data/sync/sync_service.dart';
 
@@ -18,6 +19,7 @@ final LotesRepository lotesRepo = LotesRepository(db);
 final CuentasRepository cuentasRepo = CuentasRepository(db);
 final PesajesRepository pesajesRepo = PesajesRepository(db);
 final DietasRepository dietasRepo = DietasRepository(db);
+final SanidadRepository sanidadRepo = SanidadRepository(db);
 final SesionLocalRepository sesionLocalRepo = SesionLocalRepository(db);
 final SyncService syncService = SyncService(db);
 final EstadoConexion estadoConexion = EstadoConexion();

@@ -181,6 +181,28 @@ class MovimientosLote extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Aplicación sanitaria por animal (D-04): vacuna, medicamento, etc.
+@DataClassName('EventoSanitarioRow')
+class EventosSanitarios extends Table {
+  TextColumn get id => text()();
+  TextColumn get animalId => text()();
+  TextColumn get tipo =>
+      text()(); // vacuna | medicamento | desparasitacion | otro
+  TextColumn get producto => text()();
+  TextColumn get dosis => text().nullable()();
+  DateTimeColumn get fecha => dateTime()();
+  TextColumn get responsableId => text().nullable()();
+  TextColumn get observaciones => text().nullable()();
+  RealColumn get costo => real().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DataClassName('PesajeRow')
 class Pesajes extends Table {
   TextColumn get id => text()();
@@ -238,6 +260,7 @@ class SesionesLocales extends Table {
     Dietas,
     LoteDietas,
     MovimientosLote,
+    EventosSanitarios,
     SyncCursores,
     SesionesLocales,
   ],
@@ -250,7 +273,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -289,6 +312,10 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(dietas);
         await m.createTable(loteDietas);
         await m.createTable(movimientosLote);
+      }
+      if (from < 8) {
+        // v8: eventos sanitarios por animal.
+        await m.createTable(eventosSanitarios);
       }
     },
   );

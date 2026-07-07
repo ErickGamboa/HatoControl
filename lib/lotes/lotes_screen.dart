@@ -7,9 +7,10 @@ import 'lote_animales_screen.dart';
 
 /// Lista y creación de lotes de una finca.
 class LotesScreen extends StatelessWidget {
-  const LotesScreen({super.key, required this.finca});
+  const LotesScreen({super.key, required this.finca, this.usuarioId});
 
   final FincaRow finca;
+  final String? usuarioId;
 
   /// Diálogo para crear o editar un lote. Si [lote] es null, crea uno nuevo.
   Future<void> _loteDialog(BuildContext context, {LoteRow? lote}) async {
@@ -127,7 +128,8 @@ class LotesScreen extends StatelessWidget {
                   ),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => LoteAnimalesScreen(lote: l),
+                      builder: (_) =>
+                          LoteAnimalesScreen(lote: l, usuarioId: usuarioId),
                     ),
                   ),
                 ),

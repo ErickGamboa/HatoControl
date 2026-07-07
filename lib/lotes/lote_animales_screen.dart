@@ -5,15 +5,17 @@ import '../data/local/database.dart';
 import '../data/repositories/dietas_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
 import '../services.dart';
-import 'animal_historial_screen.dart';
+import 'animal_ficha_screen.dart';
+import 'animal_sanidad_tab.dart';
 import 'lote_historial_screen.dart';
 
 /// Lista los animales de un lote (con su peso actual) y permite buscarlos.
 /// Al tocar un animal se abre su historial de pesajes.
 class LoteAnimalesScreen extends StatefulWidget {
-  const LoteAnimalesScreen({super.key, required this.lote});
+  const LoteAnimalesScreen({super.key, required this.lote, this.usuarioId});
 
   final LoteRow lote;
+  final String? usuarioId;
 
   @override
   State<LoteAnimalesScreen> createState() => _LoteAnimalesScreenState();
@@ -222,6 +224,24 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
         title: Text(widget.lote.nombre),
         actions: [
           IconButton(
+            tooltip: 'Tratamiento al lote',
+            icon: const Icon(Icons.vaccines_outlined),
+            onPressed: () async {
+              final n = await aplicarSanidadAlLote(
+                context,
+                lote: widget.lote,
+                responsableId: widget.usuarioId,
+              );
+              if (n != null && n > 0 && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Tratamiento aplicado a $n animal(es).'),
+                  ),
+                );
+              }
+            },
+          ),
+          IconButton(
             tooltip: 'Historial del lote',
             icon: const Icon(Icons.query_stats),
             onPressed: () => Navigator.of(context).push(
@@ -350,8 +370,10 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                           return InkWell(
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    AnimalHistorialScreen(animal: a.animal),
+                                builder: (_) => AnimalFichaScreen(
+                                  animal: a.animal,
+                                  usuarioId: widget.usuarioId,
+                                ),
                               ),
                             ),
                             child: Padding(

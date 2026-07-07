@@ -172,38 +172,21 @@ on Supabase before enabling sync to production:
 
 ## Module 3 — Sanidad + Hoja de vida + Corral
 
-### 3a. Sanidad / Health records
+### 3a. Sanidad / Health records — **local app shipped 2026-07-07**
 
-Per-animal applications: medicamento, dosis, fecha, responsable,
-observaciones. Data model (see D-04):
-- `eventos_sanitarios` — id, animal_id, tipo (`vacuna` | `medicamento` |
-  `desparasitacion` | `otro`), producto, dosis, fecha, responsable
-  (usuario_id), observaciones, costo (nullable — feeds module 4), timestamps
-  + sync columns.
+Per-animal applications (D-04). Run `docs/supabase_module3_sanidad.sql` before sync.
 
-- [ ] Schema + migration + sync + RLS + `MODELO_DATOS.md`.
-- [ ] `SanidadRepository`: registrar aplicación, historial por animal,
-      aplicaciones por lote/fecha (for corral batch entry).
-- [ ] Evaluator: invariants (soft delete, pendiente), history ordering,
-      batch application to N animals in one transaction.
+- [x] Drift v8 + migration + `SyncService` mappers + `MODELO_DATOS.md`.
+- [ ] Supabase tables/RLS applied (SQL script ready).
+- [x] `SanidadRepository`: registrar, historial, batch por lote, sugerencias.
+- [x] Evaluator: `test/repositories/sanidad_repository_test.dart`.
 
-### 3b. Hoja de vida del animal / Animal life record
+### 3b. Hoja de vida del animal — **partial 2026-07-07**
 
-Upgrade `AnimalHistorialScreen` into a tabbed `AnimalFichaScreen`:
-
-```text
-Animal #154
-├── Información general (identificador, lote actual, fecha ingreso, estado)
-├── Pesajes (current history + chart, module 1a)
-├── Sanidad (module 3a history)
-├── Dietas (derived: dietas received via its lote history, module 2)
-└── Venta/Costos (module 4, added later)
-```
-
-- [ ] Tabbed screen with injected repositories (widget-testable).
-- [ ] Dietas tab is **derived** data: join the animal's lote history against
-      `lote_dietas` (requires movimientos_lote — see D-05; until then, show
-      current lote's diet history with a caveat).
+- [x] `AnimalFichaScreen` with tabs: General, Pesajes, Sanidad, Dietas.
+- [x] Dietas tab derived from `movimientos_lote` + `lote_dietas` (D-05).
+- [x] Batch sanidad from lote screen (vaccine icon in app bar).
+- [ ] Venta/Costos tab (module 4).
 
 ### 3c. Pantalla de trabajo (Corral) / Work screen
 

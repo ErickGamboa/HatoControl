@@ -26,6 +26,7 @@ Useful docs:
 - `docs/MODELO_DATOS.md` — domain model and Supabase assumptions
 - `docs/ARCHITECTURE_REVIEW.md` — technical architecture review and hardening roadmap
 - `docs/supabase_module2_dietas.sql` — SQL to run in Supabase for Module 2 (dietas)
+- `docs/supabase_module3_sanidad.sql` — SQL for Module 3 (sanidad)
 
 ## Local setup / Configuración local
 

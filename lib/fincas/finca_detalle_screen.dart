@@ -109,7 +109,9 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
                   color: theme.colorScheme.primary,
                 ),
                 label: 'Lotes',
-                onTap: () => _abrir(LotesScreen(finca: finca)),
+                onTap: () => _abrir(
+                  LotesScreen(finca: finca, usuarioId: widget.usuarioId),
+                ),
               ),
               _BotonOpcion(
                 key: const ValueKey('fincaDetail.dietas'),

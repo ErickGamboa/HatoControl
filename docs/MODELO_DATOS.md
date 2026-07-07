@@ -6,6 +6,7 @@ con Drift** y una **capa de sincronización propia** hacia Supabase (Postgres).
 Módulos de esta primera etapa: **fincas, lotes, inventario (animales), pesaje**.
 Módulo 2 (dietas + movimientos de lote) documentado abajo; aplicar SQL en
 `docs/supabase_module2_dietas.sql` en Supabase antes de sincronizar.
+Módulo 3 (sanidad): `docs/supabase_module3_sanidad.sql`.
 
 > **Estado:** tablas + seguridad (RLS) aplicadas en Supabase (`geocoundyilwxrnbhcqu`).
 > Funciones auxiliares en el esquema `private` (`es_miembro`, `es_admin`, `comparte_finca`,
@@ -175,6 +176,26 @@ Reglas:
 | deleted_at | timestamptz | |
 
 Se escribe al crear animal (origen null) y al mover de lote.
+
+### eventos_sanitarios — sanidad por animal (módulo 3, D-04)
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid (PK) | |
+| animal_id | uuid → animales.id | |
+| tipo | text | `vacuna` \| `medicamento` \| `desparasitacion` \| `otro` |
+| producto | text | nombre del producto |
+| dosis | text | opcional |
+| fecha | timestamptz | |
+| responsable_id | uuid → usuarios.id | opcional |
+| observaciones | text | opcional |
+| costo | numeric | opcional; alimenta módulo 4 |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+| deleted_at | timestamptz | borrado suave |
+
+Reglas:
+- Un registro por aplicación por animal; el modo lote crea N filas en una transacción.
+- `costo` nullable hasta que se use en ventas/rentabilidad.
 
 ## Roles y permisos (resumen)
 - **admin:** todo en su finca + agregar/quitar usuarios y asignarles rol (admin u operario).

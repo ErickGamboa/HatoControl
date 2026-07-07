@@ -61,6 +61,7 @@ class SyncService {
     await _paso(_subirLoteDietas);
     await _paso(_subirAnimales);
     await _paso(_subirMovimientosLote);
+    await _paso(_subirEventosSanitarios);
     await _paso(_subirPesajes);
     // Fotos: después de la membresía (la RLS de update exige ser admin).
     await _paso(_subirFotosFincas);
@@ -75,6 +76,7 @@ class SyncService {
     await _paso(_bajarLoteDietas);
     await _paso(_bajarAnimales);
     await _paso(_bajarMovimientosLote);
+    await _paso(_bajarEventosSanitarios);
     await _paso(_bajarPesajes);
   }
 
@@ -282,6 +284,33 @@ class SyncService {
     );
   }
 
+  Future<void> _subirEventosSanitarios() async {
+    final pendientes = await (db.select(
+      db.eventosSanitarios,
+    )..where((t) => t.pendiente.equals(true))).get();
+    await _subirPendientes<EventoSanitarioRow>(
+      tabla: 'eventos_sanitarios',
+      filas: pendientes,
+      id: (e) => e.id,
+      datos: (e) => {
+        'id': e.id,
+        'animal_id': e.animalId,
+        'tipo': e.tipo,
+        'producto': e.producto,
+        'dosis': e.dosis,
+        'fecha': e.fecha.toIso8601String(),
+        'responsable_id': e.responsableId,
+        'observaciones': e.observaciones,
+        'costo': e.costo,
+        'created_at': e.createdAt.toIso8601String(),
+        'deleted_at': e.deletedAt?.toIso8601String(),
+      },
+      marcarSubida: (id) =>
+          (db.update(db.eventosSanitarios)..where((t) => t.id.equals(id)))
+              .write(const EventosSanitariosCompanion(pendiente: Value(false))),
+    );
+  }
+
   Future<void> _subirPesajes() async {
     final pendientes = await (db.select(
       db.pesajes,
@@ -402,6 +431,11 @@ class SyncService {
       case 'movimientos_lote':
         final fila = await (db.select(
           db.movimientosLote,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      case 'eventos_sanitarios':
+        final fila = await (db.select(
+          db.eventosSanitarios,
         )..where((t) => t.id.equals(id))).getSingleOrNull();
         return fila?.pendiente ?? false;
       case 'pesajes':
@@ -767,6 +801,46 @@ class SyncService {
     }
     if (!retuvoCambioLocal && maxU != null) {
       await _guardarCursor('movimientos_lote', maxU);
+    }
+  }
+
+  Future<void> _bajarEventosSanitarios() async {
+    final cursor = await _leerCursor('eventos_sanitarios');
+    final filas = await _consultar('eventos_sanitarios', cursor);
+    DateTime? maxU = cursor;
+    var retuvoCambioLocal = false;
+    for (final r in filas) {
+      final u = DateTime.parse(r['updated_at'] as String);
+      final id = r['id'] as String;
+      if (await tieneCambiosLocalesPendientes('eventos_sanitarios', id)) {
+        retuvoCambioLocal = true;
+        continue;
+      }
+      await db
+          .into(db.eventosSanitarios)
+          .insertOnConflictUpdate(
+            EventoSanitarioRow(
+              id: id,
+              animalId: r['animal_id'] as String,
+              tipo: r['tipo'] as String,
+              producto: r['producto'] as String,
+              dosis: r['dosis'] as String?,
+              fecha: DateTime.parse(r['fecha'] as String),
+              responsableId: r['responsable_id'] as String?,
+              observaciones: r['observaciones'] as String?,
+              costo: r['costo'] != null ? (r['costo'] as num).toDouble() : null,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          );
+      if (maxU == null || u.isAfter(maxU)) maxU = u;
+    }
+    if (!retuvoCambioLocal && maxU != null) {
+      await _guardarCursor('eventos_sanitarios', maxU);
     }
   }
 

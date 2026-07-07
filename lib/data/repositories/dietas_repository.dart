@@ -11,6 +11,23 @@ class DietaVigenteLote {
   final DietaRow dieta;
 }
 
+/// Dieta recibida por un animal vía los lotes donde estuvo (D-05).
+class DietaRecibidaAnimal {
+  const DietaRecibidaAnimal({
+    required this.loteNombre,
+    required this.dietaNombre,
+    required this.desde,
+    required this.hasta,
+    required this.costoAnimalDia,
+  });
+
+  final String loteNombre;
+  final String dietaNombre;
+  final DateTime desde;
+  final DateTime? hasta;
+  final double costoAnimalDia;
+}
+
 /// Acceso local a dietas y asignaciones lote-dieta. Sync corre por separado.
 class DietasRepository {
   DietasRepository(this.db);
@@ -144,5 +161,72 @@ class DietasRepository {
           ..where((t) => t.loteId.equals(loteId) & t.deletedAt.isNull())
           ..orderBy([(t) => OrderingTerm.desc(t.desde)]))
         .watch();
+  }
+
+  /// Dietas que recibió un animal según los lotes por los que pasó y las
+  /// asignaciones vigentes en cada periodo.
+  Stream<List<DietaRecibidaAnimal>> observarDietasRecibidas(String animalId) {
+    final movimientos = db.select(db.movimientosLote)
+      ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+      ..orderBy([(t) => OrderingTerm.asc(t.fecha)]);
+
+    return movimientos.watch().asyncMap((movs) async {
+      if (movs.isEmpty) return const <DietaRecibidaAnimal>[];
+
+      final resultado = <DietaRecibidaAnimal>[];
+      for (var i = 0; i < movs.length; i++) {
+        final mov = movs[i];
+        final periodoFin = i + 1 < movs.length ? movs[i + 1].fecha : null;
+        final asignaciones =
+            await (db.select(db.loteDietas)..where(
+                  (t) =>
+                      t.loteId.equals(mov.loteDestino) &
+                      t.deletedAt.isNull() &
+                      t.desde.isSmallerOrEqualValue(
+                        periodoFin ?? DateTime.now(),
+                      ),
+                ))
+                .get();
+
+        for (final asig in asignaciones) {
+          final finAsig = asig.hasta;
+          if (finAsig != null && finAsig.isBefore(mov.fecha)) continue;
+          if (periodoFin != null &&
+              finAsig != null &&
+              finAsig.isBefore(periodoFin) &&
+              finAsig.isBefore(mov.fecha)) {
+            continue;
+          }
+          final dieta = await (db.select(
+            db.dietas,
+          )..where((t) => t.id.equals(asig.dietaId))).getSingleOrNull();
+          if (dieta == null || dieta.deletedAt != null) continue;
+
+          final lote = await (db.select(
+            db.lotes,
+          )..where((t) => t.id.equals(mov.loteDestino))).getSingleOrNull();
+
+          resultado.add(
+            DietaRecibidaAnimal(
+              loteNombre: lote?.nombre ?? 'Lote',
+              dietaNombre: dieta.nombre,
+              desde: mov.fecha.isAfter(asig.desde) ? mov.fecha : asig.desde,
+              hasta: _finPeriodo(periodoFin, asig.hasta),
+              costoAnimalDia: asig.costoAnimalDiaSnapshot,
+            ),
+          );
+        }
+      }
+      return resultado;
+    });
+  }
+
+  DateTime? _finPeriodo(DateTime? finMovimiento, DateTime? finAsignacion) {
+    if (finMovimiento == null && finAsignacion == null) return null;
+    if (finMovimiento == null) return finAsignacion;
+    if (finAsignacion == null) return finMovimiento;
+    return finMovimiento.isBefore(finAsignacion)
+        ? finMovimiento
+        : finAsignacion;
   }
 }
