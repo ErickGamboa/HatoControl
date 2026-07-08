@@ -4,9 +4,10 @@ Software as a Service para manejo de hato ganadero. Offline-first: base **SQLite
 con Drift** y una **capa de sincronización propia** hacia Supabase (Postgres).
 
 Módulos de esta primera etapa: **fincas, lotes, inventario (animales), pesaje**.
-Módulo 2 (dietas + movimientos de lote) documentado abajo; aplicar SQL en
-`docs/supabase_module2_dietas.sql` en Supabase antes de sincronizar.
-Módulo 3 (sanidad): `docs/supabase_module3_sanidad.sql`.
+Módulo 2 (dietas + movimientos de lote) documentado abajo; aplicar el schema
+via `supabase db push` (`supabase/migrations/20260707203015_module2_dietas.sql`)
+antes de sincronizar — ver `docs/SUPABASE_SQL_ORDER.md`.
+Módulo 3 (sanidad): `supabase/migrations/20260707203017_module3_sanidad.sql`.
 
 > **Estado:** tablas + seguridad (RLS) aplicadas en Supabase (`geocoundyilwxrnbhcqu`).
 > Funciones auxiliares en el esquema `private` (`es_miembro`, `es_admin`, `comparte_finca`,
@@ -196,6 +197,31 @@ Se escribe al crear animal (origen null) y al mover de lote.
 Reglas:
 - Un registro por aplicación por animal; el modo lote crea N filas en una transacción.
 - `costo` nullable hasta que se use en ventas/rentabilidad.
+
+### feature_flags — módulos on/off por scope (módulo 5, D-15)
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid (PK) | |
+| scope | text | `global` \| `cuenta` \| `finca` |
+| scope_id | uuid | null solo si `scope = 'global'` |
+| clave | text | nombre del módulo/feature, p. ej. `dietas` |
+| habilitado | boolean | default `true` |
+| nota | text | opcional, para el admin que gestiona el flag |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+| deleted_at | timestamptz | borrado suave |
+
+Reglas:
+- **Solo lectura desde la app.** RLS solo otorga `SELECT` a `authenticated`;
+  el CLI (`hatoctl`, workstream aparte) escribe con `service_role`. Por eso
+  la tabla local **no tiene columna `pendiente`**: nunca hay un cambio local
+  que subir, así que el invariante habitual "escritura local ⇒
+  `pendiente=true`" no aplica aquí (excepción documentada, no un olvido).
+  `SyncService` solo la BAJA, nunca la sube.
+- Resolución de `FeatureFlagsRepository.isEnabled(clave, ...)`: precedencia
+  **finca > cuenta > global > defaultValue** (fail-open): si no hay fila en
+  ningún scope para esa `clave`, se asume habilitado a menos que se pase
+  `defaultValue: false`.
 
 ## Roles y permisos (resumen)
 - **admin:** todo en su finca + agregar/quitar usuarios y asignarles rol (admin u operario).

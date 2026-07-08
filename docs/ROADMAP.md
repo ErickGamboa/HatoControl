@@ -159,10 +159,11 @@ Data model (details and open questions in D-02, D-03):
   answer "¿con cuál dieta crecieron más rápido?" and to compute feeding cost
   per animal later (module 4).
 
-Work items — **local app shipped 2026-07-07**; run `docs/supabase_module2_dietas.sql`
-on Supabase before enabling sync to production:
+Work items — **local app shipped 2026-07-07**; run `supabase db push`
+(`supabase/migrations/20260707203015_module2_dietas.sql`) before enabling
+sync to production — see `docs/SUPABASE_SQL_ORDER.md`:
 - [x] Drift tables + migration v7 + `SyncService` mappers + `MODELO_DATOS.md`.
-- [ ] Supabase tables/RLS applied (SQL script ready for you).
+- [ ] Supabase tables/RLS applied (migration ready, not yet pushed).
 - [x] `DietasRepository`: CRUD, asignar dieta (cierra anterior + snapshot),
       dieta vigente, historial.
 - [x] `movimientos_lote` written on create animal and move lote (D-05).
@@ -174,7 +175,8 @@ on Supabase before enabling sync to production:
 
 ### 3a. Sanidad / Health records — **local app shipped 2026-07-07**
 
-Per-animal applications (D-04). Run `docs/supabase_module3_sanidad.sql` before sync.
+Per-animal applications (D-04). Run `supabase db push`
+(`supabase/migrations/20260707203017_module3_sanidad.sql`) before sync.
 
 - [x] Drift v8 + migration + `SyncService` mappers + `MODELO_DATOS.md`.
 - [ ] Supabase tables/RLS applied (SQL script ready).
@@ -209,12 +211,36 @@ otros costos, precio de venta → costo total, utilidad, margen, rentabilidad.
 
 - [x] Drift v9: `animales.estado`, `precio_compra`, `fecha_compra`; `ventas`;
       `costos_otros`; sync mappers.
-- [ ] Supabase tables/RLS applied (SQL: `docs/supabase_module4_ventas.sql`).
+- [ ] Supabase tables/RLS applied (migration:
+      `supabase/migrations/20260707203019_module4_ventas.sql`, not yet pushed).
 - [x] `VentasRepository` + `estadisticas_economicas.dart` (pure math).
 - [x] UI: Economía tab in hoja de vida; venta marca animal `vendido`.
 - [x] Evaluators: `test/estadisticas/estadisticas_economicas_test.dart`,
       `test/repositories/ventas_repository_test.dart`.
 - [ ] Finca-level sales summary (later).
+
+## Module 5 — Feature flags / Banderas de funcionalidad — **backend/data-layer shipped 2026-07-07**
+
+Lets admins turn app modules on/off per finca/cuenta/globally via the
+`hatoctl` CLI (separate workstream), without an app release (D-15). This
+entry covers the backend/data-layer piece only; CLI and any UI gating are
+separate work.
+
+- [x] Drift v10: `FeatureFlags` table (id, scope, scope_id, clave,
+      habilitado, nota, timestamps) mirroring the Supabase
+      `feature_flags` table — no `pendiente` column, since the app never
+      writes this table (pull-only, D-15).
+- [ ] Supabase table/RLS applied — schema lives in
+      `supabase/migrations/20260707203311_feature_flags.sql` (owned by the
+      CLI/migrations workstream); app only consumes it, no new SQL added here.
+- [x] `FeatureFlagsRepository`: `observarFlags()` stream + `isEnabled(clave,
+      {fincaId, cuentaId, defaultValue})` resolving finca > cuenta > global >
+      `defaultValue` (fail-open).
+- [x] `SyncService._bajarFeatureFlags()`: pull-only mapper, per-table cursor
+      (A-04), no push path (no local writes to upload).
+- [x] Wired as `featureFlagsRepo` global in `lib/services.dart`.
+- [x] Evaluator: `test/repositories/feature_flags_repository_test.dart`.
+- [ ] UI gating of modules by flag value (later, once a module needs it).
 
 ## Cross-cutting tracks / Pistas transversales
 

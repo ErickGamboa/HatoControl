@@ -1,8 +1,13 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 
+import '../app/theme.dart';
 import '../data/local/database.dart';
+import '../data/repositories/fincas_repository.dart';
+import '../data/repositories/lotes_repository.dart';
+import '../data/repositories/ventas_repository.dart' show EstadoAnimal;
 import '../corral/corral_screen.dart';
 import '../dietas/dietas_screen.dart';
 import '../lotes/lotes_screen.dart';
@@ -11,18 +16,27 @@ import '../services.dart';
 import 'compartir_finca_screen.dart';
 import 'foto_picker.dart';
 
-/// Detalle de una finca: menú de opciones (botonera) + editar la finca.
+/// Detalle de una finca: KPIs rápidos + menú de opciones (botonera) + editar
+/// la finca.
 class FincaDetalleScreen extends StatefulWidget {
-  const FincaDetalleScreen({
+  FincaDetalleScreen({
     super.key,
     required this.finca,
     required this.usuarioId,
     required this.sinConexion,
-  });
+    AppDatabase? database,
+    FincasRepository? fincasRepository,
+    LotesRepository? lotesRepository,
+  }) : database = database ?? db,
+       fincasRepository = fincasRepository ?? fincasRepo,
+       lotesRepository = lotesRepository ?? lotesRepo;
 
   final FincaRow finca;
   final String usuarioId;
   final bool sinConexion;
+  final AppDatabase database;
+  final FincasRepository fincasRepository;
+  final LotesRepository lotesRepository;
 
   @override
   State<FincaDetalleScreen> createState() => _FincaDetalleScreenState();
@@ -38,7 +52,7 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
     final (nombre, nuevaFotoPath) = resultado;
     if (nombre.isEmpty) return;
 
-    await fincasRepo.editarFinca(
+    await widget.fincasRepository.editarFinca(
       fincaId: finca.id,
       nombre: nombre,
       nuevaFotoLocalPath: nuevaFotoPath,
@@ -50,10 +64,67 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => pantalla));
   }
 
+  Stream<int> _contarLotes(String fincaId) {
+    return widget.lotesRepository
+        .observarLotes(fincaId)
+        .map((lotes) => lotes.length);
+  }
+
+  Stream<int> _contarAnimalesActivos(String fincaId) {
+    final db = widget.database;
+    final conteo = db.animales.id.count();
+    final consulta = db.selectOnly(db.animales)
+      ..addColumns([conteo])
+      ..where(
+        db.animales.fincaId.equals(fincaId) &
+            db.animales.deletedAt.isNull() &
+            db.animales.estado.equals(EstadoAnimal.activo),
+      );
+    return consulta.watchSingle().map((fila) => fila.read(conteo) ?? 0);
+  }
+
+  Widget _kpiHeader(FincaRow finca) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        HatoSpacing.lg,
+        HatoSpacing.lg,
+        HatoSpacing.lg,
+        0,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: StreamBuilder<int>(
+              stream: _contarLotes(finca.id),
+              builder: (context, snapshot) => _KpiTile(
+                key: const ValueKey('fincaDetail.kpiLotes'),
+                icono: Icons.grid_view_outlined,
+                etiqueta: 'Lotes',
+                valor: snapshot.data,
+              ),
+            ),
+          ),
+          const SizedBox(width: HatoSpacing.md),
+          Expanded(
+            child: StreamBuilder<int>(
+              stream: _contarAnimalesActivos(finca.id),
+              builder: (context, snapshot) => _KpiTile(
+                key: const ValueKey('fincaDetail.kpiAnimales'),
+                icono: Icons.pets_outlined,
+                etiqueta: 'Animales activos',
+                valor: snapshot.data,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<FincaRow?>(
-      stream: fincasRepo.observarFinca(widget.finca.id),
+      stream: widget.fincasRepository.observarFinca(widget.finca.id),
       initialData: widget.finca,
       builder: (context, snapshot) {
         final finca = snapshot.data ?? widget.finca;
@@ -81,65 +152,126 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
               ),
             ],
           ),
-          body: GridView.count(
-            padding: const EdgeInsets.all(16),
-            crossAxisCount: 2,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 1,
+          body: Column(
             children: [
-              _BotonOpcion(
-                key: const ValueKey('fincaDetail.corral'),
-                icono: Icon(
-                  Icons.agriculture_outlined,
-                  size: 60,
-                  color: theme.colorScheme.primary,
+              _kpiHeader(finca),
+              Expanded(
+                child: GridView.count(
+                  padding: const EdgeInsets.all(HatoSpacing.lg),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: HatoSpacing.lg,
+                  crossAxisSpacing: HatoSpacing.lg,
+                  childAspectRatio: 1,
+                  children: [
+                    _BotonOpcion(
+                      key: const ValueKey('fincaDetail.corral'),
+                      icono: Icon(
+                        Icons.agriculture_outlined,
+                        size: 60,
+                        color: theme.colorScheme.primary,
+                      ),
+                      label: 'Corral',
+                      onTap: () => _abrir(
+                        CorralScreen(finca: finca, usuarioId: widget.usuarioId),
+                      ),
+                    ),
+                    _BotonOpcion(
+                      key: const ValueKey('fincaDetail.pesaje'),
+                      icono: Image.asset(
+                        'assets/iconos/pesaje.png',
+                        width: 60,
+                        height: 60,
+                        color: theme.colorScheme.primary,
+                      ),
+                      label: 'Pesaje',
+                      onTap: () => _abrir(
+                        PesajeScreen(finca: finca, usuarioId: widget.usuarioId),
+                      ),
+                    ),
+                    _BotonOpcion(
+                      key: const ValueKey('fincaDetail.lotes'),
+                      icono: Image.asset(
+                        'assets/iconos/lotes.png',
+                        width: 60,
+                        height: 60,
+                        color: theme.colorScheme.primary,
+                      ),
+                      label: 'Lotes',
+                      onTap: () => _abrir(
+                        LotesScreen(finca: finca, usuarioId: widget.usuarioId),
+                      ),
+                    ),
+                    _BotonOpcion(
+                      key: const ValueKey('fincaDetail.dietas'),
+                      icono: Icon(
+                        Icons.restaurant_menu,
+                        size: 60,
+                        color: theme.colorScheme.primary,
+                      ),
+                      label: 'Dietas',
+                      onTap: () => _abrir(DietasScreen(finca: finca)),
+                    ),
+                  ],
                 ),
-                label: 'Corral',
-                onTap: () => _abrir(
-                  CorralScreen(finca: finca, usuarioId: widget.usuarioId),
-                ),
-              ),
-              _BotonOpcion(
-                key: const ValueKey('fincaDetail.pesaje'),
-                icono: Image.asset(
-                  'assets/iconos/pesaje.png',
-                  width: 60,
-                  height: 60,
-                  color: theme.colorScheme.primary,
-                ),
-                label: 'Pesaje',
-                onTap: () => _abrir(
-                  PesajeScreen(finca: finca, usuarioId: widget.usuarioId),
-                ),
-              ),
-              _BotonOpcion(
-                key: const ValueKey('fincaDetail.lotes'),
-                icono: Image.asset(
-                  'assets/iconos/lotes.png',
-                  width: 60,
-                  height: 60,
-                  color: theme.colorScheme.primary,
-                ),
-                label: 'Lotes',
-                onTap: () => _abrir(
-                  LotesScreen(finca: finca, usuarioId: widget.usuarioId),
-                ),
-              ),
-              _BotonOpcion(
-                key: const ValueKey('fincaDetail.dietas'),
-                icono: Icon(
-                  Icons.restaurant_menu,
-                  size: 60,
-                  color: theme.colorScheme.primary,
-                ),
-                label: 'Dietas',
-                onTap: () => _abrir(DietasScreen(finca: finca)),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Tarjeta compacta con un número (KPI) y su etiqueta, para el encabezado de
+/// la finca. [valor] null mientras el stream todavía no entrega el primer
+/// dato.
+class _KpiTile extends StatelessWidget {
+  const _KpiTile({
+    super.key,
+    required this.icono,
+    required this.etiqueta,
+    required this.valor,
+  });
+
+  final IconData icono;
+  final String etiqueta;
+  final int? valor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(HatoSpacing.md),
+        child: Row(
+          children: [
+            Icon(icono, color: theme.colorScheme.primary),
+            const SizedBox(width: HatoSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    valor?.toString() ?? '—',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    etiqueta,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

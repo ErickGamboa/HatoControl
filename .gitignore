@@ -4,6 +4,12 @@
 *.pyc
 *.swp
 .DS_Store
+
+# Android release signing (never commit — see android/README_SIGNING.md)
+android/key.properties
+android/app/upload-keystore.jks
+*.jks
+*.keystore
 .atom/
 .build/
 .buildlog/
@@ -43,3 +49,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Claude Code agent worktrees (ephemeral, per-session)
+/.claude/

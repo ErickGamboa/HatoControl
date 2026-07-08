@@ -159,11 +159,61 @@ Committed `.github/workflows/ci.yml` (format check, analyze, test) as
 specified in `docs/QA_AUTOMATION.md`. An Android build job can be added
 later.
 
+**Update 2026-07-07:** added pub/gradle caching, a generated-file drift check
+(`build_runner` + `git diff --exit-code -- '*.g.dart'`, enforcing `AGENTS.md`
+invariant #10 in CI instead of by convention only), and a separate
+`android-build` job (ubuntu runner, `flutter build apk --debug`) so Android
+platform breakage is caught without waiting for a macOS runner. Web build
+check deferred until D-09's web work lands — `flutter build web` fails today
+because of `dart:io` photo handling, so adding it now would just be
+permanently red.
+
 ### D-13 — Sync observability: local `sync_estado` table
 **Needed for: cross-cutting sync track. Status: Decidida (2026-07-02).**
 Local table with per-table pending counts, last error, and last success
 timestamp, plus a small status sheet in the UI. No server changes needed.
 Scheduled with the sync robustness track (before the table count doubles).
+
+### D-14 — Schema migrations: Supabase CLI, `supabase/migrations/`
+**Needed for: admin CLI, agent workflow. Status: Decidida (2026-07-07).**
+Replaces the "paste `docs/supabase_*.sql` into the Dashboard SQL Editor, in
+an order tracked by a markdown doc" process — that process had already
+caused at least one real failure (missing bootstrap step, documented in the
+old `docs/SUPABASE_SQL_ORDER.md`) and, more importantly, cannot be executed
+by an agent (no browser access to the Dashboard). Schema now lives in
+timestamped files under `supabase/migrations/`, applied with
+`supabase db push` after `supabase login && supabase link`. The four
+existing scripts (bootstrap RLS helpers, modules 2–4) were converted
+verbatim into the first four migrations; the original v1 schema
+(`fincas`/`lotes`/`animales`/etc.) predates this repo and is **not yet**
+captured as a migration — see the gap documented in
+`docs/SUPABASE_SQL_ORDER.md`, close it once via `supabase db pull` after
+linking. `supabase login`/`link` require the developer's own credentials —
+never run by an agent unattended. See `docs/ARCHITECTURE_REVIEW.md` and the
+admin CLI design for how this underpins feature flags and admin data
+operations.
+
+### D-15 — Feature flags: `feature_flags` table, admin-write-only, three scopes
+**Needed for: Module 5. Status: Decidida (2026-07-07).**
+`public.feature_flags` (migration
+`supabase/migrations/20260707203311_feature_flags.sql`): `scope`
+(`global`|`cuenta`|`finca`), `scope_id` (null iff scope='global'), `clave`
+(e.g. `modulo_dietas`), `habilitado`. Resolution order for the app:
+finca override > cuenta override > global default > compiled-in default
+(fail open — a module that already shipped stays on if no flag row exists
+for it). RLS grants `authenticated` **SELECT only**; there is deliberately
+no INSERT/UPDATE/DELETE policy — writes happen exclusively through
+`hatoctl` using the `service_role` key, which bypasses RLS. This mirrors
+A-09 (RLS is the source of truth) one level further: for this table, the
+client isn't even trusted with a UX-only write path. `admin_audit_log`
+(migration `20260707203313_admin_audit_log.sql`) records every hatoctl
+mutation (actor, acción, detalle); service_role only, no authenticated
+access at all. Local Drift mirror is pull-only (no `pendiente` column — the
+app never writes this table, so the usual sync-write invariants don't
+apply; documented as an intentional exception in `docs/MODELO_DATOS.md`).
+Gates three things: nav/menu visibility, sync (skip pulling/pushing a
+disabled module's tables), and route guards as defense in depth. Also the
+mechanism for A-07's plan-based gating later (a flag scoped by cuenta).
 
 ---
 

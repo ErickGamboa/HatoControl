@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../app/widgets/quick_number_field.dart';
+import '../app/widgets/scan_field.dart';
 import '../data/local/database.dart';
 import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
@@ -48,26 +49,7 @@ class _CorralScreenState extends State<CorralScreen> {
   int _buscarSeq = 0;
 
   @override
-  void initState() {
-    super.initState();
-    _identFocus.addListener(_seleccionarTodoId);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _identFocus.requestFocus();
-    });
-  }
-
-  void _seleccionarTodoId() {
-    if (_identFocus.hasFocus && _identCtrl.text.isNotEmpty) {
-      _identCtrl.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _identCtrl.text.length,
-      );
-    }
-  }
-
-  @override
   void dispose() {
-    _identFocus.removeListener(_seleccionarTodoId);
     _identCtrl.dispose();
     _pesoCtrl.dispose();
     _identFocus.dispose();
@@ -366,48 +348,32 @@ class _CorralScreenState extends State<CorralScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextField(
+              ScanField(
                 key: const ValueKey('corral.animalId'),
                 controller: _identCtrl,
                 focusNode: _identFocus,
-                keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
                 onChanged: (_) => _buscarAnimal(),
                 onSubmitted: (_) => _pesoFocus.requestFocus(),
-                style: const TextStyle(fontSize: 20),
-                decoration: InputDecoration(
-                  labelText: 'Arete / identificador',
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Image.asset(
-                      'assets/iconos/arete.png',
-                      width: 24,
-                      height: 24,
-                      color: theme.colorScheme.primary,
-                    ),
+                labelText: 'Arete / identificador',
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Image.asset(
+                    'assets/iconos/arete.png',
+                    width: 24,
+                    height: 24,
+                    color: theme.colorScheme.primary,
                   ),
-                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
+              QuickNumberField(
                 key: const ValueKey('corral.weight'),
                 controller: _pesoCtrl,
                 focusNode: _pesoFocus,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                ],
-                textInputAction: TextInputAction.done,
+                labelText: 'Peso (kg)',
+                suffixText: 'kg',
                 onSubmitted: (_) => _registrarPesaje(),
-                style: const TextStyle(fontSize: 20),
-                decoration: InputDecoration(
-                  labelText: 'Peso (kg)',
-                  suffixText: 'kg',
-                  border: const OutlineInputBorder(),
-                ),
               ),
               const SizedBox(height: 12),
               FilledButton.icon(

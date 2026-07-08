@@ -243,6 +243,27 @@ class CostosOtros extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Feature flags por scope (D-15): habilitan/deshabilitan módulos por
+/// finca/cuenta/global. Gestionadas solo por el CLI (`hatoctl`) vía
+/// `service_role`; la app únicamente las lee (RLS solo da SELECT). Por eso
+/// no tiene columna `pendiente`: nunca hay escritura local que sincronizar.
+@DataClassName('FeatureFlagRow')
+class FeatureFlags extends Table {
+  TextColumn get id => text()();
+  TextColumn get scope => text()(); // 'global' | 'cuenta' | 'finca'
+  TextColumn get scopeId =>
+      text().nullable()(); // null solo cuando scope = 'global'
+  TextColumn get clave => text()();
+  BoolColumn get habilitado => boolean().withDefault(const Constant(true))();
+  TextColumn get nota => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DataClassName('PesajeRow')
 class Pesajes extends Table {
   TextColumn get id => text()();
@@ -303,6 +324,7 @@ class SesionesLocales extends Table {
     EventosSanitarios,
     Ventas,
     CostosOtros,
+    FeatureFlags,
     SyncCursores,
     SesionesLocales,
   ],
@@ -315,7 +337,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -369,6 +391,10 @@ class AppDatabase extends _$AppDatabase {
         );
         await m.createTable(ventas);
         await m.createTable(costosOtros);
+      }
+      if (from < 10) {
+        // v10: feature flags por scope (D-15), solo lectura, bajadas por sync.
+        await m.createTable(featureFlags);
       }
     },
   );

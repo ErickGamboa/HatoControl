@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'app/theme.dart';
 import 'auth/auth_gate.dart';
 import 'config/supabase_config.dart';
 import 'demo/demo_env.dart';
 import 'demo/demo_seed.dart';
 import 'services.dart';
 
-/// Colores de marca de HatoControl, tomados del logo.
-const Color kAzulHato = Color(0xFF1B3A5B);
-const Color kVerdeHato = Color(0xFF3C8C56);
+export 'app/theme.dart' show kAzulHato, kVerdeHato;
 
 /// Initializes Supabase, local session, connectivity, and optional demo seed.
 Future<void> bootstrapHatoControl() async {
@@ -56,23 +55,12 @@ class HatoControlApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: kVerdeHato,
-      primary: kVerdeHato,
-      secondary: kAzulHato,
-      tertiary: kAzulHato,
-    );
     return MaterialApp(
       title: 'HatoControl',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: scheme,
-        useMaterial3: true,
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: kAzulHato,
-          foregroundColor: Colors.white,
-        ),
-      ),
+      theme: HatoTheme.light,
+      darkTheme: HatoTheme.dark,
+      themeMode: ThemeMode.system,
       home: const AuthGate(),
     );
   }

@@ -82,6 +82,7 @@ class SyncService {
     await _paso(_bajarVentas);
     await _paso(_bajarCostosOtros);
     await _paso(_bajarPesajes);
+    await _paso(_bajarFeatureFlags);
   }
 
   /// Ejecuta un paso del sync de forma aislada: si lanza una excepción, la
@@ -1024,6 +1025,38 @@ class SyncService {
     if (!retuvoCambioLocal && maxU != null) {
       await _guardarCursor('pesajes', maxU);
     }
+  }
+
+  /// Feature flags (D-15): solo BAJAR, nunca SUBIR. La tabla la escribe el
+  /// CLI (`hatoctl`) vía `service_role`; la app nunca la modifica, así que no
+  /// hace falta el guard de `tieneCambiosLocalesPendientes` (no hay filas
+  /// locales pendientes que proteger).
+  Future<void> _bajarFeatureFlags() async {
+    final cursor = await _leerCursor('feature_flags');
+    final filas = await _consultar('feature_flags', cursor);
+    DateTime? maxU = cursor;
+    for (final r in filas) {
+      final u = DateTime.parse(r['updated_at'] as String);
+      await db
+          .into(db.featureFlags)
+          .insertOnConflictUpdate(
+            FeatureFlagRow(
+              id: r['id'] as String,
+              scope: r['scope'] as String,
+              scopeId: r['scope_id'] as String?,
+              clave: r['clave'] as String,
+              habilitado: r['habilitado'] as bool,
+              nota: r['nota'] as String?,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: u,
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+            ),
+          );
+      if (maxU == null || u.isAfter(maxU)) maxU = u;
+    }
+    if (maxU != null) await _guardarCursor('feature_flags', maxU);
   }
 
   Future<List<Map<String, dynamic>>> _consultar(

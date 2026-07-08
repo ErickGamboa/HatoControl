@@ -77,7 +77,8 @@ flutter test test/estadisticas test/lotes test/repositories/pesajes_repository_t
 
 - `test/repositories/dietas_repository_test.dart` — CRUD dietas, asignación con
   costo congelado, movimientos_lote en crear/mover animal.
-- Apply server schema: `docs/supabase_module2_dietas.sql` in Supabase SQL Editor.
+- Apply server schema: `supabase/migrations/20260707203015_module2_dietas.sql`
+  via `supabase db push` (see `docs/SUPABASE_SQL_ORDER.md`).
 
 Run the dietas evaluator set:
 
@@ -89,7 +90,8 @@ flutter test test/repositories/dietas_repository_test.dart
 
 - `test/repositories/sanidad_repository_test.dart` — registro individual,
   batch por lote, borrado suave, sugerencias de producto.
-- Apply server schema: `docs/supabase_module3_sanidad.sql` in Supabase SQL Editor.
+- Apply server schema: `supabase/migrations/20260707203017_module3_sanidad.sql`
+  via `supabase db push` (see `docs/SUPABASE_SQL_ORDER.md`).
 
 Run the sanidad evaluator set:
 
@@ -115,6 +117,21 @@ flutter test test/corral
 
 ```bash
 flutter test test/estadisticas/estadisticas_economicas_test.dart test/repositories/ventas_repository_test.dart test/lotes/animal_ficha_screen_test.dart
+```
+
+## Feature flags evaluator set (módulo 5)
+
+- `test/repositories/feature_flags_repository_test.dart` — precedencia
+  finca > cuenta > global > `defaultValue` (fail-open), fila borrada
+  (soft delete) ignorada, scope de otra finca no aplica, `observarFlags()`
+  excluye borradas.
+- Read-only table (D-15): no push/pending-guard tests needed, only the pull
+  mapper in `SyncService._bajarFeatureFlags()`.
+
+Run the feature flags evaluator set:
+
+```bash
+flutter test test/repositories/feature_flags_repository_test.dart
 ```
 
 ## Demo dataset + visible tour
