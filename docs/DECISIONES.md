@@ -198,7 +198,8 @@ operations.
 `public.feature_flags` (migration
 `supabase/migrations/20260707203311_feature_flags.sql`): `scope`
 (`global`|`cuenta`|`finca`), `scope_id` (null iff scope='global'), `clave`
-(e.g. `modulo_dietas`), `habilitado`. Resolution order for the app:
+(one of `dietas`, `sanidad`, `ventas` — matching module/repository names,
+gated in the UI as of 2026-07-09), `habilitado`. Resolution order for the app:
 finca override > cuenta override > global default > compiled-in default
 (fail open — a module that already shipped stays on if no flag row exists
 for it). RLS grants `authenticated` **SELECT only**; there is deliberately
@@ -214,6 +215,33 @@ apply; documented as an intentional exception in `docs/MODELO_DATOS.md`).
 Gates three things: nav/menu visibility, sync (skip pulling/pushing a
 disabled module's tables), and route guards as defense in depth. Also the
 mechanism for A-07's plan-based gating later (a flag scoped by cuenta).
+
+### D-16 — Modules 2–5 schema pushed to the live project; RLS policy idempotency
+**Status: Decidida (2026-07-09).**
+Pushed the 7 pending migrations (bootstrap, dietas, sanidad, ventas,
+feature_flags, admin_audit_log, and a new Fase 3 CHECK-constraints
+migration for the v1 tables) after a TestFlight build surfaced a sync
+error: `feature_flags` didn't exist on the live database. The push also
+found `dietas`, `lote_dietas`, `movimientos_lote`, `eventos_sanitarios`,
+`ventas`, `costos_otros`, and the `animales` economy columns already
+existed remotely — created by hand at some point, without RLS policies and
+without being tracked in migration history. `feature_flags` and
+`admin_audit_log` genuinely did not exist; that was the actual bug.
+Consequence: every `CREATE POLICY` statement in modules 2–4 and
+feature_flags now has a `DROP POLICY IF EXISTS` guard in front of it —
+`CREATE TABLE`/`CREATE INDEX` already had `IF NOT EXISTS`, but bare
+`CREATE POLICY` isn't idempotent in Postgres and failed the push on the
+first re-run. Keep the drop-then-create pattern for any new RLS policy.
+The new v1-tables constraints migration uses `DROP CONSTRAINT IF EXISTS`
++ `ADD CONSTRAINT ... NOT VALID` + a separate `VALIDATE CONSTRAINT`, since
+`cuentas`/`finca_miembros`/`pesajes` have live rows (unlike modules 2-5,
+which were brand new) — `NOT VALID` means a stray non-conforming row
+reports clearly via `VALIDATE CONSTRAINT` instead of aborting the whole
+migration opaquely. Pushing itself required `supabase migration repair
+--status reverted` on 14 pre-repo remote migrations first (see the updated
+"known gap" note in `docs/SUPABASE_SQL_ORDER.md`) — that only edits the
+CLI's local/remote bookkeeping, not schema, and is safe to redo if the
+project is ever re-linked from a fresh machine.
 
 ---
 

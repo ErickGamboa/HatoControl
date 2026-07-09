@@ -25,6 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_eventos_sanitarios_animal
 
 ALTER TABLE public.eventos_sanitarios ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS eventos_sanitarios_select ON public.eventos_sanitarios;
 CREATE POLICY eventos_sanitarios_select ON public.eventos_sanitarios
   FOR SELECT USING (
     EXISTS (
@@ -34,6 +35,7 @@ CREATE POLICY eventos_sanitarios_select ON public.eventos_sanitarios
     )
   );
 
+DROP POLICY IF EXISTS eventos_sanitarios_insert ON public.eventos_sanitarios;
 CREATE POLICY eventos_sanitarios_insert ON public.eventos_sanitarios
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -43,6 +45,7 @@ CREATE POLICY eventos_sanitarios_insert ON public.eventos_sanitarios
     )
   );
 
+DROP POLICY IF EXISTS eventos_sanitarios_update ON public.eventos_sanitarios;
 CREATE POLICY eventos_sanitarios_update ON public.eventos_sanitarios
   FOR UPDATE USING (
     EXISTS (

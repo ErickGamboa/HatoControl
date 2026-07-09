@@ -41,6 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_costos_otros_animal ON public.costos_otros (anima
 ALTER TABLE public.ventas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.costos_otros ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS ventas_select ON public.ventas;
 CREATE POLICY ventas_select ON public.ventas FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM public.animales a
@@ -49,6 +50,7 @@ CREATE POLICY ventas_select ON public.ventas FOR SELECT USING (
   )
 );
 
+DROP POLICY IF EXISTS ventas_insert ON public.ventas;
 CREATE POLICY ventas_insert ON public.ventas FOR INSERT WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.animales a
@@ -57,6 +59,7 @@ CREATE POLICY ventas_insert ON public.ventas FOR INSERT WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS ventas_update ON public.ventas;
 CREATE POLICY ventas_update ON public.ventas FOR UPDATE USING (
   EXISTS (
     SELECT 1 FROM public.animales a
@@ -65,6 +68,7 @@ CREATE POLICY ventas_update ON public.ventas FOR UPDATE USING (
   )
 );
 
+DROP POLICY IF EXISTS costos_otros_select ON public.costos_otros;
 CREATE POLICY costos_otros_select ON public.costos_otros FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM public.animales a
@@ -73,6 +77,7 @@ CREATE POLICY costos_otros_select ON public.costos_otros FOR SELECT USING (
   )
 );
 
+DROP POLICY IF EXISTS costos_otros_insert ON public.costos_otros;
 CREATE POLICY costos_otros_insert ON public.costos_otros FOR INSERT WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.animales a
@@ -81,6 +86,7 @@ CREATE POLICY costos_otros_insert ON public.costos_otros FOR INSERT WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS costos_otros_update ON public.costos_otros;
 CREATE POLICY costos_otros_update ON public.costos_otros FOR UPDATE USING (
   EXISTS (
     SELECT 1 FROM public.animales a

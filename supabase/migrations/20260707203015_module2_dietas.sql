@@ -23,12 +23,15 @@ CREATE INDEX IF NOT EXISTS idx_dietas_finca ON public.dietas (finca_id)
 
 ALTER TABLE public.dietas ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS dietas_select ON public.dietas;
 CREATE POLICY dietas_select ON public.dietas
   FOR SELECT USING (private.es_miembro(finca_id, auth.uid()));
 
+DROP POLICY IF EXISTS dietas_insert ON public.dietas;
 CREATE POLICY dietas_insert ON public.dietas
   FOR INSERT WITH CHECK (private.es_miembro(finca_id, auth.uid()));
 
+DROP POLICY IF EXISTS dietas_update ON public.dietas;
 CREATE POLICY dietas_update ON public.dietas
   FOR UPDATE USING (private.es_miembro(finca_id, auth.uid()))
   WITH CHECK (private.es_miembro(finca_id, auth.uid()));
@@ -51,6 +54,7 @@ CREATE INDEX IF NOT EXISTS idx_lote_dietas_lote ON public.lote_dietas (lote_id)
 
 ALTER TABLE public.lote_dietas ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS lote_dietas_select ON public.lote_dietas;
 CREATE POLICY lote_dietas_select ON public.lote_dietas
   FOR SELECT USING (
     EXISTS (
@@ -60,6 +64,7 @@ CREATE POLICY lote_dietas_select ON public.lote_dietas
     )
   );
 
+DROP POLICY IF EXISTS lote_dietas_insert ON public.lote_dietas;
 CREATE POLICY lote_dietas_insert ON public.lote_dietas
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -69,6 +74,7 @@ CREATE POLICY lote_dietas_insert ON public.lote_dietas
     )
   );
 
+DROP POLICY IF EXISTS lote_dietas_update ON public.lote_dietas;
 CREATE POLICY lote_dietas_update ON public.lote_dietas
   FOR UPDATE USING (
     EXISTS (
@@ -102,6 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_movimientos_animal ON public.movimientos_lote (an
 
 ALTER TABLE public.movimientos_lote ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS movimientos_lote_select ON public.movimientos_lote;
 CREATE POLICY movimientos_lote_select ON public.movimientos_lote
   FOR SELECT USING (
     EXISTS (
@@ -111,6 +118,7 @@ CREATE POLICY movimientos_lote_select ON public.movimientos_lote
     )
   );
 
+DROP POLICY IF EXISTS movimientos_lote_insert ON public.movimientos_lote;
 CREATE POLICY movimientos_lote_insert ON public.movimientos_lote
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -120,6 +128,7 @@ CREATE POLICY movimientos_lote_insert ON public.movimientos_lote
     )
   );
 
+DROP POLICY IF EXISTS movimientos_lote_update ON public.movimientos_lote;
 CREATE POLICY movimientos_lote_update ON public.movimientos_lote
   FOR UPDATE USING (
     EXISTS (

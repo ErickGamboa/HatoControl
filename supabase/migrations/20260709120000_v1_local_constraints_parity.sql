@@ -13,17 +13,34 @@
 --
 -- ADD CONSTRAINT (not CREATE TABLE) so this is safe to push independently
 -- of the base-schema-capture gap above.
+--
+-- NOT VALID + separate VALIDATE CONSTRAINT: this table already has live
+-- rows (unlike modules 2-5, which are brand new). NOT VALID adds the
+-- constraint for all future writes immediately without an error if some
+-- existing row doesn't already conform; VALIDATE CONSTRAINT then checks
+-- the backlog and reports exactly which constraint (if any) has
+-- pre-existing violations, instead of the whole migration aborting
+-- opaquely mid-push.
 
+ALTER TABLE public.finca_miembros DROP CONSTRAINT IF EXISTS finca_miembros_rol_check;
 ALTER TABLE public.finca_miembros
   ADD CONSTRAINT finca_miembros_rol_check
-  CHECK (rol IN ('admin', 'operario'));
+  CHECK (rol IN ('admin', 'operario')) NOT VALID;
 
+ALTER TABLE public.cuentas DROP CONSTRAINT IF EXISTS cuentas_plan_check;
+ALTER TABLE public.cuentas DROP CONSTRAINT IF EXISTS cuentas_estado_check;
 ALTER TABLE public.cuentas
   ADD CONSTRAINT cuentas_plan_check
-  CHECK (plan IN ('invitado', 'light', 'medium', 'pro')),
+  CHECK (plan IN ('invitado', 'light', 'medium', 'pro')) NOT VALID,
   ADD CONSTRAINT cuentas_estado_check
-  CHECK (estado IN ('activa', 'suspendida'));
+  CHECK (estado IN ('activa', 'suspendida')) NOT VALID;
 
+ALTER TABLE public.pesajes DROP CONSTRAINT IF EXISTS pesajes_peso_check;
 ALTER TABLE public.pesajes
   ADD CONSTRAINT pesajes_peso_check
-  CHECK (peso > 0);
+  CHECK (peso > 0) NOT VALID;
+
+ALTER TABLE public.finca_miembros VALIDATE CONSTRAINT finca_miembros_rol_check;
+ALTER TABLE public.cuentas VALIDATE CONSTRAINT cuentas_plan_check;
+ALTER TABLE public.cuentas VALIDATE CONSTRAINT cuentas_estado_check;
+ALTER TABLE public.pesajes VALIDATE CONSTRAINT pesajes_peso_check;

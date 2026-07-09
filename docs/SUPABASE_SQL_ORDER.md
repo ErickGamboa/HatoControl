@@ -17,16 +17,23 @@ supabase link --project-ref geocoundyilwxrnbhcqu
 yourself in a terminal (or via `! <command>` in Claude Code), don't hand the
 access token to an agent.
 
-## Known gap: the base schema (v1) is not captured as a migration yet
+## Known gap: the base schema (v1) is still not captured as a migration
 
-`supabase/migrations/` currently starts from the **bootstrap RLS helpers**
-(private schema, `es_miembro`, `set_updated_at`) and modules 2–4. The
-original v1 schema (`planes`, `cuentas`, `usuarios`, `fincas`,
-`finca_miembros`, `lotes`, `animales`, `pesajes`) was created directly on the
-Supabase dashboard early on and was never in this repo (see the old note in
-this file's git history). **Before relying on `supabase db reset` locally or
-treating this migrations folder as the full source of truth**, run once,
-after linking:
+`supabase/migrations/` starts from the **bootstrap RLS helpers** (private
+schema, `es_miembro`, `set_updated_at`) and modules 2–5. The original v1
+schema (`planes`, `cuentas`, `usuarios`, `fincas`, `finca_miembros`,
+`lotes`, `animales`, `pesajes`) was created directly on the Supabase
+dashboard early on and was never in this repo. As of 2026-07-09 this gap is
+worked around, not closed: the 14 remote-only migrations from that era were
+marked `reverted` in the CLI's bookkeeping via `supabase migration repair
+--status reverted <ids>` so `db push` would stop refusing to run — that
+only edits the CLI's local-vs-remote tracking table, it does not touch
+actual schema. The v1 schema itself is still only "live in the dashboard,"
+not in a migration file. `supabase db pull` (see below) is still the right
+way to close this properly when there's time; it wasn't run on 2026-07-09
+because it hit the same history-mismatch error as `db push` and fixing that
+via `migration repair` was the higher-priority path (a client build was
+blocked on the sync error this was causing).
 
 ```bash
 supabase db pull
@@ -42,9 +49,19 @@ clean slate.
 
 ## Applying pending migrations to the real project
 
-Modules 2–4's tables/RLS have **not** been applied to the live project yet
-(see the unchecked "Supabase tables/RLS applied" boxes in `docs/ROADMAP.md`).
-Once linked and the base-schema gap above is closed:
+**Status: applied 2026-07-09.** Modules 2–5's tables/RLS (dietas, sanidad,
+ventas, feature_flags, admin_audit_log) plus the Fase 3 CHECK constraints
+are live on the project. This also surfaced that `dietas`, `lote_dietas`,
+`movimientos_lote`, `eventos_sanitarios`, `ventas`, `costos_otros`, and the
+`animales` economy columns already existed on the remote — created by hand
+at some earlier point, without their RLS policies and without being
+recorded in migration history. `feature_flags` and `admin_audit_log` did
+not exist at all, which is what broke sync (`SyncService` tried to pull a
+table that wasn't there yet). Because of that partial prior state, every
+`CREATE POLICY` in modules 2–4 and feature_flags now has a `DROP POLICY IF
+EXISTS` guard in front of it (plain `CREATE POLICY` isn't idempotent the
+way `CREATE TABLE IF NOT EXISTS` is) — keep that pattern for any new RLS
+policy added to these files or new ones.
 
 ```bash
 supabase db push          # applies every migration not yet recorded as applied, in order
@@ -52,7 +69,11 @@ supabase migration list   # shows local vs remote status
 ```
 
 `db push` runs against the real project — review the diff it prints before
-confirming.
+confirming. If it refuses with a migration-history-mismatch error pointing
+at migrations you don't recognize, that's the known gap above; running the
+suggested `migration repair --status reverted` for those specific IDs (not
+`--status applied`, which would be a lie — they're not actually applied via
+a tracked migration) unblocks `db push` without touching schema.
 
 ## Adding a new schema change from now on
 

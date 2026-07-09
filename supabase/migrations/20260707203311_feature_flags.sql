@@ -60,6 +60,7 @@ $$;
 REVOKE ALL ON FUNCTION private.es_miembro_cuenta(uuid, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION private.es_miembro_cuenta(uuid, uuid) TO authenticated, service_role;
 
+DROP POLICY IF EXISTS feature_flags_select ON public.feature_flags;
 CREATE POLICY feature_flags_select ON public.feature_flags
   FOR SELECT USING (
     scope = 'global'
