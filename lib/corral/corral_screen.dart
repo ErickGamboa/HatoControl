@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/widgets/quick_number_field.dart';
 import '../app/widgets/scan_field.dart';
 import '../data/local/database.dart';
+import '../data/repositories/feature_flags_repository.dart';
 import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
 import '../data/repositories/sanidad_repository.dart';
@@ -21,15 +22,18 @@ class CorralScreen extends StatefulWidget {
     PesajesRepository? pesajesRepository,
     SanidadRepository? sanidadRepository,
     LotesRepository? lotesRepository,
+    FeatureFlagsRepository? featureFlagsRepository,
   }) : pesajesRepository = pesajesRepository ?? pesajesRepo,
        sanidadRepository = sanidadRepository ?? sanidadRepo,
-       lotesRepository = lotesRepository ?? lotesRepo;
+       lotesRepository = lotesRepository ?? lotesRepo,
+       featureFlagsRepository = featureFlagsRepository ?? featureFlagsRepo;
 
   final FincaRow finca;
   final String usuarioId;
   final PesajesRepository pesajesRepository;
   final SanidadRepository sanidadRepository;
   final LotesRepository lotesRepository;
+  final FeatureFlagsRepository featureFlagsRepository;
 
   @override
   State<CorralScreen> createState() => _CorralScreenState();
@@ -334,11 +338,22 @@ class _CorralScreenState extends State<CorralScreen> {
       appBar: AppBar(
         title: const Text('Corral'),
         actions: [
-          IconButton(
-            key: const ValueKey('corral.batchLote'),
-            tooltip: 'Tratamiento al lote',
-            icon: const Icon(Icons.vaccines_outlined),
-            onPressed: _batchLote,
+          StreamBuilder<bool>(
+            stream: widget.featureFlagsRepository.observarHabilitado(
+              'sanidad',
+              fincaId: widget.finca.id,
+              cuentaId: widget.finca.cuentaId,
+            ),
+            initialData: true,
+            builder: (context, snapshot) {
+              if (!(snapshot.data ?? true)) return const SizedBox.shrink();
+              return IconButton(
+                key: const ValueKey('corral.batchLote'),
+                tooltip: 'Tratamiento al lote',
+                icon: const Icon(Icons.vaccines_outlined),
+                onPressed: _batchLote,
+              );
+            },
           ),
         ],
       ),

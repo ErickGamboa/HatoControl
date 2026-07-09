@@ -198,4 +198,29 @@ void main() {
     expect(filas, hasLength(1));
     expect(filas.single.clave, 'dietas');
   });
+
+  test(
+    'observarHabilitado emite fail-open y se actualiza cuando el sync baja un flag',
+    () async {
+      final valores = <bool>[];
+      final sub = repo
+          .observarHabilitado('sanidad', fincaId: 'finca-1')
+          .listen(valores.add);
+      addTearDown(sub.cancel);
+
+      await pumpEventQueue();
+      expect(valores, [true]); // sin filas todavía: fail-open
+
+      await insertarFlag(
+        id: 'f1',
+        scope: 'finca',
+        scopeId: 'finca-1',
+        clave: 'sanidad',
+        habilitado: false,
+      );
+      await pumpEventQueue();
+
+      expect(valores, [true, false]);
+    },
+  );
 }

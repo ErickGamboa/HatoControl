@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../data/local/database.dart';
+import '../data/repositories/feature_flags_repository.dart';
 import '../data/repositories/fincas_repository.dart';
 import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/ventas_repository.dart' show EstadoAnimal;
@@ -27,9 +28,11 @@ class FincaDetalleScreen extends StatefulWidget {
     AppDatabase? database,
     FincasRepository? fincasRepository,
     LotesRepository? lotesRepository,
+    FeatureFlagsRepository? featureFlagsRepository,
   }) : database = database ?? db,
        fincasRepository = fincasRepository ?? fincasRepo,
-       lotesRepository = lotesRepository ?? lotesRepo;
+       lotesRepository = lotesRepository ?? lotesRepo,
+       featureFlagsRepository = featureFlagsRepository ?? featureFlagsRepo;
 
   final FincaRow finca;
   final String usuarioId;
@@ -37,6 +40,7 @@ class FincaDetalleScreen extends StatefulWidget {
   final AppDatabase database;
   final FincasRepository fincasRepository;
   final LotesRepository lotesRepository;
+  final FeatureFlagsRepository featureFlagsRepository;
 
   @override
   State<FincaDetalleScreen> createState() => _FincaDetalleScreenState();
@@ -156,62 +160,83 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
             children: [
               _kpiHeader(finca),
               Expanded(
-                child: GridView.count(
-                  padding: const EdgeInsets.all(HatoSpacing.lg),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: HatoSpacing.lg,
-                  crossAxisSpacing: HatoSpacing.lg,
-                  childAspectRatio: 1,
-                  children: [
-                    _BotonOpcion(
-                      key: const ValueKey('fincaDetail.corral'),
-                      icono: Icon(
-                        Icons.agriculture_outlined,
-                        size: 60,
-                        color: theme.colorScheme.primary,
-                      ),
-                      label: 'Corral',
-                      onTap: () => _abrir(
-                        CorralScreen(finca: finca, usuarioId: widget.usuarioId),
-                      ),
-                    ),
-                    _BotonOpcion(
-                      key: const ValueKey('fincaDetail.pesaje'),
-                      icono: Image.asset(
-                        'assets/iconos/pesaje.png',
-                        width: 60,
-                        height: 60,
-                        color: theme.colorScheme.primary,
-                      ),
-                      label: 'Pesaje',
-                      onTap: () => _abrir(
-                        PesajeScreen(finca: finca, usuarioId: widget.usuarioId),
-                      ),
-                    ),
-                    _BotonOpcion(
-                      key: const ValueKey('fincaDetail.lotes'),
-                      icono: Image.asset(
-                        'assets/iconos/lotes.png',
-                        width: 60,
-                        height: 60,
-                        color: theme.colorScheme.primary,
-                      ),
-                      label: 'Lotes',
-                      onTap: () => _abrir(
-                        LotesScreen(finca: finca, usuarioId: widget.usuarioId),
-                      ),
-                    ),
-                    _BotonOpcion(
-                      key: const ValueKey('fincaDetail.dietas'),
-                      icono: Icon(
-                        Icons.restaurant_menu,
-                        size: 60,
-                        color: theme.colorScheme.primary,
-                      ),
-                      label: 'Dietas',
-                      onTap: () => _abrir(DietasScreen(finca: finca)),
-                    ),
-                  ],
+                child: StreamBuilder<bool>(
+                  stream: widget.featureFlagsRepository.observarHabilitado(
+                    'dietas',
+                    fincaId: finca.id,
+                    cuentaId: finca.cuentaId,
+                  ),
+                  initialData: true,
+                  builder: (context, dietasSnap) {
+                    final dietasHabilitado = dietasSnap.data ?? true;
+                    return GridView.count(
+                      padding: const EdgeInsets.all(HatoSpacing.lg),
+                      crossAxisCount: 2,
+                      mainAxisSpacing: HatoSpacing.lg,
+                      crossAxisSpacing: HatoSpacing.lg,
+                      childAspectRatio: 1,
+                      children: [
+                        _BotonOpcion(
+                          key: const ValueKey('fincaDetail.corral'),
+                          icono: Icon(
+                            Icons.agriculture_outlined,
+                            size: 60,
+                            color: theme.colorScheme.primary,
+                          ),
+                          label: 'Corral',
+                          onTap: () => _abrir(
+                            CorralScreen(
+                              finca: finca,
+                              usuarioId: widget.usuarioId,
+                            ),
+                          ),
+                        ),
+                        _BotonOpcion(
+                          key: const ValueKey('fincaDetail.pesaje'),
+                          icono: Image.asset(
+                            'assets/iconos/pesaje.png',
+                            width: 60,
+                            height: 60,
+                            color: theme.colorScheme.primary,
+                          ),
+                          label: 'Pesaje',
+                          onTap: () => _abrir(
+                            PesajeScreen(
+                              finca: finca,
+                              usuarioId: widget.usuarioId,
+                            ),
+                          ),
+                        ),
+                        _BotonOpcion(
+                          key: const ValueKey('fincaDetail.lotes'),
+                          icono: Image.asset(
+                            'assets/iconos/lotes.png',
+                            width: 60,
+                            height: 60,
+                            color: theme.colorScheme.primary,
+                          ),
+                          label: 'Lotes',
+                          onTap: () => _abrir(
+                            LotesScreen(
+                              finca: finca,
+                              usuarioId: widget.usuarioId,
+                            ),
+                          ),
+                        ),
+                        if (dietasHabilitado)
+                          _BotonOpcion(
+                            key: const ValueKey('fincaDetail.dietas'),
+                            icono: Icon(
+                              Icons.restaurant_menu,
+                              size: 60,
+                              color: theme.colorScheme.primary,
+                            ),
+                            label: 'Dietas',
+                            onTap: () => _abrir(DietasScreen(finca: finca)),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],

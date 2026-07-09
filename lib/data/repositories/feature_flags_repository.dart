@@ -37,6 +37,25 @@ class FeatureFlagsRepository {
       defaultValue: defaultValue,
     );
   }
+
+  /// Igual que [isEnabled], pero como stream: se actualiza sola cuando el
+  /// sync baja un cambio de flag, sin que la UI tenga que refrescar a mano.
+  /// Pensada para gatear navegación/pestañas (D-15, módulo 5).
+  Stream<bool> observarHabilitado(
+    String clave, {
+    String? fincaId,
+    String? cuentaId,
+    bool defaultValue = true,
+  }) {
+    return observarFlags().map(
+      (filas) => resolverPrecedenciaFlag(
+        filas.where((f) => f.clave == clave).toList(),
+        fincaId: fincaId,
+        cuentaId: cuentaId,
+        defaultValue: defaultValue,
+      ),
+    );
+  }
 }
 
 /// Función pura que aplica la precedencia finca > cuenta > global sobre las

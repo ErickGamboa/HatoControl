@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hato_control/data/local/database.dart';
+import 'package:hato_control/data/repositories/feature_flags_repository.dart';
 import 'package:hato_control/data/repositories/fincas_repository.dart';
 import 'package:hato_control/data/repositories/lotes_repository.dart';
 import 'package:hato_control/data/repositories/ventas_repository.dart';
@@ -12,11 +13,13 @@ void main() {
   late AppDatabase db;
   late FincasRepository fincasRepo;
   late LotesRepository lotesRepo;
+  late FeatureFlagsRepository featureFlagsRepo;
 
   setUp(() {
     db = AppDatabase.forExecutor(NativeDatabase.memory());
     fincasRepo = FincasRepository(db);
     lotesRepo = LotesRepository(db);
+    featureFlagsRepo = FeatureFlagsRepository(db);
   });
 
   tearDown(() async {
@@ -97,6 +100,7 @@ void main() {
           database: db,
           fincasRepository: fincasRepo,
           lotesRepository: lotesRepo,
+          featureFlagsRepository: featureFlagsRepo,
         ),
       ),
     );
@@ -132,4 +136,46 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   });
+
+  testWidgets(
+    'oculta el botón de Dietas cuando el flag está deshabilitado',
+    (tester) async {
+      final finca = await seedFinca();
+      final ahora = DateTime(2026, 1, 1);
+      await db
+          .into(db.featureFlags)
+          .insert(
+            FeatureFlagRow(
+              id: 'flag-1',
+              scope: 'finca',
+              scopeId: 'finca-1',
+              clave: 'dietas',
+              habilitado: false,
+              createdAt: ahora,
+              updatedAt: ahora,
+            ),
+          );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FincaDetalleScreen(
+            finca: finca,
+            usuarioId: 'u1',
+            sinConexion: false,
+            database: db,
+            fincasRepository: fincasRepo,
+            lotesRepository: lotesRepo,
+            featureFlagsRepository: featureFlagsRepo,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('fincaDetail.corral')), findsOneWidget);
+      expect(find.byKey(const ValueKey('fincaDetail.dietas')), findsNothing);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
 }

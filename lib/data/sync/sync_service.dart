@@ -7,18 +7,71 @@ import 'package:flutter/foundation.dart';
 import '../local/database.dart';
 import 'sync_remote_gateway.dart';
 
+/// Cómo subir las filas `pendiente=true` de una tabla: qué mandar y cómo
+/// marcarlas subidas al terminar. `pendientes()` devuelve pares (id, datos)
+/// para no acoplar el motor genérico al tipo de fila de cada tabla.
+class PushSpec {
+  const PushSpec({required this.pendientes, required this.marcarSubida});
+
+  final Future<List<(String id, Map<String, dynamic> datos)>> Function()
+  pendientes;
+  final Future<void> Function(String id) marcarSubida;
+}
+
+/// Cómo aplicar una fila bajada del servidor, y (si la tabla tiene
+/// `pendiente`) cómo saber si la fila local tiene cambios sin subir que no
+/// hay que pisar. `tieneCambioLocalPendiente` es null para tablas sin guard
+/// (sin columna `pendiente`, como `planes` y `feature_flags`).
+///
+/// `idDe` extrae el identificador de la fila remota para el guard y el
+/// cursor compuesto — por defecto `r['id']`, salvo `planes` cuya llave
+/// natural es `codigo` (no tiene columna `id`).
+class PullSpec {
+  const PullSpec({
+    required this.aplicar,
+    this.tieneCambioLocalPendiente,
+    this.idDe = _idPorDefecto,
+    this.idColumnaRemota = 'id',
+  });
+
+  final Future<void> Function(Map<String, dynamic> fila) aplicar;
+  final Future<bool> Function(String id)? tieneCambioLocalPendiente;
+  final String Function(Map<String, dynamic> fila) idDe;
+
+  /// Nombre de la columna remota que identifica la fila, para el filtro y
+  /// orden del cursor compuesto (ver [SyncRemoteGateway.consultar]). Debe
+  /// coincidir con lo que [idDe] lee del mapa remoto.
+  final String idColumnaRemota;
+
+  static String _idPorDefecto(Map<String, dynamic> fila) => fila['id'] as String;
+}
+
+/// Todo lo que el motor de sync necesita saber de una tabla. `subida` es
+/// null para tablas de solo lectura (`planes`, `cuentas`, `usuarios`,
+/// `feature_flags`): el motor genérico (`_subirTabla`/`_bajarTabla`) hace el
+/// resto igual para todas.
+class TableSyncSpec {
+  const TableSyncSpec({required this.tabla, this.subida, required this.bajada});
+
+  final String tabla;
+  final PushSpec? subida;
+  final PullSpec bajada;
+}
+
 /// Motor de sincronización entre la base local (Drift/SQLite) y Supabase.
 ///
 /// Estrategia:
 ///  - SUBIR: envía al servidor las filas marcadas como `pendiente` (upsert) y
 ///    luego las marca como sincronizadas.
-///  - BAJAR: trae del servidor las filas con `updated_at` mayor al último
-///    marcador guardado, y las guarda localmente. Avanza el marcador.
+///  - BAJAR: trae del servidor las filas con `(updated_at, id)` mayor al
+///    último marcador guardado ([SyncCursor]), y las guarda localmente.
+///    Avanza el marcador.
 ///  - Conflictos: "gana el último que escribe" (el servidor fija `updated_at`).
 ///  - Borrados: viajan como `deleted_at` (borrado suave).
 ///
-/// Por ahora sincroniza `fincas` y `finca_miembros`. Al construir las demás
-/// pantallas agregaremos lotes, animales y pesajes con el mismo patrón.
+/// Cada tabla es un [TableSyncSpec] en [_specs]; `_subirTabla`/`_bajarTabla`
+/// son el único código de orquestación (antes había un par de métodos casi
+/// idénticos por tabla — ver docs/ARCHITECTURE_REVIEW.md #2).
 class SyncService {
   SyncService(this.db, {SyncRemoteGateway? remote})
     : _remote = remote ?? SupabaseSyncRemoteGateway();
@@ -51,38 +104,19 @@ class SyncService {
 
   Future<void> _ejecutarSync() async {
     // Cada paso va aislado: si uno falla (p. ej. un registro con conflicto),
-    // los demás igual se ejecutan. Al BAJAR protegemos filas con cambios
-    // locales pendientes para no pisarlas con una copia vieja del servidor.
-    // Subir primero (para no pisar cambios locales al bajar).
-    await _paso(_subirFincas);
-    await _paso(_subirMiembros);
-    await _paso(_subirLotes);
-    await _paso(_subirDietas);
-    await _paso(_subirLoteDietas);
-    await _paso(_subirAnimales);
-    await _paso(_subirMovimientosLote);
-    await _paso(_subirEventosSanitarios);
-    await _paso(_subirVentas);
-    await _paso(_subirCostosOtros);
-    await _paso(_subirPesajes);
-    // Fotos: después de la membresía (la RLS de update exige ser admin).
+    // los demás igual se ejecutan. Subir primero (para no pisar cambios
+    // locales al bajar); fotos después de la membresía (la RLS de update
+    // exige ser admin). Bajar después, en el orden de _specs (planes/cuentas
+    // antes que fincas, que las necesita).
+    for (final spec in _specs) {
+      if (spec.subida != null) {
+        await _paso(() => _subirTabla(spec));
+      }
+    }
     await _paso(_subirFotosFincas);
-    // Bajar después. Planes y cuentas primero (la finca necesita su cuenta).
-    await _paso(_bajarPlanes);
-    await _paso(_bajarCuentas);
-    await _paso(_bajarUsuarios);
-    await _paso(_bajarFincas);
-    await _paso(_bajarMiembros);
-    await _paso(_bajarLotes);
-    await _paso(_bajarDietas);
-    await _paso(_bajarLoteDietas);
-    await _paso(_bajarAnimales);
-    await _paso(_bajarMovimientosLote);
-    await _paso(_bajarEventosSanitarios);
-    await _paso(_bajarVentas);
-    await _paso(_bajarCostosOtros);
-    await _paso(_bajarPesajes);
-    await _paso(_bajarFeatureFlags);
+    for (final spec in _specs) {
+      await _paso(() => _bajarTabla(spec));
+    }
   }
 
   /// Ejecuta un paso del sync de forma aislada: si lanza una excepción, la
@@ -95,308 +129,130 @@ class SyncService {
     }
   }
 
-  // ---------------------------------------------------------------- SUBIR
+  // ------------------------------------------------------------- MOTOR
 
-  Future<void> _subirFincas() async {
-    final pendientes = await (db.select(
-      db.fincas,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<FincaRow>(
-      tabla: 'fincas',
-      filas: pendientes,
-      id: (f) => f.id,
-      datos: (f) => {
-        'id': f.id,
-        'nombre': f.nombre,
-        'foto_url': f.fotoUrl,
-        'creada_por': f.creadaPor,
-        'cuenta_id': f.cuentaId,
-        'created_at': f.createdAt.toIso8601String(),
-        'deleted_at': f.deletedAt?.toIso8601String(),
-        // updated_at lo fija el servidor.
-      },
-      marcarSubida: (id) =>
-          (db.update(db.fincas)..where((t) => t.id.equals(id))).write(
-            const FincasCompanion(pendiente: Value(false)),
-          ),
-    );
-  }
-
-  Future<void> _subirMiembros() async {
-    final pendientes = await (db.select(
-      db.fincaMiembros,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<FincaMiembroRow>(
-      tabla: 'finca_miembros',
-      filas: pendientes,
-      id: (m) => m.id,
-      datos: (m) => {
-        'id': m.id,
-        'finca_id': m.fincaId,
-        'usuario_id': m.usuarioId,
-        'rol': m.rol,
-        'created_at': m.createdAt.toIso8601String(),
-        'deleted_at': m.deletedAt?.toIso8601String(),
-      },
-      marcarSubida: (id) =>
-          (db.update(db.fincaMiembros)..where((t) => t.id.equals(id))).write(
-            const FincaMiembrosCompanion(pendiente: Value(false)),
-          ),
-    );
-  }
-
-  /// Sube filas pendientes con resiliencia POR FILA: si una falla (conflicto,
-  /// red, RLS, etc.) se registra y se sigue con las demás — una fila con
-  /// problema NUNCA bloquea ni descarta al resto. Cada fila se marca como
-  /// subida solo si su subida tuvo éxito; si falla, queda `pendiente` y se
-  /// reintenta en la próxima sincronización. Así un dato local sin subir no se
-  /// pierde: insiste hasta lograrlo.
-  Future<void> _subirPendientes<T>({
-    required String tabla,
-    required List<T> filas,
-    required String Function(T) id,
-    required Map<String, dynamic> Function(T) datos,
-    required Future<void> Function(String id) marcarSubida,
-  }) async {
-    for (final fila in filas) {
+  Future<void> _subirTabla(TableSyncSpec spec) async {
+    final subida = spec.subida;
+    if (subida == null) return;
+    final pendientes = await subida.pendientes();
+    // Resiliencia POR FILA: si una falla (conflicto, red, RLS, etc.) se
+    // registra y se sigue con las demás — nunca bloquea ni descarta al
+    // resto. Cada fila se marca subida solo si tuvo éxito; si falla, queda
+    // `pendiente` y se reintenta en la próxima sincronización.
+    for (final (id, datos) in pendientes) {
       try {
-        await _remote.insertarOActualizar(tabla, id(fila), datos(fila));
-        await marcarSubida(id(fila));
+        await _remote.insertarOActualizar(spec.tabla, id, datos);
+        await subida.marcarSubida(id);
       } catch (e) {
         debugPrint(
-          'Sync: no se pudo subir $tabla ${id(fila)}; queda pendiente '
+          'Sync: no se pudo subir ${spec.tabla} $id; queda pendiente '
           'para reintentar ($e)',
         );
       }
     }
   }
 
-  Future<void> _subirLotes() async {
-    final pendientes = await (db.select(
-      db.lotes,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<LoteRow>(
-      tabla: 'lotes',
-      filas: pendientes,
-      id: (l) => l.id,
-      datos: (l) => {
-        'id': l.id,
-        'finca_id': l.fincaId,
-        'nombre': l.nombre,
-        'numero': l.numero,
-        'created_at': l.createdAt.toIso8601String(),
-        'deleted_at': l.deletedAt?.toIso8601String(),
-      },
-      marcarSubida: (id) => (db.update(db.lotes)..where((t) => t.id.equals(id)))
-          .write(const LotesCompanion(pendiente: Value(false))),
-    );
+  Future<void> _bajarTabla(TableSyncSpec spec) async {
+    var cursorNuevo = SyncCursor.vacio;
+    var retuvoCambioLocal = false;
+    try {
+      final cursorActual = await _leerCursor(spec.tabla);
+      cursorNuevo = cursorActual;
+      final filas = await _consultar(
+        spec.tabla,
+        cursorActual,
+        idColumna: spec.bajada.idColumnaRemota,
+      );
+      for (final r in filas) {
+        final id = spec.bajada.idDe(r);
+        final guard = spec.bajada.tieneCambioLocalPendiente;
+        // Las descargas nunca deben pisar cambios locales sin subir: si una
+        // subida falló y luego baja una versión vieja del servidor, se
+        // perdería el cambio local.
+        if (guard != null && await guard(id)) {
+          retuvoCambioLocal = true;
+          continue;
+        }
+        await spec.bajada.aplicar(r);
+        cursorNuevo = SyncCursor(
+          updatedAt: DateTime.parse(r['updated_at'] as String),
+          id: id,
+        );
+      }
+      if (!retuvoCambioLocal && !cursorNuevo.esVacio) {
+        await _guardarCursor(spec.tabla, cursorNuevo);
+      }
+      await _registrarExito(spec.tabla);
+    } catch (e) {
+      await _registrarError(spec.tabla, e);
+      rethrow; // _paso() lo registra y sigue con la próxima tabla.
+    }
   }
 
-  Future<void> _subirDietas() async {
-    final pendientes = await (db.select(
-      db.dietas,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<DietaRow>(
-      tabla: 'dietas',
-      filas: pendientes,
-      id: (d) => d.id,
-      datos: (d) => {
-        'id': d.id,
-        'finca_id': d.fincaId,
-        'nombre': d.nombre,
-        'descripcion': d.descripcion,
-        'costo_animal_dia': d.costoAnimalDia,
-        'moneda': d.moneda,
-        'created_at': d.createdAt.toIso8601String(),
-        'deleted_at': d.deletedAt?.toIso8601String(),
-      },
-      marcarSubida: (id) =>
-          (db.update(db.dietas)..where((t) => t.id.equals(id))).write(
-            const DietasCompanion(pendiente: Value(false)),
+  TableSyncSpec? _specPara(String tabla) {
+    for (final spec in _specs) {
+      if (spec.tabla == tabla) return spec;
+    }
+    return null;
+  }
+
+  /// Indica si una fila local todavía tiene cambios sin subir. Expuesto para
+  /// tests; delega en el guard del spec de esa tabla (null = sin guard).
+  @visibleForTesting
+  Future<bool> tieneCambiosLocalesPendientes(String tabla, String id) async {
+    final guard = _specPara(tabla)?.bajada.tieneCambioLocalPendiente;
+    if (guard == null) return false;
+    return guard(id);
+  }
+
+  /// Estado de sync por tabla (D-13): para una pantalla de "sincronizando…"
+  /// con detalle, o para soporte/debug.
+  Future<List<SyncEstadoRow>> estadoPorTabla() => db.select(db.syncEstados).get();
+
+  /// Cantidad de filas `pendiente=true` por tabla (solo las que suben algo).
+  Future<Map<String, int>> pendientesPorTabla() async {
+    final resultado = <String, int>{};
+    for (final spec in _specs) {
+      final subida = spec.subida;
+      if (subida == null) continue;
+      resultado[spec.tabla] = (await subida.pendientes()).length;
+    }
+    return resultado;
+  }
+
+  Future<void> _registrarExito(String tabla) async {
+    await db
+        .into(db.syncEstados)
+        .insertOnConflictUpdate(
+          SyncEstadosCompanion.insert(
+            tabla: tabla,
+            ultimaSincronizacionOk: Value(DateTime.now()),
+            ultimoError: const Value(null),
+            ultimoErrorEn: const Value(null),
           ),
-    );
+        );
   }
 
-  Future<void> _subirLoteDietas() async {
-    final pendientes = await (db.select(
-      db.loteDietas,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<LoteDietaRow>(
-      tabla: 'lote_dietas',
-      filas: pendientes,
-      id: (a) => a.id,
-      datos: (a) => {
-        'id': a.id,
-        'lote_id': a.loteId,
-        'dieta_id': a.dietaId,
-        'desde': a.desde.toIso8601String(),
-        'hasta': a.hasta?.toIso8601String(),
-        'costo_animal_dia_snapshot': a.costoAnimalDiaSnapshot,
-        'created_at': a.createdAt.toIso8601String(),
-        'deleted_at': a.deletedAt?.toIso8601String(),
-      },
-      marcarSubida: (id) =>
-          (db.update(db.loteDietas)..where((t) => t.id.equals(id))).write(
-            const LoteDietasCompanion(pendiente: Value(false)),
+  Future<void> _registrarError(String tabla, Object error) async {
+    await db
+        .into(db.syncEstados)
+        .insertOnConflictUpdate(
+          SyncEstadosCompanion.insert(
+            tabla: tabla,
+            ultimoError: Value(error.toString()),
+            ultimoErrorEn: Value(DateTime.now()),
           ),
-    );
+        );
   }
 
-  Future<void> _subirAnimales() async {
-    final pendientes = await (db.select(
-      db.animales,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<AnimalRow>(
-      tabla: 'animales',
-      filas: pendientes,
-      id: (a) => a.id,
-      datos: (a) => {
-        'id': a.id,
-        'finca_id': a.fincaId,
-        'lote_id': a.loteId,
-        'identificador': a.identificador,
-        'estado': a.estado,
-        'precio_compra': a.precioCompra,
-        'fecha_compra': a.fechaCompra?.toIso8601String(),
-        'created_at': a.createdAt.toIso8601String(),
-        'deleted_at': a.deletedAt?.toIso8601String(),
-      },
-      marcarSubida: (id) =>
-          (db.update(db.animales)..where((t) => t.id.equals(id))).write(
-            const AnimalesCompanion(pendiente: Value(false)),
-          ),
-    );
-  }
-
-  Future<void> _subirMovimientosLote() async {
-    final pendientes = await (db.select(
-      db.movimientosLote,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<MovimientoLoteRow>(
-      tabla: 'movimientos_lote',
-      filas: pendientes,
-      id: (m) => m.id,
-      datos: (m) => {
-        'id': m.id,
-        'animal_id': m.animalId,
-        'lote_origen': m.loteOrigen,
-        'lote_destino': m.loteDestino,
-        'fecha': m.fecha.toIso8601String(),
-        'created_at': m.createdAt.toIso8601String(),
-        'deleted_at': m.deletedAt?.toIso8601String(),
-      },
-      marcarSubida: (id) =>
-          (db.update(db.movimientosLote)..where((t) => t.id.equals(id))).write(
-            const MovimientosLoteCompanion(pendiente: Value(false)),
-          ),
-    );
-  }
-
-  Future<void> _subirEventosSanitarios() async {
-    final pendientes = await (db.select(
-      db.eventosSanitarios,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<EventoSanitarioRow>(
-      tabla: 'eventos_sanitarios',
-      filas: pendientes,
-      id: (e) => e.id,
-      datos: (e) => {
-        'id': e.id,
-        'animal_id': e.animalId,
-        'tipo': e.tipo,
-        'producto': e.producto,
-        'dosis': e.dosis,
-        'fecha': e.fecha.toIso8601String(),
-        'responsable_id': e.responsableId,
-        'observaciones': e.observaciones,
-        'costo': e.costo,
-        'created_at': e.createdAt.toIso8601String(),
-        'deleted_at': e.deletedAt?.toIso8601String(),
-      },
-      marcarSubida: (id) =>
-          (db.update(db.eventosSanitarios)..where((t) => t.id.equals(id)))
-              .write(const EventosSanitariosCompanion(pendiente: Value(false))),
-    );
-  }
-
-  Future<void> _subirVentas() async {
-    final pendientes = await (db.select(
-      db.ventas,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<VentaRow>(
-      tabla: 'ventas',
-      filas: pendientes,
-      id: (v) => v.id,
-      datos: (v) => {
-        'id': v.id,
-        'animal_id': v.animalId,
-        'fecha': v.fecha.toIso8601String(),
-        'precio': v.precio,
-        'comprador': v.comprador,
-        'observaciones': v.observaciones,
-        'created_at': v.createdAt.toIso8601String(),
-        'deleted_at': v.deletedAt?.toIso8601String(),
-      },
-      marcarSubida: (id) =>
-          (db.update(db.ventas)..where((t) => t.id.equals(id))).write(
-            const VentasCompanion(pendiente: Value(false)),
-          ),
-    );
-  }
-
-  Future<void> _subirCostosOtros() async {
-    final pendientes = await (db.select(
-      db.costosOtros,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<CostoOtroRow>(
-      tabla: 'costos_otros',
-      filas: pendientes,
-      id: (c) => c.id,
-      datos: (c) => {
-        'id': c.id,
-        'animal_id': c.animalId,
-        'concepto': c.concepto,
-        'monto': c.monto,
-        'fecha': c.fecha.toIso8601String(),
-        'created_at': c.createdAt.toIso8601String(),
-        'deleted_at': c.deletedAt?.toIso8601String(),
-      },
-      marcarSubida: (id) =>
-          (db.update(db.costosOtros)..where((t) => t.id.equals(id))).write(
-            const CostosOtrosCompanion(pendiente: Value(false)),
-          ),
-    );
-  }
-
-  Future<void> _subirPesajes() async {
-    final pendientes = await (db.select(
-      db.pesajes,
-    )..where((t) => t.pendiente.equals(true))).get();
-    await _subirPendientes<PesajeRow>(
-      tabla: 'pesajes',
-      filas: pendientes,
-      id: (p) => p.id,
-      datos: (p) => {
-        'id': p.id,
-        'animal_id': p.animalId,
-        'peso': p.peso,
-        'fecha': p.fecha.toIso8601String(),
-        'registrado_por': p.registradoPor,
-        'created_at': p.createdAt.toIso8601String(),
-        'deleted_at': p.deletedAt?.toIso8601String(),
-      },
-      marcarSubida: (id) =>
-          (db.update(db.pesajes)..where((t) => t.id.equals(id))).write(
-            const PesajesCompanion(pendiente: Value(false)),
-          ),
-    );
-  }
+  // ------------------------------------------------------------ FOTOS
 
   /// Sube las fotos de fincas marcadas `fotoPendiente` a través de la Edge
   /// Function `subir-foto-finca` (que valida al usuario y escribe con permisos
   /// de servidor), guarda la URL pública devuelta y limpia la bandera.
   Future<void> _subirFotosFincas() async {
     if (!_remote.tieneSesion) return;
+    if (kIsWeb) return; // captura de fotos deshabilitada en web (D-09).
 
     final conFoto =
         await (db.select(db.fincas)..where(
@@ -436,124 +292,96 @@ class SyncService {
     }
   }
 
-  // ---------------------------------------------------------------- BAJAR
+  // -------------------------------------------------------------- MARCADORES
 
-  /// Indica si una fila local todavía tiene cambios sin subir.
-  ///
-  /// Las descargas nunca deben borrar `pendiente=true`: si una subida falló y
-  /// luego baja una versión vieja del servidor, se perdería el cambio local.
-  @visibleForTesting
-  Future<bool> tieneCambiosLocalesPendientes(String tabla, String id) async {
-    switch (tabla) {
-      case 'cuentas':
-        final fila = await (db.select(
-          db.cuentas,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'usuarios':
-        final fila = await (db.select(
-          db.usuarios,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'fincas':
-        final fila = await (db.select(
-          db.fincas,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'finca_miembros':
-        final fila = await (db.select(
-          db.fincaMiembros,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'lotes':
-        final fila = await (db.select(
-          db.lotes,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'dietas':
-        final fila = await (db.select(
-          db.dietas,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'lote_dietas':
-        final fila = await (db.select(
-          db.loteDietas,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'animales':
-        final fila = await (db.select(
-          db.animales,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'movimientos_lote':
-        final fila = await (db.select(
-          db.movimientosLote,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'eventos_sanitarios':
-        final fila = await (db.select(
-          db.eventosSanitarios,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'ventas':
-        final fila = await (db.select(
-          db.ventas,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'costos_otros':
-        final fila = await (db.select(
-          db.costosOtros,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      case 'pesajes':
-        final fila = await (db.select(
-          db.pesajes,
-        )..where((t) => t.id.equals(id))).getSingleOrNull();
-        return fila?.pendiente ?? false;
-      default:
-        return false;
-    }
+  Future<SyncCursor> _leerCursor(String tabla) async {
+    final row = await (db.select(
+      db.syncCursores,
+    )..where((t) => t.tabla.equals(tabla))).getSingleOrNull();
+    if (row == null || row.ultimaBajada == null) return SyncCursor.vacio;
+    return SyncCursor(updatedAt: row.ultimaBajada, id: row.ultimaBajadaId);
   }
 
-  /// Catálogo de licencias (solo lectura). No usa borrado suave.
-  Future<void> _bajarPlanes() async {
-    final cursor = await _leerCursor('planes');
-    final filas = await _consultar('planes', cursor);
-    DateTime? maxU = cursor;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      await db
+  Future<void> _guardarCursor(String tabla, SyncCursor cursor) async {
+    await db
+        .into(db.syncCursores)
+        .insertOnConflictUpdate(
+          SyncCursorRow(
+            tabla: tabla,
+            ultimaBajada: cursor.updatedAt,
+            ultimaBajadaId: cursor.id,
+          ),
+        );
+  }
+
+  Future<List<Map<String, dynamic>>> _consultar(
+    String tabla,
+    SyncCursor cursor, {
+    String idColumna = 'id',
+  }) {
+    return _remote.consultar(tabla, cursor, idColumna: idColumna);
+  }
+
+  // --------------------------------------------------------------- SPECS
+  //
+  // Orden: primero las tablas de solo bajada que no dependen de nada
+  // (planes, cuentas, usuarios), luego el resto en el mismo orden que antes
+  // tenían los métodos _subirX/_bajarX. El bucle de SUBIR filtra las que
+  // tienen `subida` (así queda: fincas, miembros, lotes, dietas, lote_dietas,
+  // animales, movimientos_lote, eventos_sanitarios, ventas, costos_otros,
+  // pesajes — igual que antes).
+
+  List<TableSyncSpec> get _specs => [
+    _planesSpec,
+    _cuentasSpec,
+    _usuariosSpec,
+    _fincasSpec,
+    _fincaMiembrosSpec,
+    _lotesSpec,
+    _dietasSpec,
+    _loteDietasSpec,
+    _animalesSpec,
+    _movimientosLoteSpec,
+    _eventosSanitariosSpec,
+    _ventasSpec,
+    _costosOtrosSpec,
+    _pesajesSpec,
+    _featureFlagsSpec,
+  ];
+
+  /// Catálogo de licencias (solo lectura). No usa borrado suave ni `pendiente`.
+  TableSyncSpec get _planesSpec => TableSyncSpec(
+    tabla: 'planes',
+    bajada: PullSpec(
+      idDe: (r) => r['codigo'] as String,
+      idColumnaRemota: 'codigo',
+      aplicar: (r) => db
           .into(db.planes)
           .insertOnConflictUpdate(
             PlanRow(
               codigo: r['codigo'] as String,
               nombre: r['nombre'] as String,
               limiteFincas: r['limite_fincas'] as int,
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (maxU != null) await _guardarCursor('planes', maxU);
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarCuentas() async {
-    final cursor = await _leerCursor('cuentas');
-    final filas = await _consultar('cuentas', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('cuentas', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _cuentasSpec => TableSyncSpec(
+    tabla: 'cuentas',
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.cuentas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.cuentas)
           .insertOnConflictUpdate(
             CuentaRow(
-              id: id,
+              id: r['id'] as String,
               nombre: r['nombre'] as String,
               duenoId: r['dueno_id'] as String,
               plan: r['plan'] as String,
@@ -562,221 +390,310 @@ class SyncService {
                   ? DateTime.parse(r['prueba_termina'] as String)
                   : null,
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('cuentas', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
   /// Perfiles de usuario (el propio + compañeros de finca). Trae `cuenta_id`,
   /// necesario para saber la cuenta del usuario actual.
-  Future<void> _bajarUsuarios() async {
-    final cursor = await _leerCursor('usuarios');
-    final filas = await _consultar('usuarios', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('usuarios', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _usuariosSpec => TableSyncSpec(
+    tabla: 'usuarios',
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.usuarios,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.usuarios)
           .insertOnConflictUpdate(
             UsuarioRow(
-              id: id,
+              id: r['id'] as String,
               nombre: r['nombre'] as String?,
               email: r['email'] as String?,
               cuentaId: r['cuenta_id'] as String?,
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('usuarios', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarFincas() async {
-    final cursor = await _leerCursor('fincas');
-    final filas = await _consultar('fincas', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('fincas', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      final deletedAt = r['deleted_at'] != null
-          ? DateTime.parse(r['deleted_at'] as String)
-          : null;
+  TableSyncSpec get _fincasSpec => TableSyncSpec(
+    tabla: 'fincas',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.fincas,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final f in filas)
+            (
+              f.id,
+              {
+                'id': f.id,
+                'nombre': f.nombre,
+                'foto_url': f.fotoUrl,
+                'creada_por': f.creadaPor,
+                'cuenta_id': f.cuentaId,
+                'created_at': f.createdAt.toIso8601String(),
+                'deleted_at': f.deletedAt?.toIso8601String(),
+                // updated_at lo fija el servidor.
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.fincas)..where((t) => t.id.equals(id))).write(
+            const FincasCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.fincas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) async {
+        final id = r['id'] as String;
+        // Solo columnas del servidor; NO tocamos fotoLocalPath/fotoPendiente
+        // (son locales) para no perder una foto aún sin subir.
+        FincasCompanion datosServidor({required bool conId}) => FincasCompanion(
+          id: conId ? Value(id) : const Value.absent(),
+          nombre: Value(r['nombre'] as String),
+          fotoUrl: Value(r['foto_url'] as String?),
+          creadaPor: Value(r['creada_por'] as String),
+          cuentaId: Value(r['cuenta_id'] as String?),
+          createdAt: Value(DateTime.parse(r['created_at'] as String)),
+          updatedAt: Value(DateTime.parse(r['updated_at'] as String)),
+          deletedAt: Value(
+            r['deleted_at'] != null
+                ? DateTime.parse(r['deleted_at'] as String)
+                : null,
+          ),
+          pendiente: const Value(false),
+        );
+        await db
+            .into(db.fincas)
+            .insert(
+              datosServidor(conId: true),
+              onConflict: DoUpdate((_) => datosServidor(conId: false)),
+            );
+      },
+    ),
+  );
 
-      // Solo columnas del servidor; NO tocamos fotoLocalPath/fotoPendiente
-      // (son locales) para no perder una foto aún sin subir.
-      FincasCompanion datosServidor({required bool conId}) => FincasCompanion(
-        id: conId ? Value(id) : const Value.absent(),
-        nombre: Value(r['nombre'] as String),
-        fotoUrl: Value(r['foto_url'] as String?),
-        creadaPor: Value(r['creada_por'] as String),
-        cuentaId: Value(r['cuenta_id'] as String?),
-        createdAt: Value(DateTime.parse(r['created_at'] as String)),
-        updatedAt: Value(u),
-        deletedAt: Value(deletedAt),
-        pendiente: const Value(false),
-      );
-
-      await db
-          .into(db.fincas)
-          .insert(
-            datosServidor(conId: true),
-            onConflict: DoUpdate((_) => datosServidor(conId: false)),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('fincas', maxU);
-    }
-  }
-
-  Future<void> _bajarMiembros() async {
-    final cursor = await _leerCursor('finca_miembros');
-    final filas = await _consultar('finca_miembros', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('finca_miembros', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _fincaMiembrosSpec => TableSyncSpec(
+    tabla: 'finca_miembros',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.fincaMiembros,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final m in filas)
+            (
+              m.id,
+              {
+                'id': m.id,
+                'finca_id': m.fincaId,
+                'usuario_id': m.usuarioId,
+                'rol': m.rol,
+                'created_at': m.createdAt.toIso8601String(),
+                'deleted_at': m.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.fincaMiembros)..where((t) => t.id.equals(id))).write(
+            const FincaMiembrosCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.fincaMiembros,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.fincaMiembros)
           .insertOnConflictUpdate(
             FincaMiembroRow(
-              id: id,
+              id: r['id'] as String,
               fincaId: r['finca_id'] as String,
               usuarioId: r['usuario_id'] as String,
               rol: r['rol'] as String,
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('finca_miembros', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarLotes() async {
-    final cursor = await _leerCursor('lotes');
-    final filas = await _consultar('lotes', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('lotes', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _lotesSpec => TableSyncSpec(
+    tabla: 'lotes',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.lotes,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final l in filas)
+            (
+              l.id,
+              {
+                'id': l.id,
+                'finca_id': l.fincaId,
+                'nombre': l.nombre,
+                'numero': l.numero,
+                'created_at': l.createdAt.toIso8601String(),
+                'deleted_at': l.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) => (db.update(db.lotes)..where((t) => t.id.equals(id)))
+          .write(const LotesCompanion(pendiente: Value(false))),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.lotes,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.lotes)
           .insertOnConflictUpdate(
             LoteRow(
-              id: id,
+              id: r['id'] as String,
               fincaId: r['finca_id'] as String,
               nombre: r['nombre'] as String,
               numero: r['numero'] as int?,
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('lotes', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarDietas() async {
-    final cursor = await _leerCursor('dietas');
-    final filas = await _consultar('dietas', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('dietas', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _dietasSpec => TableSyncSpec(
+    tabla: 'dietas',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.dietas,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final d in filas)
+            (
+              d.id,
+              {
+                'id': d.id,
+                'finca_id': d.fincaId,
+                'nombre': d.nombre,
+                'descripcion': d.descripcion,
+                'costo_animal_dia': d.costoAnimalDia,
+                'moneda': d.moneda,
+                'created_at': d.createdAt.toIso8601String(),
+                'deleted_at': d.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.dietas)..where((t) => t.id.equals(id))).write(
+            const DietasCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.dietas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.dietas)
           .insertOnConflictUpdate(
             DietaRow(
-              id: id,
+              id: r['id'] as String,
               fincaId: r['finca_id'] as String,
               nombre: r['nombre'] as String,
               descripcion: r['descripcion'] as String?,
               costoAnimalDia: (r['costo_animal_dia'] as num).toDouble(),
               moneda: r['moneda'] as String? ?? 'CRC',
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('dietas', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarLoteDietas() async {
-    final cursor = await _leerCursor('lote_dietas');
-    final filas = await _consultar('lote_dietas', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('lote_dietas', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _loteDietasSpec => TableSyncSpec(
+    tabla: 'lote_dietas',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.loteDietas,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final a in filas)
+            (
+              a.id,
+              {
+                'id': a.id,
+                'lote_id': a.loteId,
+                'dieta_id': a.dietaId,
+                'desde': a.desde.toIso8601String(),
+                'hasta': a.hasta?.toIso8601String(),
+                'costo_animal_dia_snapshot': a.costoAnimalDiaSnapshot,
+                'created_at': a.createdAt.toIso8601String(),
+                'deleted_at': a.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.loteDietas)..where((t) => t.id.equals(id))).write(
+            const LoteDietasCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.loteDietas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.loteDietas)
           .insertOnConflictUpdate(
             LoteDietaRow(
-              id: id,
+              id: r['id'] as String,
               loteId: r['lote_id'] as String,
               dietaId: r['dieta_id'] as String,
               desde: DateTime.parse(r['desde'] as String),
@@ -786,37 +703,58 @@ class SyncService {
               costoAnimalDiaSnapshot: (r['costo_animal_dia_snapshot'] as num)
                   .toDouble(),
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('lote_dietas', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarAnimales() async {
-    final cursor = await _leerCursor('animales');
-    final filas = await _consultar('animales', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('animales', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _animalesSpec => TableSyncSpec(
+    tabla: 'animales',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.animales,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final a in filas)
+            (
+              a.id,
+              {
+                'id': a.id,
+                'finca_id': a.fincaId,
+                'lote_id': a.loteId,
+                'identificador': a.identificador,
+                'estado': a.estado,
+                'precio_compra': a.precioCompra,
+                'fecha_compra': a.fechaCompra?.toIso8601String(),
+                'created_at': a.createdAt.toIso8601String(),
+                'deleted_at': a.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.animales)..where((t) => t.id.equals(id))).write(
+            const AnimalesCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.animales,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.animales)
           .insertOnConflictUpdate(
             AnimalRow(
-              id: id,
+              id: r['id'] as String,
               fincaId: r['finca_id'] as String,
               loteId: r['lote_id'] as String,
               identificador: r['identificador'] as String,
@@ -828,73 +766,114 @@ class SyncService {
                   ? DateTime.parse(r['fecha_compra'] as String)
                   : null,
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('animales', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarMovimientosLote() async {
-    final cursor = await _leerCursor('movimientos_lote');
-    final filas = await _consultar('movimientos_lote', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('movimientos_lote', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _movimientosLoteSpec => TableSyncSpec(
+    tabla: 'movimientos_lote',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.movimientosLote,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final m in filas)
+            (
+              m.id,
+              {
+                'id': m.id,
+                'animal_id': m.animalId,
+                'lote_origen': m.loteOrigen,
+                'lote_destino': m.loteDestino,
+                'fecha': m.fecha.toIso8601String(),
+                'created_at': m.createdAt.toIso8601String(),
+                'deleted_at': m.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.movimientosLote)..where((t) => t.id.equals(id))).write(
+            const MovimientosLoteCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.movimientosLote,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.movimientosLote)
           .insertOnConflictUpdate(
             MovimientoLoteRow(
-              id: id,
+              id: r['id'] as String,
               animalId: r['animal_id'] as String,
               loteOrigen: r['lote_origen'] as String?,
               loteDestino: r['lote_destino'] as String,
               fecha: DateTime.parse(r['fecha'] as String),
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('movimientos_lote', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarEventosSanitarios() async {
-    final cursor = await _leerCursor('eventos_sanitarios');
-    final filas = await _consultar('eventos_sanitarios', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('eventos_sanitarios', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _eventosSanitariosSpec => TableSyncSpec(
+    tabla: 'eventos_sanitarios',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.eventosSanitarios,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final e in filas)
+            (
+              e.id,
+              {
+                'id': e.id,
+                'animal_id': e.animalId,
+                'tipo': e.tipo,
+                'producto': e.producto,
+                'dosis': e.dosis,
+                'fecha': e.fecha.toIso8601String(),
+                'responsable_id': e.responsableId,
+                'observaciones': e.observaciones,
+                'costo': e.costo,
+                'created_at': e.createdAt.toIso8601String(),
+                'deleted_at': e.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.eventosSanitarios)..where((t) => t.id.equals(id)))
+              .write(const EventosSanitariosCompanion(pendiente: Value(false))),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.eventosSanitarios,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.eventosSanitarios)
           .insertOnConflictUpdate(
             EventoSanitarioRow(
-              id: id,
+              id: r['id'] as String,
               animalId: r['animal_id'] as String,
               tipo: r['tipo'] as String,
               producto: r['producto'] as String,
@@ -904,140 +883,191 @@ class SyncService {
               observaciones: r['observaciones'] as String?,
               costo: r['costo'] != null ? (r['costo'] as num).toDouble() : null,
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('eventos_sanitarios', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarVentas() async {
-    final cursor = await _leerCursor('ventas');
-    final filas = await _consultar('ventas', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('ventas', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _ventasSpec => TableSyncSpec(
+    tabla: 'ventas',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.ventas,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final v in filas)
+            (
+              v.id,
+              {
+                'id': v.id,
+                'animal_id': v.animalId,
+                'fecha': v.fecha.toIso8601String(),
+                'precio': v.precio,
+                'comprador': v.comprador,
+                'observaciones': v.observaciones,
+                'created_at': v.createdAt.toIso8601String(),
+                'deleted_at': v.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.ventas)..where((t) => t.id.equals(id))).write(
+            const VentasCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.ventas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.ventas)
           .insertOnConflictUpdate(
             VentaRow(
-              id: id,
+              id: r['id'] as String,
               animalId: r['animal_id'] as String,
               fecha: DateTime.parse(r['fecha'] as String),
               precio: (r['precio'] as num).toDouble(),
               comprador: r['comprador'] as String?,
               observaciones: r['observaciones'] as String?,
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('ventas', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarCostosOtros() async {
-    final cursor = await _leerCursor('costos_otros');
-    final filas = await _consultar('costos_otros', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('costos_otros', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _costosOtrosSpec => TableSyncSpec(
+    tabla: 'costos_otros',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.costosOtros,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final c in filas)
+            (
+              c.id,
+              {
+                'id': c.id,
+                'animal_id': c.animalId,
+                'concepto': c.concepto,
+                'monto': c.monto,
+                'fecha': c.fecha.toIso8601String(),
+                'created_at': c.createdAt.toIso8601String(),
+                'deleted_at': c.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.costosOtros)..where((t) => t.id.equals(id))).write(
+            const CostosOtrosCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.costosOtros,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.costosOtros)
           .insertOnConflictUpdate(
             CostoOtroRow(
-              id: id,
+              id: r['id'] as String,
               animalId: r['animal_id'] as String,
               concepto: r['concepto'] as String,
               monto: (r['monto'] as num).toDouble(),
               fecha: DateTime.parse(r['fecha'] as String),
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('costos_otros', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
-  Future<void> _bajarPesajes() async {
-    final cursor = await _leerCursor('pesajes');
-    final filas = await _consultar('pesajes', cursor);
-    DateTime? maxU = cursor;
-    var retuvoCambioLocal = false;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      final id = r['id'] as String;
-      if (await tieneCambiosLocalesPendientes('pesajes', id)) {
-        retuvoCambioLocal = true;
-        continue;
-      }
-      await db
+  TableSyncSpec get _pesajesSpec => TableSyncSpec(
+    tabla: 'pesajes',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.pesajes,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final p in filas)
+            (
+              p.id,
+              {
+                'id': p.id,
+                'animal_id': p.animalId,
+                'peso': p.peso,
+                'fecha': p.fecha.toIso8601String(),
+                'registrado_por': p.registradoPor,
+                'created_at': p.createdAt.toIso8601String(),
+                'deleted_at': p.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.pesajes)..where((t) => t.id.equals(id))).write(
+            const PesajesCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.pesajes,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
           .into(db.pesajes)
           .insertOnConflictUpdate(
             PesajeRow(
-              id: id,
+              id: r['id'] as String,
               animalId: r['animal_id'] as String,
               peso: (r['peso'] as num).toDouble(),
               fecha: DateTime.parse(r['fecha'] as String),
               registradoPor: r['registrado_por'] as String?,
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (!retuvoCambioLocal && maxU != null) {
-      await _guardarCursor('pesajes', maxU);
-    }
-  }
+          ),
+    ),
+  );
 
   /// Feature flags (D-15): solo BAJAR, nunca SUBIR. La tabla la escribe el
   /// CLI (`hatoctl`) vía `service_role`; la app nunca la modifica, así que no
-  /// hace falta el guard de `tieneCambiosLocalesPendientes` (no hay filas
-  /// locales pendientes que proteger).
-  Future<void> _bajarFeatureFlags() async {
-    final cursor = await _leerCursor('feature_flags');
-    final filas = await _consultar('feature_flags', cursor);
-    DateTime? maxU = cursor;
-    for (final r in filas) {
-      final u = DateTime.parse(r['updated_at'] as String);
-      await db
+  /// hace falta guard de `tieneCambioLocalPendiente` (no hay filas locales
+  /// pendientes que proteger).
+  TableSyncSpec get _featureFlagsSpec => TableSyncSpec(
+    tabla: 'feature_flags',
+    bajada: PullSpec(
+      aplicar: (r) => db
           .into(db.featureFlags)
           .insertOnConflictUpdate(
             FeatureFlagRow(
@@ -1048,38 +1078,12 @@ class SyncService {
               habilitado: r['habilitado'] as bool,
               nota: r['nota'] as String?,
               createdAt: DateTime.parse(r['created_at'] as String),
-              updatedAt: u,
+              updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
             ),
-          );
-      if (maxU == null || u.isAfter(maxU)) maxU = u;
-    }
-    if (maxU != null) await _guardarCursor('feature_flags', maxU);
-  }
-
-  Future<List<Map<String, dynamic>>> _consultar(
-    String tabla,
-    DateTime? cursor,
-  ) async {
-    return _remote.consultar(tabla, cursor);
-  }
-
-  // -------------------------------------------------------------- MARCADORES
-
-  Future<DateTime?> _leerCursor(String tabla) async {
-    final row = await (db.select(
-      db.syncCursores,
-    )..where((t) => t.tabla.equals(tabla))).getSingleOrNull();
-    return row?.ultimaBajada;
-  }
-
-  Future<void> _guardarCursor(String tabla, DateTime fecha) async {
-    await db
-        .into(db.syncCursores)
-        .insertOnConflictUpdate(
-          SyncCursorRow(tabla: tabla, ultimaBajada: fecha),
-        );
-  }
+          ),
+    ),
+  );
 }

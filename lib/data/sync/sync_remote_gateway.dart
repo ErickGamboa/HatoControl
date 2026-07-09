@@ -1,5 +1,21 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Marcador de sincronización compuesto: fecha del último registro bajado
+/// más su id, para desempatar filas con el mismo `updated_at` (evita que una
+/// quede invisible para siempre detrás de un `updated_at.gt` estricto). Los
+/// dos campos viajan juntos: [id] solo es null cuando [updatedAt] también lo
+/// es (tabla nunca sincronizada).
+class SyncCursor {
+  const SyncCursor({this.updatedAt, this.id});
+
+  static const vacio = SyncCursor();
+
+  final DateTime? updatedAt;
+  final String? id;
+
+  bool get esVacio => updatedAt == null;
+}
+
 /// Frontera remota del sync.
 ///
 /// Mantiene a [SyncService] testeable: en producción habla con Supabase; en
@@ -14,7 +30,16 @@ abstract class SyncRemoteGateway {
     Map<String, dynamic> datos,
   );
 
-  Future<List<Map<String, dynamic>>> consultar(String tabla, DateTime? cursor);
+  /// Filas con `(updated_at, [idColumna]) > cursor` en orden ascendente por
+  /// `(updated_at, [idColumna])` — ese orden es lo que permite a
+  /// [SyncService] tratar "el cursor" como "la última fila aplicada" en vez
+  /// de rastrear un máximo. [idColumna] es `id` para casi todas las tablas,
+  /// salvo `planes` cuya llave natural es `codigo` (no tiene columna `id`).
+  Future<List<Map<String, dynamic>>> consultar(
+    String tabla,
+    SyncCursor cursor, {
+    String idColumna = 'id',
+  });
 
   Future<String?> subirFotoFinca({
     required String fincaId,
@@ -56,18 +81,26 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
     }
   }
 
-  /// Trae del servidor las filas con updated_at > cursor (o todas si es null).
+  /// Trae del servidor las filas con `(updated_at, id) > cursor` (o todas si
+  /// [cursor] está vacío), ordenadas por `(updated_at, id)` ascendente. El
+  /// filtro compuesto evita perder una fila que comparte `updated_at` exacto
+  /// con el borde del cursor (ver [SyncCursor]).
   @override
   Future<List<Map<String, dynamic>>> consultar(
     String tabla,
-    DateTime? cursor,
-  ) async {
-    final base = _sb.from(tabla).select();
-    final res = cursor == null
-        ? await base.order('updated_at', ascending: true)
-        : await base
-              .gt('updated_at', cursor.toIso8601String())
-              .order('updated_at', ascending: true);
+    SyncCursor cursor, {
+    String idColumna = 'id',
+  }) async {
+    var query = _sb.from(tabla).select();
+    if (!cursor.esVacio) {
+      final ts = cursor.updatedAt!.toIso8601String();
+      query = query.or(
+        'updated_at.gt.$ts,and(updated_at.eq.$ts,$idColumna.gt.${cursor.id})',
+      );
+    }
+    final res = await query
+        .order('updated_at', ascending: true)
+        .order(idColumna, ascending: true);
     return (res as List).cast<Map<String, dynamic>>();
   }
 

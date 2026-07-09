@@ -43,6 +43,12 @@ class Cuentas extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    "CHECK (plan IN ('invitado','light','medium','pro'))",
+    "CHECK (estado IN ('activa','suspendida'))",
+  ];
 }
 
 @DataClassName('UsuarioRow')
@@ -95,6 +101,9 @@ class FincaMiembros extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => ["CHECK (rol IN ('admin','operario'))"];
 }
 
 @DataClassName('LoteRow')
@@ -130,6 +139,12 @@ class Animales extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    "CHECK (estado IN ('activo','vendido','muerto'))",
+    'CHECK (precio_compra IS NULL OR precio_compra >= 0)',
+  ];
 }
 
 /// Catálogo de dietas por finca (D-02, D-03).
@@ -148,6 +163,9 @@ class Dietas extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => ['CHECK (costo_animal_dia >= 0)'];
 }
 
 /// Historial de asignación de dieta a un lote. `hasta` null = vigente.
@@ -206,6 +224,12 @@ class EventosSanitarios extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    "CHECK (tipo IN ('vacuna','medicamento','desparasitacion','otro'))",
+    'CHECK (costo IS NULL OR costo >= 0)',
+  ];
 }
 
 /// Venta de un animal (Module 4). Al registrar, el animal pasa a estado vendido.
@@ -224,6 +248,9 @@ class Ventas extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => ['CHECK (precio >= 0)'];
 }
 
 /// Otros costos directos del animal (Module 4).
@@ -241,6 +268,9 @@ class CostosOtros extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => ['CHECK (monto >= 0)'];
 }
 
 /// Feature flags por scope (D-15): habilitan/deshabilitan módulos por
@@ -262,6 +292,12 @@ class FeatureFlags extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    "CHECK (scope IN ('global','cuenta','finca'))",
+    "CHECK ((scope = 'global') = (scope_id IS NULL))",
+  ];
 }
 
 @DataClassName('PesajeRow')
@@ -278,15 +314,37 @@ class Pesajes extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => ['CHECK (peso > 0)'];
 }
 
-/// Guarda, por cada tabla, la fecha del último registro que bajamos del
-/// servidor. Sirve como "marcador" para pedir solo lo nuevo en la próxima
-/// sincronización.
+/// Guarda, por cada tabla, la fecha (y el id, para desempatar filas con el
+/// mismo `updated_at`) del último registro que bajamos del servidor. Sirve
+/// como "marcador" para pedir solo lo nuevo en la próxima sincronización.
+/// `ultimaBajadaId` es null solo si `ultimaBajada` también lo es (tabla
+/// nunca sincronizada) — ver `SyncCursor` en `sync_remote_gateway.dart`.
 @DataClassName('SyncCursorRow')
 class SyncCursores extends Table {
   TextColumn get tabla => text()();
   DateTimeColumn get ultimaBajada => dateTime().nullable()();
+  TextColumn get ultimaBajadaId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {tabla};
+}
+
+/// Estado de sincronización por tabla, solo local (D-13): para qué el
+/// usuario/soporte pueda ver "N cambios pendientes" y el último error sin
+/// tener que leer logs. `ultimaSincronizacionOk` se actualiza en cada BAJADA
+/// exitosa (aunque no haya filas nuevas); `ultimoError`/`ultimoErrorEn` se
+/// llenan cuando un paso falla y se limpian en el próximo éxito.
+@DataClassName('SyncEstadoRow')
+class SyncEstados extends Table {
+  TextColumn get tabla => text()();
+  DateTimeColumn get ultimaSincronizacionOk => dateTime().nullable()();
+  TextColumn get ultimoError => text().nullable()();
+  DateTimeColumn get ultimoErrorEn => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {tabla};
@@ -326,6 +384,7 @@ class SesionesLocales extends Table {
     CostosOtros,
     FeatureFlags,
     SyncCursores,
+    SyncEstados,
     SesionesLocales,
   ],
 )
@@ -337,7 +396,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -395,6 +454,29 @@ class AppDatabase extends _$AppDatabase {
       if (from < 10) {
         // v10: feature flags por scope (D-15), solo lectura, bajadas por sync.
         await m.createTable(featureFlags);
+      }
+      if (from < 11) {
+        // v11: CHECK constraints locales (Fase 3, ver ARCHITECTURE_REVIEW.md
+        // #3) + cursor de sync compuesto (updated_at, id) + sync_estado
+        // (D-13). Sin usuarios en producción todavía, así que las tablas
+        // que ganan un CHECK se recrean en vez de migrar datos con cuidado
+        // (decisión explícita, no un atajo permanente).
+        for (final tabla in <TableInfo>[
+          cuentas,
+          fincaMiembros,
+          animales,
+          pesajes,
+          dietas,
+          eventosSanitarios,
+          ventas,
+          costosOtros,
+          featureFlags,
+        ]) {
+          await m.deleteTable(tabla.actualTableName);
+          await m.createTable(tabla);
+        }
+        await m.addColumn(syncCursores, syncCursores.ultimaBajadaId);
+        await m.createTable(syncEstados);
       }
     },
   );

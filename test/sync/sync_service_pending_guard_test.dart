@@ -2,74 +2,9 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hato_control/data/local/database.dart';
-import 'package:hato_control/data/sync/sync_remote_gateway.dart';
 import 'package:hato_control/data/sync/sync_service.dart';
 
-class RemoteWrite {
-  const RemoteWrite({
-    required this.tabla,
-    required this.id,
-    required this.datos,
-  });
-
-  final String tabla;
-  final String id;
-  final Map<String, dynamic> datos;
-}
-
-class FakeSyncRemoteGateway implements SyncRemoteGateway {
-  FakeSyncRemoteGateway({this.tieneUsuario = true, this.tieneSesion = false});
-
-  @override
-  final bool tieneUsuario;
-
-  @override
-  final bool tieneSesion;
-
-  final descargas = <String, List<Map<String, dynamic>>>{};
-  final subidas = <RemoteWrite>[];
-  final fallarSubidas = <String>{};
-
-  @override
-  Future<void> insertarOActualizar(
-    String tabla,
-    String id,
-    Map<String, dynamic> datos,
-  ) async {
-    if (fallarSubidas.contains('$tabla:$id')) {
-      throw StateError('fallo remoto simulado');
-    }
-    subidas.add(RemoteWrite(tabla: tabla, id: id, datos: Map.of(datos)));
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> consultar(
-    String tabla,
-    DateTime? cursor,
-  ) async {
-    final filas = descargas[tabla] ?? const <Map<String, dynamic>>[];
-    return filas
-        .where((fila) {
-          if (cursor == null) return true;
-          return DateTime.parse(fila['updated_at'] as String).isAfter(cursor);
-        })
-        .map(Map<String, dynamic>.of)
-        .toList()
-      ..sort((a, b) {
-        final fechaA = DateTime.parse(a['updated_at'] as String);
-        final fechaB = DateTime.parse(b['updated_at'] as String);
-        return fechaA.compareTo(fechaB);
-      });
-  }
-
-  @override
-  Future<String?> subirFotoFinca({
-    required String fincaId,
-    required String imagenBase64,
-  }) async {
-    return null;
-  }
-}
+import '../support/fake_sync_remote_gateway.dart';
 
 void main() {
   late AppDatabase db;

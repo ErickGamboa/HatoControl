@@ -7,6 +7,7 @@ import '../data/repositories/fincas_repository.dart';
 import '../services.dart';
 import 'finca_detalle_screen.dart';
 import 'foto_picker.dart';
+import 'sync_status_sheet.dart';
 
 /// Lista de fincas del usuario, con opción de crear (con foto) y sincronizar.
 class FincasScreen extends StatefulWidget {
@@ -25,12 +26,15 @@ class FincasScreen extends StatefulWidget {
 
 class _FincasScreenState extends State<FincasScreen> {
   EstadoLicencia? _estado;
+  Map<String, int> _pendientesPorTabla = const {};
+  List<SyncEstadoRow> _estadoSync = const [];
 
   @override
   void initState() {
     super.initState();
     sincronizarSiSePuede();
     _cargarEstado();
+    _cargarEstadoSync();
     syncService.sincronizando.addListener(_alCambiarSync);
   }
 
@@ -41,7 +45,10 @@ class _FincasScreenState extends State<FincasScreen> {
   }
 
   void _alCambiarSync() {
-    if (!syncService.sincronizando.value) _cargarEstado();
+    if (!syncService.sincronizando.value) {
+      _cargarEstado();
+      _cargarEstadoSync();
+    }
   }
 
   String get _usuarioId => widget.usuarioId;
@@ -50,6 +57,21 @@ class _FincasScreenState extends State<FincasScreen> {
     final estado = await fincasRepo.estadoLicencia(_usuarioId);
     if (mounted) setState(() => _estado = estado);
   }
+
+  Future<void> _cargarEstadoSync() async {
+    final pendientes = await syncService.pendientesPorTabla();
+    final estados = await syncService.estadoPorTabla();
+    if (mounted) {
+      setState(() {
+        _pendientesPorTabla = pendientes;
+        _estadoSync = estados;
+      });
+    }
+  }
+
+  bool get _hayAlgoQueMostrarEnSync =>
+      _pendientesPorTabla.values.any((n) => n > 0) ||
+      _estadoSync.any((e) => e.ultimoError != null);
 
   void _mostrar(String texto) {
     if (!mounted) return;
@@ -129,6 +151,17 @@ class _FincasScreenState extends State<FincasScreen> {
               );
             },
           ),
+          if (_hayAlgoQueMostrarEnSync)
+            IconButton(
+              key: const ValueKey('fincas.syncStatus'),
+              tooltip: 'Estado de sincronización',
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => mostrarSyncStatusSheet(
+                context,
+                pendientes: _pendientesPorTabla,
+                estados: _estadoSync,
+              ),
+            ),
           IconButton(
             tooltip: 'Cerrar sesión',
             icon: const Icon(Icons.logout),

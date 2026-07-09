@@ -8644,8 +8644,19 @@ class $SyncCursoresTable extends SyncCursores
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _ultimaBajadaIdMeta = const VerificationMeta(
+    'ultimaBajadaId',
+  );
   @override
-  List<GeneratedColumn> get $columns => [tabla, ultimaBajada];
+  late final GeneratedColumn<String> ultimaBajadaId = GeneratedColumn<String>(
+    'ultima_bajada_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [tabla, ultimaBajada, ultimaBajadaId];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -8675,6 +8686,15 @@ class $SyncCursoresTable extends SyncCursores
         ),
       );
     }
+    if (data.containsKey('ultima_bajada_id')) {
+      context.handle(
+        _ultimaBajadaIdMeta,
+        ultimaBajadaId.isAcceptableOrUnknown(
+          data['ultima_bajada_id']!,
+          _ultimaBajadaIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -8692,6 +8712,10 @@ class $SyncCursoresTable extends SyncCursores
         DriftSqlType.dateTime,
         data['${effectivePrefix}ultima_bajada'],
       ),
+      ultimaBajadaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ultima_bajada_id'],
+      ),
     );
   }
 
@@ -8704,13 +8728,21 @@ class $SyncCursoresTable extends SyncCursores
 class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
   final String tabla;
   final DateTime? ultimaBajada;
-  const SyncCursorRow({required this.tabla, this.ultimaBajada});
+  final String? ultimaBajadaId;
+  const SyncCursorRow({
+    required this.tabla,
+    this.ultimaBajada,
+    this.ultimaBajadaId,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['tabla'] = Variable<String>(tabla);
     if (!nullToAbsent || ultimaBajada != null) {
       map['ultima_bajada'] = Variable<DateTime>(ultimaBajada);
+    }
+    if (!nullToAbsent || ultimaBajadaId != null) {
+      map['ultima_bajada_id'] = Variable<String>(ultimaBajadaId);
     }
     return map;
   }
@@ -8721,6 +8753,9 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
       ultimaBajada: ultimaBajada == null && nullToAbsent
           ? const Value.absent()
           : Value(ultimaBajada),
+      ultimaBajadaId: ultimaBajadaId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ultimaBajadaId),
     );
   }
 
@@ -8732,6 +8767,7 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
     return SyncCursorRow(
       tabla: serializer.fromJson<String>(json['tabla']),
       ultimaBajada: serializer.fromJson<DateTime?>(json['ultimaBajada']),
+      ultimaBajadaId: serializer.fromJson<String?>(json['ultimaBajadaId']),
     );
   }
   @override
@@ -8740,15 +8776,20 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
     return <String, dynamic>{
       'tabla': serializer.toJson<String>(tabla),
       'ultimaBajada': serializer.toJson<DateTime?>(ultimaBajada),
+      'ultimaBajadaId': serializer.toJson<String?>(ultimaBajadaId),
     };
   }
 
   SyncCursorRow copyWith({
     String? tabla,
     Value<DateTime?> ultimaBajada = const Value.absent(),
+    Value<String?> ultimaBajadaId = const Value.absent(),
   }) => SyncCursorRow(
     tabla: tabla ?? this.tabla,
     ultimaBajada: ultimaBajada.present ? ultimaBajada.value : this.ultimaBajada,
+    ultimaBajadaId: ultimaBajadaId.present
+        ? ultimaBajadaId.value
+        : this.ultimaBajadaId,
   );
   SyncCursorRow copyWithCompanion(SyncCursoresCompanion data) {
     return SyncCursorRow(
@@ -8756,6 +8797,9 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
       ultimaBajada: data.ultimaBajada.present
           ? data.ultimaBajada.value
           : this.ultimaBajada,
+      ultimaBajadaId: data.ultimaBajadaId.present
+          ? data.ultimaBajadaId.value
+          : this.ultimaBajadaId,
     );
   }
 
@@ -8763,43 +8807,50 @@ class SyncCursorRow extends DataClass implements Insertable<SyncCursorRow> {
   String toString() {
     return (StringBuffer('SyncCursorRow(')
           ..write('tabla: $tabla, ')
-          ..write('ultimaBajada: $ultimaBajada')
+          ..write('ultimaBajada: $ultimaBajada, ')
+          ..write('ultimaBajadaId: $ultimaBajadaId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(tabla, ultimaBajada);
+  int get hashCode => Object.hash(tabla, ultimaBajada, ultimaBajadaId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is SyncCursorRow &&
           other.tabla == this.tabla &&
-          other.ultimaBajada == this.ultimaBajada);
+          other.ultimaBajada == this.ultimaBajada &&
+          other.ultimaBajadaId == this.ultimaBajadaId);
 }
 
 class SyncCursoresCompanion extends UpdateCompanion<SyncCursorRow> {
   final Value<String> tabla;
   final Value<DateTime?> ultimaBajada;
+  final Value<String?> ultimaBajadaId;
   final Value<int> rowid;
   const SyncCursoresCompanion({
     this.tabla = const Value.absent(),
     this.ultimaBajada = const Value.absent(),
+    this.ultimaBajadaId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SyncCursoresCompanion.insert({
     required String tabla,
     this.ultimaBajada = const Value.absent(),
+    this.ultimaBajadaId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : tabla = Value(tabla);
   static Insertable<SyncCursorRow> custom({
     Expression<String>? tabla,
     Expression<DateTime>? ultimaBajada,
+    Expression<String>? ultimaBajadaId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (tabla != null) 'tabla': tabla,
       if (ultimaBajada != null) 'ultima_bajada': ultimaBajada,
+      if (ultimaBajadaId != null) 'ultima_bajada_id': ultimaBajadaId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -8807,11 +8858,13 @@ class SyncCursoresCompanion extends UpdateCompanion<SyncCursorRow> {
   SyncCursoresCompanion copyWith({
     Value<String>? tabla,
     Value<DateTime?>? ultimaBajada,
+    Value<String?>? ultimaBajadaId,
     Value<int>? rowid,
   }) {
     return SyncCursoresCompanion(
       tabla: tabla ?? this.tabla,
       ultimaBajada: ultimaBajada ?? this.ultimaBajada,
+      ultimaBajadaId: ultimaBajadaId ?? this.ultimaBajadaId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -8825,6 +8878,9 @@ class SyncCursoresCompanion extends UpdateCompanion<SyncCursorRow> {
     if (ultimaBajada.present) {
       map['ultima_bajada'] = Variable<DateTime>(ultimaBajada.value);
     }
+    if (ultimaBajadaId.present) {
+      map['ultima_bajada_id'] = Variable<String>(ultimaBajadaId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -8836,6 +8892,359 @@ class SyncCursoresCompanion extends UpdateCompanion<SyncCursorRow> {
     return (StringBuffer('SyncCursoresCompanion(')
           ..write('tabla: $tabla, ')
           ..write('ultimaBajada: $ultimaBajada, ')
+          ..write('ultimaBajadaId: $ultimaBajadaId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SyncEstadosTable extends SyncEstados
+    with TableInfo<$SyncEstadosTable, SyncEstadoRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncEstadosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _tablaMeta = const VerificationMeta('tabla');
+  @override
+  late final GeneratedColumn<String> tabla = GeneratedColumn<String>(
+    'tabla',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ultimaSincronizacionOkMeta =
+      const VerificationMeta('ultimaSincronizacionOk');
+  @override
+  late final GeneratedColumn<DateTime> ultimaSincronizacionOk =
+      GeneratedColumn<DateTime>(
+        'ultima_sincronizacion_ok',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _ultimoErrorMeta = const VerificationMeta(
+    'ultimoError',
+  );
+  @override
+  late final GeneratedColumn<String> ultimoError = GeneratedColumn<String>(
+    'ultimo_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ultimoErrorEnMeta = const VerificationMeta(
+    'ultimoErrorEn',
+  );
+  @override
+  late final GeneratedColumn<DateTime> ultimoErrorEn =
+      GeneratedColumn<DateTime>(
+        'ultimo_error_en',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    tabla,
+    ultimaSincronizacionOk,
+    ultimoError,
+    ultimoErrorEn,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_estados';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncEstadoRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('tabla')) {
+      context.handle(
+        _tablaMeta,
+        tabla.isAcceptableOrUnknown(data['tabla']!, _tablaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tablaMeta);
+    }
+    if (data.containsKey('ultima_sincronizacion_ok')) {
+      context.handle(
+        _ultimaSincronizacionOkMeta,
+        ultimaSincronizacionOk.isAcceptableOrUnknown(
+          data['ultima_sincronizacion_ok']!,
+          _ultimaSincronizacionOkMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ultimo_error')) {
+      context.handle(
+        _ultimoErrorMeta,
+        ultimoError.isAcceptableOrUnknown(
+          data['ultimo_error']!,
+          _ultimoErrorMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ultimo_error_en')) {
+      context.handle(
+        _ultimoErrorEnMeta,
+        ultimoErrorEn.isAcceptableOrUnknown(
+          data['ultimo_error_en']!,
+          _ultimoErrorEnMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {tabla};
+  @override
+  SyncEstadoRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncEstadoRow(
+      tabla: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tabla'],
+      )!,
+      ultimaSincronizacionOk: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}ultima_sincronizacion_ok'],
+      ),
+      ultimoError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ultimo_error'],
+      ),
+      ultimoErrorEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}ultimo_error_en'],
+      ),
+    );
+  }
+
+  @override
+  $SyncEstadosTable createAlias(String alias) {
+    return $SyncEstadosTable(attachedDatabase, alias);
+  }
+}
+
+class SyncEstadoRow extends DataClass implements Insertable<SyncEstadoRow> {
+  final String tabla;
+  final DateTime? ultimaSincronizacionOk;
+  final String? ultimoError;
+  final DateTime? ultimoErrorEn;
+  const SyncEstadoRow({
+    required this.tabla,
+    this.ultimaSincronizacionOk,
+    this.ultimoError,
+    this.ultimoErrorEn,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['tabla'] = Variable<String>(tabla);
+    if (!nullToAbsent || ultimaSincronizacionOk != null) {
+      map['ultima_sincronizacion_ok'] = Variable<DateTime>(
+        ultimaSincronizacionOk,
+      );
+    }
+    if (!nullToAbsent || ultimoError != null) {
+      map['ultimo_error'] = Variable<String>(ultimoError);
+    }
+    if (!nullToAbsent || ultimoErrorEn != null) {
+      map['ultimo_error_en'] = Variable<DateTime>(ultimoErrorEn);
+    }
+    return map;
+  }
+
+  SyncEstadosCompanion toCompanion(bool nullToAbsent) {
+    return SyncEstadosCompanion(
+      tabla: Value(tabla),
+      ultimaSincronizacionOk: ultimaSincronizacionOk == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ultimaSincronizacionOk),
+      ultimoError: ultimoError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ultimoError),
+      ultimoErrorEn: ultimoErrorEn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ultimoErrorEn),
+    );
+  }
+
+  factory SyncEstadoRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncEstadoRow(
+      tabla: serializer.fromJson<String>(json['tabla']),
+      ultimaSincronizacionOk: serializer.fromJson<DateTime?>(
+        json['ultimaSincronizacionOk'],
+      ),
+      ultimoError: serializer.fromJson<String?>(json['ultimoError']),
+      ultimoErrorEn: serializer.fromJson<DateTime?>(json['ultimoErrorEn']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'tabla': serializer.toJson<String>(tabla),
+      'ultimaSincronizacionOk': serializer.toJson<DateTime?>(
+        ultimaSincronizacionOk,
+      ),
+      'ultimoError': serializer.toJson<String?>(ultimoError),
+      'ultimoErrorEn': serializer.toJson<DateTime?>(ultimoErrorEn),
+    };
+  }
+
+  SyncEstadoRow copyWith({
+    String? tabla,
+    Value<DateTime?> ultimaSincronizacionOk = const Value.absent(),
+    Value<String?> ultimoError = const Value.absent(),
+    Value<DateTime?> ultimoErrorEn = const Value.absent(),
+  }) => SyncEstadoRow(
+    tabla: tabla ?? this.tabla,
+    ultimaSincronizacionOk: ultimaSincronizacionOk.present
+        ? ultimaSincronizacionOk.value
+        : this.ultimaSincronizacionOk,
+    ultimoError: ultimoError.present ? ultimoError.value : this.ultimoError,
+    ultimoErrorEn: ultimoErrorEn.present
+        ? ultimoErrorEn.value
+        : this.ultimoErrorEn,
+  );
+  SyncEstadoRow copyWithCompanion(SyncEstadosCompanion data) {
+    return SyncEstadoRow(
+      tabla: data.tabla.present ? data.tabla.value : this.tabla,
+      ultimaSincronizacionOk: data.ultimaSincronizacionOk.present
+          ? data.ultimaSincronizacionOk.value
+          : this.ultimaSincronizacionOk,
+      ultimoError: data.ultimoError.present
+          ? data.ultimoError.value
+          : this.ultimoError,
+      ultimoErrorEn: data.ultimoErrorEn.present
+          ? data.ultimoErrorEn.value
+          : this.ultimoErrorEn,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncEstadoRow(')
+          ..write('tabla: $tabla, ')
+          ..write('ultimaSincronizacionOk: $ultimaSincronizacionOk, ')
+          ..write('ultimoError: $ultimoError, ')
+          ..write('ultimoErrorEn: $ultimoErrorEn')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(tabla, ultimaSincronizacionOk, ultimoError, ultimoErrorEn);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncEstadoRow &&
+          other.tabla == this.tabla &&
+          other.ultimaSincronizacionOk == this.ultimaSincronizacionOk &&
+          other.ultimoError == this.ultimoError &&
+          other.ultimoErrorEn == this.ultimoErrorEn);
+}
+
+class SyncEstadosCompanion extends UpdateCompanion<SyncEstadoRow> {
+  final Value<String> tabla;
+  final Value<DateTime?> ultimaSincronizacionOk;
+  final Value<String?> ultimoError;
+  final Value<DateTime?> ultimoErrorEn;
+  final Value<int> rowid;
+  const SyncEstadosCompanion({
+    this.tabla = const Value.absent(),
+    this.ultimaSincronizacionOk = const Value.absent(),
+    this.ultimoError = const Value.absent(),
+    this.ultimoErrorEn = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncEstadosCompanion.insert({
+    required String tabla,
+    this.ultimaSincronizacionOk = const Value.absent(),
+    this.ultimoError = const Value.absent(),
+    this.ultimoErrorEn = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : tabla = Value(tabla);
+  static Insertable<SyncEstadoRow> custom({
+    Expression<String>? tabla,
+    Expression<DateTime>? ultimaSincronizacionOk,
+    Expression<String>? ultimoError,
+    Expression<DateTime>? ultimoErrorEn,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (tabla != null) 'tabla': tabla,
+      if (ultimaSincronizacionOk != null)
+        'ultima_sincronizacion_ok': ultimaSincronizacionOk,
+      if (ultimoError != null) 'ultimo_error': ultimoError,
+      if (ultimoErrorEn != null) 'ultimo_error_en': ultimoErrorEn,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncEstadosCompanion copyWith({
+    Value<String>? tabla,
+    Value<DateTime?>? ultimaSincronizacionOk,
+    Value<String?>? ultimoError,
+    Value<DateTime?>? ultimoErrorEn,
+    Value<int>? rowid,
+  }) {
+    return SyncEstadosCompanion(
+      tabla: tabla ?? this.tabla,
+      ultimaSincronizacionOk:
+          ultimaSincronizacionOk ?? this.ultimaSincronizacionOk,
+      ultimoError: ultimoError ?? this.ultimoError,
+      ultimoErrorEn: ultimoErrorEn ?? this.ultimoErrorEn,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (tabla.present) {
+      map['tabla'] = Variable<String>(tabla.value);
+    }
+    if (ultimaSincronizacionOk.present) {
+      map['ultima_sincronizacion_ok'] = Variable<DateTime>(
+        ultimaSincronizacionOk.value,
+      );
+    }
+    if (ultimoError.present) {
+      map['ultimo_error'] = Variable<String>(ultimoError.value);
+    }
+    if (ultimoErrorEn.present) {
+      map['ultimo_error_en'] = Variable<DateTime>(ultimoErrorEn.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncEstadosCompanion(')
+          ..write('tabla: $tabla, ')
+          ..write('ultimaSincronizacionOk: $ultimaSincronizacionOk, ')
+          ..write('ultimoError: $ultimoError, ')
+          ..write('ultimoErrorEn: $ultimoErrorEn, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9292,6 +9701,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CostosOtrosTable costosOtros = $CostosOtrosTable(this);
   late final $FeatureFlagsTable featureFlags = $FeatureFlagsTable(this);
   late final $SyncCursoresTable syncCursores = $SyncCursoresTable(this);
+  late final $SyncEstadosTable syncEstados = $SyncEstadosTable(this);
   late final $SesionesLocalesTable sesionesLocales = $SesionesLocalesTable(
     this,
   );
@@ -9316,6 +9726,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     costosOtros,
     featureFlags,
     syncCursores,
+    syncEstados,
     sesionesLocales,
   ];
   @override
@@ -13525,12 +13936,14 @@ typedef $$SyncCursoresTableCreateCompanionBuilder =
     SyncCursoresCompanion Function({
       required String tabla,
       Value<DateTime?> ultimaBajada,
+      Value<String?> ultimaBajadaId,
       Value<int> rowid,
     });
 typedef $$SyncCursoresTableUpdateCompanionBuilder =
     SyncCursoresCompanion Function({
       Value<String> tabla,
       Value<DateTime?> ultimaBajada,
+      Value<String?> ultimaBajadaId,
       Value<int> rowid,
     });
 
@@ -13550,6 +13963,11 @@ class $$SyncCursoresTableFilterComposer
 
   ColumnFilters<DateTime> get ultimaBajada => $composableBuilder(
     column: $table.ultimaBajada,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ultimaBajadaId => $composableBuilder(
+    column: $table.ultimaBajadaId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -13572,6 +13990,11 @@ class $$SyncCursoresTableOrderingComposer
     column: $table.ultimaBajada,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get ultimaBajadaId => $composableBuilder(
+    column: $table.ultimaBajadaId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncCursoresTableAnnotationComposer
@@ -13588,6 +14011,11 @@ class $$SyncCursoresTableAnnotationComposer
 
   GeneratedColumn<DateTime> get ultimaBajada => $composableBuilder(
     column: $table.ultimaBajada,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get ultimaBajadaId => $composableBuilder(
+    column: $table.ultimaBajadaId,
     builder: (column) => column,
   );
 }
@@ -13625,20 +14053,24 @@ class $$SyncCursoresTableTableManager
               ({
                 Value<String> tabla = const Value.absent(),
                 Value<DateTime?> ultimaBajada = const Value.absent(),
+                Value<String?> ultimaBajadaId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SyncCursoresCompanion(
                 tabla: tabla,
                 ultimaBajada: ultimaBajada,
+                ultimaBajadaId: ultimaBajadaId,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String tabla,
                 Value<DateTime?> ultimaBajada = const Value.absent(),
+                Value<String?> ultimaBajadaId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SyncCursoresCompanion.insert(
                 tabla: tabla,
                 ultimaBajada: ultimaBajada,
+                ultimaBajadaId: ultimaBajadaId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -13664,6 +14096,193 @@ typedef $$SyncCursoresTableProcessedTableManager =
         BaseReferences<_$AppDatabase, $SyncCursoresTable, SyncCursorRow>,
       ),
       SyncCursorRow,
+      PrefetchHooks Function()
+    >;
+typedef $$SyncEstadosTableCreateCompanionBuilder =
+    SyncEstadosCompanion Function({
+      required String tabla,
+      Value<DateTime?> ultimaSincronizacionOk,
+      Value<String?> ultimoError,
+      Value<DateTime?> ultimoErrorEn,
+      Value<int> rowid,
+    });
+typedef $$SyncEstadosTableUpdateCompanionBuilder =
+    SyncEstadosCompanion Function({
+      Value<String> tabla,
+      Value<DateTime?> ultimaSincronizacionOk,
+      Value<String?> ultimoError,
+      Value<DateTime?> ultimoErrorEn,
+      Value<int> rowid,
+    });
+
+class $$SyncEstadosTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncEstadosTable> {
+  $$SyncEstadosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get tabla => $composableBuilder(
+    column: $table.tabla,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get ultimaSincronizacionOk => $composableBuilder(
+    column: $table.ultimaSincronizacionOk,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ultimoError => $composableBuilder(
+    column: $table.ultimoError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get ultimoErrorEn => $composableBuilder(
+    column: $table.ultimoErrorEn,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyncEstadosTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncEstadosTable> {
+  $$SyncEstadosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get tabla => $composableBuilder(
+    column: $table.tabla,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get ultimaSincronizacionOk => $composableBuilder(
+    column: $table.ultimaSincronizacionOk,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ultimoError => $composableBuilder(
+    column: $table.ultimoError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get ultimoErrorEn => $composableBuilder(
+    column: $table.ultimoErrorEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyncEstadosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncEstadosTable> {
+  $$SyncEstadosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get tabla =>
+      $composableBuilder(column: $table.tabla, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get ultimaSincronizacionOk => $composableBuilder(
+    column: $table.ultimaSincronizacionOk,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get ultimoError => $composableBuilder(
+    column: $table.ultimoError,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get ultimoErrorEn => $composableBuilder(
+    column: $table.ultimoErrorEn,
+    builder: (column) => column,
+  );
+}
+
+class $$SyncEstadosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyncEstadosTable,
+          SyncEstadoRow,
+          $$SyncEstadosTableFilterComposer,
+          $$SyncEstadosTableOrderingComposer,
+          $$SyncEstadosTableAnnotationComposer,
+          $$SyncEstadosTableCreateCompanionBuilder,
+          $$SyncEstadosTableUpdateCompanionBuilder,
+          (
+            SyncEstadoRow,
+            BaseReferences<_$AppDatabase, $SyncEstadosTable, SyncEstadoRow>,
+          ),
+          SyncEstadoRow,
+          PrefetchHooks Function()
+        > {
+  $$SyncEstadosTableTableManager(_$AppDatabase db, $SyncEstadosTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncEstadosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncEstadosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncEstadosTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> tabla = const Value.absent(),
+                Value<DateTime?> ultimaSincronizacionOk = const Value.absent(),
+                Value<String?> ultimoError = const Value.absent(),
+                Value<DateTime?> ultimoErrorEn = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncEstadosCompanion(
+                tabla: tabla,
+                ultimaSincronizacionOk: ultimaSincronizacionOk,
+                ultimoError: ultimoError,
+                ultimoErrorEn: ultimoErrorEn,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String tabla,
+                Value<DateTime?> ultimaSincronizacionOk = const Value.absent(),
+                Value<String?> ultimoError = const Value.absent(),
+                Value<DateTime?> ultimoErrorEn = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncEstadosCompanion.insert(
+                tabla: tabla,
+                ultimaSincronizacionOk: ultimaSincronizacionOk,
+                ultimoError: ultimoError,
+                ultimoErrorEn: ultimoErrorEn,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyncEstadosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyncEstadosTable,
+      SyncEstadoRow,
+      $$SyncEstadosTableFilterComposer,
+      $$SyncEstadosTableOrderingComposer,
+      $$SyncEstadosTableAnnotationComposer,
+      $$SyncEstadosTableCreateCompanionBuilder,
+      $$SyncEstadosTableUpdateCompanionBuilder,
+      (
+        SyncEstadoRow,
+        BaseReferences<_$AppDatabase, $SyncEstadosTable, SyncEstadoRow>,
+      ),
+      SyncEstadoRow,
       PrefetchHooks Function()
     >;
 typedef $$SesionesLocalesTableCreateCompanionBuilder =
@@ -13931,6 +14550,8 @@ class $AppDatabaseManager {
       $$FeatureFlagsTableTableManager(_db, _db.featureFlags);
   $$SyncCursoresTableTableManager get syncCursores =>
       $$SyncCursoresTableTableManager(_db, _db.syncCursores);
+  $$SyncEstadosTableTableManager get syncEstados =>
+      $$SyncEstadosTableTableManager(_db, _db.syncEstados);
   $$SesionesLocalesTableTableManager get sesionesLocales =>
       $$SesionesLocalesTableTableManager(_db, _db.sesionesLocales);
 }
