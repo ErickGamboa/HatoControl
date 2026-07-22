@@ -52,3 +52,6 @@ app.*.map.json
 
 # Claude Code agent worktrees (ephemeral, per-session)
 /.claude/
+
+# Documentación (no se versiona)
+/docs/
