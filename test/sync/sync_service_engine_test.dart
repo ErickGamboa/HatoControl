@@ -84,7 +84,9 @@ void main() {
               pendiente: true,
             ),
           );
-      remote.descargas['cuentas'] = [cuentaRemota(updatedAt: DateTime(2026, 1, 3))];
+      remote.descargas['cuentas'] = [
+        cuentaRemota(updatedAt: DateTime(2026, 1, 3)),
+      ];
 
       await sync.sincronizar();
 
@@ -124,7 +126,10 @@ void main() {
         db.syncCursores,
       )..where((t) => t.tabla.equals('planes'))).getSingle();
       expect(cursor.ultimaBajada, mismoInstante);
-      expect(cursor.ultimaBajadaId, 'medium'); // último en orden (updated_at, id)
+      expect(
+        cursor.ultimaBajadaId,
+        'medium',
+      ); // último en orden (updated_at, id)
     },
   );
 

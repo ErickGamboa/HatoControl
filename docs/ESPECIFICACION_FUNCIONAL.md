@@ -1,0 +1,195 @@
+# HatoControl — Especificación funcional
+
+> **Estado:** documento oro (fuente de verdad del producto).  
+> **Para:** Mainor (desarrollo) · **De:** Erick  
+> **Qué es:** describe **cómo debe comportarse la app**, no cómo está hoy.  
+> **Regla:** si una función **no está aquí**, no pertenece al producto — no se construye; si ya existe, se elimina o se alinea.
+
+App para un **ganadero de campo**: sencilla, **mucho de tocar y poco de escribir**, **offline-first** (la sync a Supabase va en segundo plano).
+
+---
+
+## Principios generales
+
+| Principio | Comportamiento |
+|---|---|
+| **Offline primero** | Todo se registra y se ve sin señal. Sync automática cuando hay internet. |
+| **Poco teclado** | Toques y valores por defecto. Escribir solo lo mínimo (peso, precios). |
+| **Una finca activa** | Todos los módulos operan sobre la finca seleccionada. |
+| **Un identificador por animal** | Un solo número. RFID o manual en el **mismo campo**. Sin número visual aparte (por ahora). |
+| **Nada se borra** | El animal vendido no se elimina: pasa a historial (trazabilidad). |
+| **Todo alimenta la Hoja de Vida** | Pesaje, sanidad, dieta, cambio de lote y venta quedan registrados con fecha. |
+
+**Terminología:** *lote de manejo* = donde vive el animal en la finca. *Lote de venta* = grupo que se vende junto. Son conceptos distintos.
+
+---
+
+## Módulo 1 — Pantalla de Trabajo (Pesaje) ★ pantalla principal
+
+Donde el ganadero trabaja en la manga. Todo gira alrededor de ella.
+
+### Registrar un pesaje
+
+1. **Identificador:** RFID o escritura manual (mismo campo).
+2. **Peso:** solo manual por ahora.
+3. **Animal existente:** guardar pesaje → aparece en la lista del día.
+4. **Animal nuevo:** ofrecer registrarlo de una vez, con lo mínimo:
+   - Lote de entrada (tocar; lotes del Módulo 3).
+   - **Precio de compra** y **peso de compra**.
+     - Peso de compra = peso recién digitado (editable).
+     - Opción **nació en la finca** → sin precio de compra (o costo aparte si se define después).
+
+### Lista de pesajes del día (misma pantalla)
+
+- Columnas: **Animal | Peso | Ganancia** (vs. pesaje anterior del mismo animal).
+- **GMD (kg/día)** = (peso hoy − peso anterior) ÷ días entre pesajes. Número clave de engorde.
+- **Pestañas por lote:** una por cada lote pesado hoy.
+- **Contador** de animales pesados visible.
+- Si ya se pesó hoy y se vuelve a escanear: mostrar el registro y **preguntar si se corrige** (no duplicar).
+
+### Botón flotante de Sanidad (cruz)
+
+Tras registrar el peso de un animal, se **habilita** un FAB con cruz de sanidad.
+
+1. Abre modal con los **medicamentos** del Módulo 2.
+2. Cada uno muestra la **dosis ya calculada** con el peso real recién pesado.  
+   Ej.: Catosal “50 ml cada 10 kg”, animal 300 kg → dosis para 300 kg.
+3. El usuario **toca** los que aplica (**N** medicamentos al mismo animal).
+4. Cada aplicación va a la hoja de vida: medicamento, dosis, fecha, **días de retiro**, **costo**.
+5. Con retiro: el animal queda **en retiro** hasta `fecha aplicación + días de retiro`.
+
+---
+
+## Módulo 2 — Sanidad
+
+Catálogo de medicamentos de la finca. Se registran una vez; luego aparecen en el modal de la Pantalla de Trabajo.
+
+### Datos del medicamento
+
+- **Nombre** (ej. Catosal).
+- **Costo del envase** (ej. ₡10.000).
+- **Rendimiento del envase:**
+  - Líquidos → tamaño en **ml** (ej. 400 ml).
+  - Spray / por rendimiento → **número de aplicaciones** (ej. 50).
+- **Tipo de aplicación** (define dosis y costo):
+  1. **Por peso** (inyectable / pour-on): cantidad por cada X kg (ej. 50 ml cada 10 kg). La app calcula ml según peso real.
+  2. **Dosis fija:** misma cantidad sin importar el peso (ej. 5 ml).
+  3. **Por aplicación (spray):** cada uso = **1 aplicación** (sprays, curabicheras, garrapaticidas “al ojo”, etc.).
+- **Días de retiro** (ej. 30).
+
+### Costo por uso (suma a la utilidad)
+
+Calculado solo a partir de costo y rendimiento del envase:
+
+| Tipo | Fórmula | Ejemplo |
+|---|---|---|
+| Líquido / inyectable | `costo envase ÷ ml envase × ml aplicados` | ₡10.000 / 10 ml × 2 ml = **₡2.000** |
+| Spray / bañable | `costo envase ÷ aplicaciones que rinde` | ₡15.000 / 50 = **₡300** |
+
+La dosificación calcula sola cuánto aplicar y cuánto cuesta según el peso en el momento del pesaje.
+
+---
+
+## Módulo 3 — Lotes
+
+- **Crear lotes** con **nombre** y **número**, ambos editables.
+- Son los lotes que se eligen al registrar un animal nuevo en Pesaje.
+- **Dentro del lote:** lista con buscador; columnas **Animal | Peso actual**; acción **Cambiar de lote**.
+- **Cambiar de lote** se registra en la hoja de vida (con fecha).
+- **Tocar un animal** → abre su **Hoja de Vida**.
+
+---
+
+## Módulo 4 — Dietas
+
+Debe ser **sencillo**.
+
+- **Crear dieta:** nombre, **ingredientes**, y **costo por animal por día** de cada ingrediente (así se reparte con exactitud en la utilidad).
+- Las dietas se **asignan a lotes** → y por tanto a la hoja de vida de cada animal del lote.
+- **Rangos de fecha** si el animal cambia a un lote con otra dieta:
+  - *Del [fecha] al [fecha]: Dieta A*
+  - *Del [fecha] al [fecha]: Dieta B*
+- **Costo total de alimentación** = Σ (costo/día de la dieta × días en ella).
+
+---
+
+## Módulo 5 — Hoja de Vida del animal
+
+Consulta de cualquier animal (también al tocar uno en la lista de un lote).
+
+Ordenado por fecha, muestra:
+
+| Sección | Contenido |
+|---|---|
+| **Pesajes** | Peso y GMD |
+| **Sanidad** | Medicamento, dosis, fecha, retiro |
+| **Dietas** | Por rangos de fecha |
+| **Cambios de lote** | Fechas |
+| **Estado actual** | Lote actual, peso actual, si está **en retiro** (y hasta cuándo) |
+| **Venta** | Fecha, peso y precio de venta (cuando aplique) |
+
+---
+
+## Módulo 6 — Venta de animales
+
+### Registrar la venta
+
+1. Identificador (RFID o manual).
+2. **Validación de retiro:** si hay retiro activo → **alerta y no permite vender**.
+3. Digitar **peso** y **precio de venta** → agregar a la lista de la venta en curso.
+4. Repetir con todos los animales.
+5. **Confirmar la venta:**
+   - Salen de su **lote de manejo**.
+   - Dejan de aparecer en pesaje y lotes.
+   - Quedan en la pestaña **Historial de ventas** de este módulo.
+
+### Historial de ventas
+
+- Cada confirmación es un **lote de venta** (puede mezclar animales de distintos lotes de manejo).
+- Por cada lote de venta se muestra la **utilidad**:
+
+```text
+Utilidad = Precio de venta − (Precio de compra + Costo de dietas + Costo de sanidad)
+```
+
+| Componente | Origen |
+|---|---|
+| Precio de compra | Al ingresar el animal |
+| Costo de dietas | Σ (costo/día × días en cada dieta) |
+| Costo de sanidad | Σ costo por uso de medicamentos aplicados |
+| Precio de venta | Digitado al vender |
+
+---
+
+## Cálculos clave (norma)
+
+| Cálculo | Fórmula |
+|---|---|
+| Ganancia entre pesajes | peso actual − peso anterior |
+| GMD (kg/día) | (peso actual − peso anterior) ÷ días entre pesajes |
+| Dosis por peso | (cantidad por cada X kg) según peso del animal |
+| Dosis fija | cantidad fija |
+| Dosis spray | 1 aplicación |
+| Costo uso (líquido) | costo envase ÷ ml envase × ml aplicados |
+| Costo uso (spray) | costo envase ÷ aplicaciones que rinde |
+| Fin de retiro | fecha aplicación + días de retiro |
+| Costo dieta / animal | Σ (costo/día × días en esa dieta) |
+| Costo sanidad / animal | Σ costo por uso de cada aplicación |
+| Utilidad / animal | venta − (compra + dietas + sanidad) |
+| Utilidad / lote de venta | Σ utilidad de los animales del lote |
+
+---
+
+## Fuera de alcance (no construir / retirar si existe)
+
+Todo lo que no esté en los módulos 1–6 ni en los principios anteriores. En particular, **no** forman parte de esta visión:
+
+- Pantalla **Corral** paralela a Pesaje (la Pantalla de Trabajo **es** Pesaje).
+- Historial agregado / gráficas por **lote** como módulo aparte.
+- Catálogo sanitario distinto al modelo de medicamentos + dosis/costo/retiro de aquí.
+- Economía con “otros costos”, márgenes o rentabilidades **fuera** de la fórmula de utilidad de arriba.
+- Feature flags de producto, comparativas entre dietas/lotes, u otros dashboards no descritos.
+
+Plataforma base (auth, fincas, cuenta/licencia, sync) se mantiene como infraestructura; no es “módulo de campo” de esta especificación, pero tampoco se elimina.
+
+Documentos técnicos (`MODELO_DATOS`, `DECISIONES`, `QA_AUTOMATION`, roadmap de implementación) deben **alinearse a este documento**, no al revés.

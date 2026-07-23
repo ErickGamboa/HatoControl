@@ -48,23 +48,106 @@ class DietasRepository {
     String? descripcion,
     required double costoAnimalDia,
     String moneda = 'CRC',
+    List<({String nombre, double costoAnimalDia})> ingredientes = const [],
   }) async {
     final ahora = DateTime.now();
-    await db
-        .into(db.dietas)
-        .insert(
-          DietasCompanion.insert(
-            id: _uuid.v4(),
-            fincaId: fincaId,
-            nombre: nombre,
-            descripcion: Value(descripcion),
-            costoAnimalDia: costoAnimalDia,
-            moneda: Value(moneda),
-            createdAt: ahora,
-            updatedAt: ahora,
+    final total = ingredientes.isEmpty
+        ? costoAnimalDia
+        : ingredientes.fold<double>(0, (s, i) => s + i.costoAnimalDia);
+    final dietaId = _uuid.v4();
+    await db.transaction(() async {
+      await db
+          .into(db.dietas)
+          .insert(
+            DietasCompanion.insert(
+              id: dietaId,
+              fincaId: fincaId,
+              nombre: nombre,
+              descripcion: Value(descripcion),
+              costoAnimalDia: total,
+              moneda: Value(moneda),
+              createdAt: ahora,
+              updatedAt: ahora,
+              pendiente: const Value(true),
+            ),
+          );
+      for (final ing in ingredientes) {
+        await db
+            .into(db.dietaIngredientes)
+            .insert(
+              DietaIngredientesCompanion.insert(
+                id: _uuid.v4(),
+                dietaId: dietaId,
+                nombre: ing.nombre,
+                costoAnimalDia: ing.costoAnimalDia,
+                createdAt: ahora,
+                updatedAt: ahora,
+                pendiente: const Value(true),
+              ),
+            );
+      }
+    });
+  }
+
+  Stream<List<DietaIngredienteRow>> observarIngredientes(String dietaId) {
+    return (db.select(db.dietaIngredientes)
+          ..where((t) => t.dietaId.equals(dietaId) & t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.asc(t.nombre)]))
+        .watch();
+  }
+
+  Future<List<DietaIngredienteRow>> listarIngredientes(String dietaId) {
+    return (db.select(db.dietaIngredientes)
+          ..where((t) => t.dietaId.equals(dietaId) & t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.asc(t.nombre)]))
+        .get();
+  }
+
+  /// Reemplaza ingredientes y recalcula costoAnimalDia = Σ costos.
+  Future<void> reemplazarIngredientes({
+    required String dietaId,
+    required List<({String nombre, double costoAnimalDia})> ingredientes,
+  }) async {
+    final ahora = DateTime.now();
+    final total = ingredientes.fold<double>(0, (s, i) => s + i.costoAnimalDia);
+    await db.transaction(() async {
+      final viejos = await (db.select(
+        db.dietaIngredientes,
+      )..where((t) => t.dietaId.equals(dietaId) & t.deletedAt.isNull())).get();
+      for (final v in viejos) {
+        await (db.update(
+          db.dietaIngredientes,
+        )..where((t) => t.id.equals(v.id))).write(
+          DietaIngredientesCompanion(
+            deletedAt: Value(ahora),
+            updatedAt: Value(ahora),
             pendiente: const Value(true),
           ),
         );
+      }
+      for (final ing in ingredientes) {
+        await db
+            .into(db.dietaIngredientes)
+            .insert(
+              DietaIngredientesCompanion.insert(
+                id: _uuid.v4(),
+                dietaId: dietaId,
+                nombre: ing.nombre,
+                costoAnimalDia: ing.costoAnimalDia,
+                createdAt: ahora,
+                updatedAt: ahora,
+                pendiente: const Value(true),
+              ),
+            );
+      }
+      await (db.update(db.dietas)..where((t) => t.id.equals(dietaId))).write(
+        DietasCompanion(
+          costoAnimalDia: Value(total),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+    });
   }
 
   Future<void> editarDieta({

@@ -1,7 +1,11 @@
 import 'package:hato_control/data/sync/sync_remote_gateway.dart';
 
 class RemoteWrite {
-  const RemoteWrite({required this.tabla, required this.id, required this.datos});
+  const RemoteWrite({
+    required this.tabla,
+    required this.id,
+    required this.datos,
+  });
 
   final String tabla;
   final String id;
@@ -59,14 +63,15 @@ class FakeSyncRemoteGateway implements SyncRemoteGateway {
       return false;
     }
 
-    final filtradas = filas.where(pasaCursor).map(Map<String, dynamic>.of).toList()
-      ..sort((a, b) {
-        final fechaA = DateTime.parse(a['updated_at'] as String);
-        final fechaB = DateTime.parse(b['updated_at'] as String);
-        final cmp = fechaA.compareTo(fechaB);
-        if (cmp != 0) return cmp;
-        return (a[idColumna] as String).compareTo(b[idColumna] as String);
-      });
+    final filtradas =
+        filas.where(pasaCursor).map(Map<String, dynamic>.of).toList()
+          ..sort((a, b) {
+            final fechaA = DateTime.parse(a['updated_at'] as String);
+            final fechaB = DateTime.parse(b['updated_at'] as String);
+            final cmp = fechaA.compareTo(fechaB);
+            if (cmp != 0) return cmp;
+            return (a[idColumna] as String).compareTo(b[idColumna] as String);
+          });
     return filtradas;
   }
 

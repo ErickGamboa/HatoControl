@@ -103,3 +103,10 @@ Means the bootstrap migration
 (`supabase/migrations/20260707203013_bootstrap_rls_helpers.sql`) hasn't been
 applied yet. Run `supabase db push` (after linking) to apply it along with
 everything after it, in order.
+
+## Oro schema (2026-07-23)
+
+`20260723120000_oro_medicamentos_ventas.sql` — medicamentos catalog,
+dieta_ingredientes, lotes_venta, retiro/dosis columns on eventos_sanitarios,
+peso/lote_venta_id on ventas. **Pushed to live** `geocoundyilwxrnbhcqu` on
+2026-07-23 (`supabase migration list` shows local=remote for that stamp).

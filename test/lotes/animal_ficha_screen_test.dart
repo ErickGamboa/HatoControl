@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/data/repositories/dietas_repository.dart';
-import 'package:hato_control/data/repositories/feature_flags_repository.dart';
 import 'package:hato_control/data/repositories/pesajes_repository.dart';
 import 'package:hato_control/data/repositories/sanidad_repository.dart';
 import 'package:hato_control/data/repositories/ventas_repository.dart';
@@ -59,7 +58,9 @@ void main() {
     return (await db.select(db.animales).get()).single;
   }
 
-  testWidgets('muestra pestañas incluyendo Economía', (tester) async {
+  testWidgets('hoja de vida oro: General Pesajes Sanidad Dietas Venta', (
+    tester,
+  ) async {
     final animal = await seedAnimal();
     await tester.pumpWidget(
       MaterialApp(
@@ -70,7 +71,6 @@ void main() {
           sanidadRepository: SanidadRepository(db),
           dietasRepository: DietasRepository(db),
           ventasRepository: VentasRepository(db),
-          featureFlagsRepository: FeatureFlagsRepository(db),
         ),
       ),
     );
@@ -80,60 +80,13 @@ void main() {
     expect(find.text('Pesajes'), findsOneWidget);
     expect(find.text('Sanidad'), findsOneWidget);
     expect(find.text('Dietas'), findsOneWidget);
-    expect(find.text('Economía'), findsOneWidget);
+    expect(find.text('Venta'), findsOneWidget);
 
-    await tester.tap(find.text('Economía'));
+    await tester.tap(find.text('Venta'));
     await tester.pumpAndSettle();
-    expect(find.text('Resumen económico'), findsOneWidget);
+    expect(find.textContaining('Utilidad'), findsWidgets);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   });
-
-  testWidgets(
-    'oculta las pestañas de Sanidad y Economía cuando sus flags están deshabilitados',
-    (tester) async {
-      final animal = await seedAnimal();
-      final ahora = DateTime(2026, 1, 1);
-      for (final clave in ['sanidad', 'ventas']) {
-        await db
-            .into(db.featureFlags)
-            .insert(
-              FeatureFlagRow(
-                id: 'flag-$clave',
-                scope: 'finca',
-                scopeId: 'finca-1',
-                clave: clave,
-                habilitado: false,
-                createdAt: ahora,
-                updatedAt: ahora,
-              ),
-            );
-      }
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: AnimalFichaScreen(
-            animal: animal,
-            usuarioId: 'u1',
-            pesajesRepository: PesajesRepository(db),
-            sanidadRepository: SanidadRepository(db),
-            dietasRepository: DietasRepository(db),
-            ventasRepository: VentasRepository(db),
-            featureFlagsRepository: FeatureFlagsRepository(db),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('General'), findsOneWidget);
-      expect(find.text('Pesajes'), findsOneWidget);
-      expect(find.text('Dietas'), findsOneWidget);
-      expect(find.text('Sanidad'), findsNothing);
-      expect(find.text('Economía'), findsNothing);
-
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump(const Duration(seconds: 1));
-    },
-  );
 }

@@ -64,8 +64,6 @@ These tests protect the weight-history math and screens. Keep them passing:
   excluded).
 - `test/lotes/animal_historial_screen_test.dart` — Días column, per-row
   ganancia and kg/día, global average, and evolution chart render.
-- `test/lotes/lote_historial_screen_test.dart` — period table (count,
-  promedio, ganancia, kg/día) and average-weight chart render.
 
 Run the historial evaluator set:
 
@@ -99,12 +97,12 @@ Run the sanidad evaluator set:
 flutter test test/repositories/sanidad_repository_test.dart
 ```
 
-## Corral evaluator set (módulo 3c)
+## Trabajo / Pesaje evaluator set (oro Módulo 1)
 
-- `test/corral/corral_screen_test.dart` — arete + peso + guardar (≤3 taps).
+- Prefer `PesajeScreen` (Pantalla de Trabajo). Corral was removed as out of oro.
 
 ```bash
-flutter test test/corral
+flutter test test/fincas/finca_detalle_screen_test.dart
 ```
 
 ## Ventas / economía evaluator set (módulo 4)

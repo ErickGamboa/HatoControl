@@ -1,9 +1,11 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../estadisticas/estadisticas_sanidad.dart';
 import '../local/database.dart';
+import 'medicamentos_repository.dart';
 
-/// Tipos de evento sanitario (D-04).
+/// Tipos de evento sanitario (legado + oro).
 abstract final class TipoEventoSanitario {
   static const vacuna = 'vacuna';
   static const medicamento = 'medicamento';
@@ -21,14 +23,20 @@ abstract final class TipoEventoSanitario {
   };
 }
 
-/// Acceso local a eventos sanitarios por animal. Sync corre por separado.
+class AnimalEnRetiroException implements Exception {
+  const AnimalEnRetiroException(this.retiroHasta);
+  final DateTime retiroHasta;
+}
+
+/// Acceso local a eventos sanitarios y retiro. Sync corre por separado.
 class SanidadRepository {
-  SanidadRepository(this.db);
+  SanidadRepository(this.db, {MedicamentosRepository? medicamentosRepository})
+    : _medicamentos = medicamentosRepository ?? MedicamentosRepository(db);
 
   final AppDatabase db;
+  final MedicamentosRepository _medicamentos;
   final _uuid = const Uuid();
 
-  /// Historial sanitario de un animal, más reciente primero.
   Stream<List<EventoSanitarioRow>> observarHistorial(String animalId) {
     return (db.select(db.eventosSanitarios)
           ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
@@ -36,35 +44,32 @@ class SanidadRepository {
         .watch();
   }
 
-  /// Eventos de los animales de un lote en una fecha (día de calendario).
-  Stream<List<EventoSanitarioRow>> observarEventosDelDia({
-    required String loteId,
-    required DateTime dia,
-  }) {
-    final inicio = DateTime(dia.year, dia.month, dia.day);
-    final fin = inicio.add(const Duration(days: 1));
-    final consulta =
-        db.select(db.eventosSanitarios).join([
-            innerJoin(
-              db.animales,
-              db.animales.id.equalsExp(db.eventosSanitarios.animalId),
-            ),
-          ])
-          ..where(
-            db.animales.loteId.equals(loteId) &
-                db.animales.deletedAt.isNull() &
-                db.eventosSanitarios.deletedAt.isNull() &
-                db.eventosSanitarios.fecha.isBiggerOrEqualValue(inicio) &
-                db.eventosSanitarios.fecha.isSmallerThanValue(fin),
-          )
-          ..orderBy([OrderingTerm.desc(db.eventosSanitarios.fecha)]);
-
-    return consulta.watch().map(
-      (filas) => filas.map((f) => f.readTable(db.eventosSanitarios)).toList(),
-    );
+  /// Fecha fin de retiro vigente del animal (null si no está en retiro).
+  Future<DateTime?> retiroHasta(String animalId, {DateTime? hoy}) async {
+    final ahora = hoy ?? DateTime.now();
+    final dia = DateTime(ahora.year, ahora.month, ahora.day);
+    final eventos =
+        await (db.select(db.eventosSanitarios)..where(
+              (t) =>
+                  t.animalId.equals(animalId) &
+                  t.deletedAt.isNull() &
+                  t.retiroHasta.isNotNull(),
+            ))
+            .get();
+    DateTime? maxFin;
+    for (final e in eventos) {
+      final fin = e.retiroHasta;
+      if (fin == null) continue;
+      if (!estaEnRetiro(fin, hoy: dia)) continue;
+      if (maxFin == null || fin.isAfter(maxFin)) maxFin = fin;
+    }
+    return maxFin;
   }
 
-  /// Productos usados antes en la finca (para sugerencias al registrar).
+  Stream<DateTime?> observarRetiroHasta(String animalId) {
+    return observarHistorial(animalId).asyncMap((_) => retiroHasta(animalId));
+  }
+
   Future<List<String>> sugerenciasProducto(String fincaId) async {
     final filas =
         await (db.select(db.eventosSanitarios).join([
@@ -85,7 +90,46 @@ class SanidadRepository {
     return productos;
   }
 
-  /// Registra un evento sanitario para un animal.
+  /// Aplica un medicamento del catálogo con dosis/costo/retiro calculados.
+  Future<void> aplicarMedicamento({
+    required String animalId,
+    required String medicamentoId,
+    required double pesoKg,
+    DateTime? fecha,
+    String? responsableId,
+  }) async {
+    final med = await _medicamentos.porId(medicamentoId);
+    if (med == null) {
+      throw StateError('Medicamento no encontrado: $medicamentoId');
+    }
+    final dosis = _medicamentos.dosisParaPeso(med, pesoKg);
+    final ahora = fecha ?? DateTime.now();
+    final retiro = fechaFinRetiro(ahora, med.diasRetiro);
+
+    await db
+        .into(db.eventosSanitarios)
+        .insert(
+          EventosSanitariosCompanion.insert(
+            id: _uuid.v4(),
+            animalId: animalId,
+            tipo: TipoEventoSanitario.medicamento,
+            producto: med.nombre,
+            dosis: Value(dosis.etiquetaDosis),
+            fecha: ahora,
+            responsableId: Value(responsableId),
+            costo: Value(dosis.costoUso),
+            medicamentoId: Value(medicamentoId),
+            mlAplicados: Value(dosis.mlAplicados),
+            aplicaciones: Value(dosis.aplicaciones),
+            diasRetiro: Value(med.diasRetiro > 0 ? med.diasRetiro : null),
+            retiroHasta: Value(retiro),
+            createdAt: ahora,
+            updatedAt: ahora,
+            pendiente: const Value(true),
+          ),
+        );
+  }
+
   Future<void> registrarEvento({
     required String animalId,
     required String tipo,
@@ -95,8 +139,12 @@ class SanidadRepository {
     String? responsableId,
     String? observaciones,
     double? costo,
+    int? diasRetiro,
   }) async {
     final ahora = fecha ?? DateTime.now();
+    final retiro = diasRetiro == null
+        ? null
+        : fechaFinRetiro(ahora, diasRetiro);
     await db
         .into(db.eventosSanitarios)
         .insert(
@@ -110,6 +158,8 @@ class SanidadRepository {
             responsableId: Value(responsableId),
             observaciones: Value(observaciones),
             costo: Value(costo),
+            diasRetiro: Value(diasRetiro),
+            retiroHasta: Value(retiro),
             createdAt: ahora,
             updatedAt: ahora,
             pendiente: const Value(true),
@@ -117,8 +167,6 @@ class SanidadRepository {
         );
   }
 
-  /// Aplica el mismo evento a todos los animales activos del lote en una
-  /// transacción (modo corral / lote).
   Future<int> registrarEventoEnLote({
     required String loteId,
     required String tipo,
@@ -129,9 +177,14 @@ class SanidadRepository {
     String? observaciones,
     double? costo,
   }) async {
-    final animales = await (db.select(
-      db.animales,
-    )..where((t) => t.loteId.equals(loteId) & t.deletedAt.isNull())).get();
+    final animales =
+        await (db.select(db.animales)..where(
+              (t) =>
+                  t.loteId.equals(loteId) &
+                  t.deletedAt.isNull() &
+                  t.estado.equals('activo'),
+            ))
+            .get();
     if (animales.isEmpty) return 0;
 
     final ahora = fecha ?? DateTime.now();
@@ -160,7 +213,6 @@ class SanidadRepository {
     return animales.length;
   }
 
-  /// Último evento sanitario del animal (para repetir en corral).
   Future<EventoSanitarioRow?> ultimoEvento(String animalId) async {
     return (db.select(db.eventosSanitarios)
           ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
@@ -169,13 +221,22 @@ class SanidadRepository {
         .getSingleOrNull();
   }
 
-  /// Repite el último tratamiento con la misma ficha (producto, tipo, dosis).
   Future<bool> repetirUltimoEvento({
     required String animalId,
     String? responsableId,
+    double? pesoKg,
   }) async {
     final ultimo = await ultimoEvento(animalId);
     if (ultimo == null) return false;
+    if (ultimo.medicamentoId != null && pesoKg != null) {
+      await aplicarMedicamento(
+        animalId: animalId,
+        medicamentoId: ultimo.medicamentoId!,
+        pesoKg: pesoKg,
+        responsableId: responsableId,
+      );
+      return true;
+    }
     await registrarEvento(
       animalId: animalId,
       tipo: ultimo.tipo,
@@ -183,12 +244,12 @@ class SanidadRepository {
       dosis: ultimo.dosis,
       observaciones: ultimo.observaciones,
       costo: ultimo.costo,
+      diasRetiro: ultimo.diasRetiro,
       responsableId: responsableId,
     );
     return true;
   }
 
-  /// Borrado suave de un evento.
   Future<void> eliminarEvento(String eventoId) async {
     await (db.update(
       db.eventosSanitarios,

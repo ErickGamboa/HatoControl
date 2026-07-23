@@ -4,6 +4,10 @@ Lightweight ADR log. Each entry: context, decision, status. Agents and humans
 should check this file before designing a new module, and add an entry when a
 significant choice is made or changed.
 
+**Product behavior** is defined by `docs/ESPECIFICACION_FUNCIONAL.md` (documento
+oro). Decisions here must not contradict that doc; if they do, update or retire
+the decision and align the code.
+
 Statuses: **Decidida** (made, reflected in code/docs), **Abierta** (needs a
 product/tech decision before building), **Propuesta** (recommended default;
 build with it unless overridden).
@@ -69,6 +73,13 @@ constraints + triggers are authoritative. Never commit `service_role` keys.
 in `lib/services.dart` but new code must accept injected dependencies
 (constructor injection) so it is testable. See D-10 for the open follow-up.
 
+### A-11 — Product behavior source of truth = Especificación funcional (oro)
+**Status: Decidida (2026-07-23).** `docs/ESPECIFICACION_FUNCIONAL.md` (Erick)
+defines how the app must behave. Features not described there are out of
+scope: do not build; existing contradictions are retired or aligned
+(`docs/ROADMAP.md` gap list). Technical ADRs below remain valid only when
+they serve an oro module; otherwise mark superseded (see D-01, D-11, D-15).
+
 ---
 
 ## Module decisions / Decisiones por módulo
@@ -76,16 +87,12 @@ in `lib/services.dart` but new code must accept injected dependencies
 All propuestas below were adopted as decisions on **2026-07-02**.
 
 ### D-01 — "Período" for lote history = group by calendar date
-**Needed for: Module 1b. Status: Decidida (2026-07-02).**
-Pesajes are per-animal; nothing marks a "lote weighing session". Decision:
-group the lote's pesajes by **calendar date** — each weighing date is a
-"jornada" and a period runs between consecutive dates. Zero schema change,
-works with existing data. Each animal is compared against **its own previous
-pesaje** (so a missed weighing doesn't corrupt the average), and headcount is
-reported per date. Implemented as pure functions in
-`lib/data/estadisticas/estadisticas_pesajes.dart`. A `jornadas_pesaje`
-entity remains the upgrade path only if field usage shows one lote weighing
-spanning several days.
+**Needed for: Module 1b. Status: Supercedida por A-11 (2026-07-23).**
+Historial agregado por lote / jornadas as a product module is **not** in
+`ESPECIFICACION_FUNCIONAL.md`. `LoteHistorialScreen` was **removed**
+(2026-07-23). Calendar-day gain math (A-06) remains for per-animal GMD on
+Pesaje and Hoja de Vida. Prior implementation note (archaeology): periods
+were calendar-date groups in `estadisticas_pesajes.dart`.
 
 ### D-02 — Dieta cost model: cost snapshot on assignment
 **Needed for: Module 2 (and 4). Status: Decidida (2026-07-02).**
@@ -100,11 +107,12 @@ Diets are defined per finca, matching the RLS pattern of every other domain
 table. Cross-finca comparison can match diets by name later.
 
 ### D-04 — Sanidad: one `eventos_sanitarios` table with `tipo`
-**Needed for: Module 3a. Status: Decidida (2026-07-02).**
-One table with `tipo` (`vacuna` | `medicamento` | `desparasitacion` |
-`otro`); fields are identical across types (producto, dosis, fecha,
-responsable, observaciones, costo). Products are free text with local
-suggestions from history; a `productos_sanitarios` catalog only if needed.
+**Needed for: Module 3a. Status: Revisar vs oro (2026-07-23).**
+Current model is free-text events with `tipo`. The oro requires a **catálogo
+de medicamentos** (nombre, costo envase, rendimiento, tipo de aplicación
+peso/fija/spray, días de retiro) plus aplicaciones with calculated dosis and
+costo por uso. Keep application history; replace/extend the catalog model to
+match Módulo 2 of `ESPECIFICACION_FUNCIONAL.md`.
 
 ### D-05 — Track lote movements (`movimientos_lote`): yes, from Module 2
 **Needed for: Modules 3b and 4. Status: Decidida (2026-07-02).**
@@ -115,11 +123,10 @@ reconstruct later; modules 3b (dietas recibidas) and 4 (feeding cost) depend
 on it.
 
 ### D-06 — Purchase price lives on `animales`
-**Needed for: Module 4. Status: Decidida (2026-07-02).**
-Nullable `precio_compra` and `fecha_compra` columns on `animales` (one
-purchase per animal). "Otros costos" get their own small table
-(`costos_otros`). Migrate to a generic cost ledger only if more cost types
-emerge.
+**Needed for: Module 4. Status: Decidida (2026-07-02); costo scope narrowed by A-11.**
+Nullable `precio_compra` and `fecha_compra` on `animales` stay. Oro utilidad
+= venta − (compra + dietas + sanidad) only — **retire `costos_otros` from
+product math/UI** (table may remain until a cleanup PR).
 
 ### D-07 — Currency: `moneda` on cuenta, numeric amounts, no FX
 **Needed for: Modules 2 and 4. Status: Decidida (2026-07-02).**
@@ -134,11 +141,10 @@ keep their full historial (hoja de vida) but drop out of active lote counts
 and the corral screen. `deletedAt` remains "created by mistake" only.
 
 ### D-09 — Web: read-mostly dashboard, after Module 2
-**Needed for: platform planning. Status: Decidida (2026-07-02).**
-Ship web as a read-mostly analysis experience (historial, comparisons,
-ventas reports) after Module 2; the corral workflow stays mobile-first.
-Requires Drift WASM setup, `XFile`-based photo code with conditional imports,
-and a web pass of the auth/sync flow.
+**Needed for: platform planning. Status: Supercedida en alcance (A-11).**
+Do not build comparison/historial dashboards that are not in the oro. Web
+remains optional/later; if revisited, mirror oro field modules only
+(mobile-first Pantalla de Trabajo stays primary).
 
 ### D-10 — DI convention: constructor injection with global defaults
 **Needed for: Phase 0. Status: Decidida (2026-07-02).**
@@ -148,10 +154,10 @@ in-memory-backed repositories. No DI framework unless manual wiring becomes
 painful. First applied in `AnimalHistorialScreen` and `LoteHistorialScreen`.
 
 ### D-11 — Chart package: `fl_chart`
-**Needed for: Modules 1a/1b. Status: Decidida (2026-07-02).**
-`fl_chart` (pure Dart — works on iOS/Android/macOS/web, no platform
-channels). Added as a dependency and first used for the weight evolution
-chart in the animal historial.
+**Needed for: Modules 1a/1b. Status: Opcional / no oro (A-11).**
+Charts are not required by `ESPECIFICACION_FUNCIONAL.md`. Keep dependency
+only while existing screens still use it; remove with lote/animal chart UI
+retirement. Do not add new chart surfaces for product scope.
 
 ### D-12 — CI: GitHub Actions, macOS runner
 **Needed for: Phase 0. Status: Decidida (2026-07-02).**
@@ -194,27 +200,11 @@ admin CLI design for how this underpins feature flags and admin data
 operations.
 
 ### D-15 — Feature flags: `feature_flags` table, admin-write-only, three scopes
-**Needed for: Module 5. Status: Decidida (2026-07-07).**
-`public.feature_flags` (migration
-`supabase/migrations/20260707203311_feature_flags.sql`): `scope`
-(`global`|`cuenta`|`finca`), `scope_id` (null iff scope='global'), `clave`
-(one of `dietas`, `sanidad`, `ventas` — matching module/repository names,
-gated in the UI as of 2026-07-09), `habilitado`. Resolution order for the app:
-finca override > cuenta override > global default > compiled-in default
-(fail open — a module that already shipped stays on if no flag row exists
-for it). RLS grants `authenticated` **SELECT only**; there is deliberately
-no INSERT/UPDATE/DELETE policy — writes happen exclusively through
-`hatoctl` using the `service_role` key, which bypasses RLS. This mirrors
-A-09 (RLS is the source of truth) one level further: for this table, the
-client isn't even trusted with a UX-only write path. `admin_audit_log`
-(migration `20260707203313_admin_audit_log.sql`) records every hatoctl
-mutation (actor, acción, detalle); service_role only, no authenticated
-access at all. Local Drift mirror is pull-only (no `pendiente` column — the
-app never writes this table, so the usual sync-write invariants don't
-apply; documented as an intentional exception in `docs/MODELO_DATOS.md`).
-Gates three things: nav/menu visibility, sync (skip pulling/pushing a
-disabled module's tables), and route guards as defense in depth. Also the
-mechanism for A-07's plan-based gating later (a flag scoped by cuenta).
+**Needed for: Module 5. Status: Infra ok; gating oro modules out of product scope (A-11).**
+Table/CLI may remain for ops. **Do not gate core oro modules** (Pesaje,
+Sanidad, Lotes, Dietas, Hoja de Vida, Venta) behind flags in the field UI —
+those modules are the product. Prior design (scopes, pull-only Drift mirror,
+hatoctl writes) stays for archaeology / optional ops.
 
 ### D-16 — Modules 2–5 schema pushed to the live project; RLS policy idempotency
 **Status: Decidida (2026-07-09).**

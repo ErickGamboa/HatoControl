@@ -94,16 +94,18 @@ void main() {
     });
 
     test('rechaza un plan o estado de cuenta fuera del catálogo', () async {
-      CuentasCompanion cuenta({String plan = 'light', String estado = 'activa'}) =>
-          CuentasCompanion.insert(
-            id: 'c-1',
-            nombre: 'Cuenta',
-            duenoId: 'user-1',
-            plan: plan,
-            estado: estado,
-            createdAt: now,
-            updatedAt: now,
-          );
+      CuentasCompanion cuenta({
+        String plan = 'light',
+        String estado = 'activa',
+      }) => CuentasCompanion.insert(
+        id: 'c-1',
+        nombre: 'Cuenta',
+        duenoId: 'user-1',
+        plan: plan,
+        estado: estado,
+        createdAt: now,
+        updatedAt: now,
+      );
 
       expect(
         () => db.into(db.cuentas).insert(cuenta(plan: 'ilimitado')),
@@ -124,9 +126,9 @@ void main() {
         throwsA(anything),
       );
       expect(
-        () => db.into(db.animales).insert(
-          animal(id: 'a-2').copyWith(precioCompra: const Value(-10)),
-        ),
+        () => db
+            .into(db.animales)
+            .insert(animal(id: 'a-2').copyWith(precioCompra: const Value(-10))),
         throwsA(anything),
       );
     });
@@ -148,43 +150,49 @@ void main() {
 
     test('rechaza montos negativos en dietas, ventas y costos_otros', () async {
       expect(
-        () => db.into(db.dietas).insert(
-          DietasCompanion.insert(
-            id: 'd-1',
-            fincaId: 'finca-1',
-            nombre: 'Dieta',
-            costoAnimalDia: -1,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        ),
+        () => db
+            .into(db.dietas)
+            .insert(
+              DietasCompanion.insert(
+                id: 'd-1',
+                fincaId: 'finca-1',
+                nombre: 'Dieta',
+                costoAnimalDia: -1,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            ),
         throwsA(anything),
       );
       expect(
-        () => db.into(db.ventas).insert(
-          VentasCompanion.insert(
-            id: 'v-1',
-            animalId: 'animal-1',
-            fecha: now,
-            precio: -1,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        ),
+        () => db
+            .into(db.ventas)
+            .insert(
+              VentasCompanion.insert(
+                id: 'v-1',
+                animalId: 'animal-1',
+                fecha: now,
+                precio: -1,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            ),
         throwsA(anything),
       );
       expect(
-        () => db.into(db.costosOtros).insert(
-          CostosOtrosCompanion.insert(
-            id: 'co-1',
-            animalId: 'animal-1',
-            concepto: 'Sal',
-            monto: -1,
-            fecha: now,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        ),
+        () => db
+            .into(db.costosOtros)
+            .insert(
+              CostosOtrosCompanion.insert(
+                id: 'co-1',
+                animalId: 'animal-1',
+                concepto: 'Sal',
+                monto: -1,
+                fecha: now,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            ),
         throwsA(anything),
       );
     });
@@ -210,9 +218,9 @@ void main() {
         );
         // scope='global' pero con scope_id no nulo: viola la constraint cruzada.
         expect(
-          () => db.into(db.featureFlags).insert(
-            flag(scopeId: const Value('finca-1')),
-          ),
+          () => db
+              .into(db.featureFlags)
+              .insert(flag(scopeId: const Value('finca-1'))),
           throwsA(anything),
         );
         // scope='finca' pero sin scope_id: misma constraint, otro sentido.

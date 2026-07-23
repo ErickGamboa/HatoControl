@@ -1,9 +1,11 @@
 import 'package:drift/drift.dart';
 
+import '../data/estadisticas/estadisticas_sanidad.dart';
 import '../data/local/database.dart';
 import '../data/repositories/dietas_repository.dart';
 import '../data/repositories/fincas_repository.dart';
 import '../data/repositories/lotes_repository.dart';
+import '../data/repositories/medicamentos_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
 import '../data/repositories/sanidad_repository.dart';
 import '../data/repositories/ventas_repository.dart';
@@ -11,7 +13,7 @@ import '../services.dart';
 import 'demo_env.dart';
 import 'demo_seed_ids.dart';
 
-/// Seeds a rich offline demo finca (modules 1–4) for simulators and tours.
+/// Seeds a rich offline demo finca (oro modules) for simulators and tours.
 class DemoSeed {
   DemoSeed({
     AppDatabase? database,
@@ -21,13 +23,15 @@ class DemoSeed {
     DietasRepository? dietas,
     SanidadRepository? sanidad,
     VentasRepository? ventas,
+    MedicamentosRepository? medicamentos,
   }) : _db = database ?? db,
        _fincas = fincas ?? fincasRepo,
        _lotes = lotes ?? lotesRepo,
        _pesajes = pesajes ?? pesajesRepo,
        _dietas = dietas ?? dietasRepo,
        _sanidad = sanidad ?? sanidadRepo,
-       _ventas = ventas ?? ventasRepo;
+       _ventas = ventas ?? ventasRepo,
+       _medicamentos = medicamentos ?? medicamentosRepo;
 
   final AppDatabase _db;
   final FincasRepository _fincas;
@@ -36,6 +40,7 @@ class DemoSeed {
   final DietasRepository _dietas;
   final SanidadRepository _sanidad;
   final VentasRepository _ventas;
+  final MedicamentosRepository _medicamentos;
 
   /// Idempotent: skips if demo finca already exists for this user.
   Future<DemoSeedSnapshot> seedIfAbsent({required String usuarioId}) async {
@@ -125,6 +130,8 @@ class DemoSeed {
       loteId: loteLevante.id,
       dietaId: dietaPasto.id,
     );
+
+    await _ensureMedicamentos(finca.id);
 
     // Animal 1001 — historial de pesajes + sanidad
     await _pesajes.crearAnimalConPesaje(
@@ -243,6 +250,45 @@ class DemoSeed {
     );
   }
 
+  /// Catálogo oro: Catosal (por peso) + spray curabicheras.
+  Future<void> _ensureMedicamentos(String fincaId) async {
+    final existentes = await _medicamentos.listarMedicamentos(fincaId);
+    final nombres = existentes.map((m) => m.nombre).toSet();
+    if (!nombres.contains('Catosal')) {
+      await _medicamentos.crearMedicamento(
+        fincaId: fincaId,
+        nombre: 'Catosal',
+        costoEnvase: 10000,
+        tipoAplicacion: TipoAplicacionMedicamento.porPeso,
+        mlEnvase: 100,
+        dosisCantidad: 50,
+        dosisPorCadaKg: 10,
+        diasRetiro: 0,
+      );
+    }
+    if (!nombres.contains('Curabicheras spray')) {
+      await _medicamentos.crearMedicamento(
+        fincaId: fincaId,
+        nombre: 'Curabicheras spray',
+        costoEnvase: 15000,
+        tipoAplicacion: TipoAplicacionMedicamento.porAplicacion,
+        aplicacionesPorEnvase: 50,
+        diasRetiro: 0,
+      );
+    }
+    if (!nombres.contains('Ivermectina')) {
+      await _medicamentos.crearMedicamento(
+        fincaId: fincaId,
+        nombre: 'Ivermectina',
+        costoEnvase: 25000,
+        tipoAplicacion: TipoAplicacionMedicamento.dosisFija,
+        mlEnvase: 50,
+        dosisCantidad: 5,
+        diasRetiro: 35,
+      );
+    }
+  }
+
   /// Older demo seeds applied Albendazol batch to [loteDestete]; drop for tour UX.
   Future<void> _quitarAlbendazolObsoletoEnDestete(String loteDesteteId) async {
     final animalesDestete =
@@ -283,6 +329,7 @@ class DemoSeed {
     final loteEngorde = loteOrThrow(DemoSeedIds.loteEngorde);
 
     await _quitarAlbendazolObsoletoEnDestete(loteDestete.id);
+    await _ensureMedicamentos(finca.id);
 
     Future<AnimalRow?> animal(String ident) =>
         _pesajes.buscarAnimal(finca.id, ident);

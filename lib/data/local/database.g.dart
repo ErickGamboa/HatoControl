@@ -4935,6 +4935,524 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
   }
 }
 
+class $DietaIngredientesTable extends DietaIngredientes
+    with TableInfo<$DietaIngredientesTable, DietaIngredienteRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DietaIngredientesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dietaIdMeta = const VerificationMeta(
+    'dietaId',
+  );
+  @override
+  late final GeneratedColumn<String> dietaId = GeneratedColumn<String>(
+    'dieta_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nombreMeta = const VerificationMeta('nombre');
+  @override
+  late final GeneratedColumn<String> nombre = GeneratedColumn<String>(
+    'nombre',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _costoAnimalDiaMeta = const VerificationMeta(
+    'costoAnimalDia',
+  );
+  @override
+  late final GeneratedColumn<double> costoAnimalDia = GeneratedColumn<double>(
+    'costo_animal_dia',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    dietaId,
+    nombre,
+    costoAnimalDia,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'dieta_ingredientes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DietaIngredienteRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('dieta_id')) {
+      context.handle(
+        _dietaIdMeta,
+        dietaId.isAcceptableOrUnknown(data['dieta_id']!, _dietaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dietaIdMeta);
+    }
+    if (data.containsKey('nombre')) {
+      context.handle(
+        _nombreMeta,
+        nombre.isAcceptableOrUnknown(data['nombre']!, _nombreMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nombreMeta);
+    }
+    if (data.containsKey('costo_animal_dia')) {
+      context.handle(
+        _costoAnimalDiaMeta,
+        costoAnimalDia.isAcceptableOrUnknown(
+          data['costo_animal_dia']!,
+          _costoAnimalDiaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_costoAnimalDiaMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DietaIngredienteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DietaIngredienteRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      dietaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}dieta_id'],
+      )!,
+      nombre: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nombre'],
+      )!,
+      costoAnimalDia: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}costo_animal_dia'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $DietaIngredientesTable createAlias(String alias) {
+    return $DietaIngredientesTable(attachedDatabase, alias);
+  }
+}
+
+class DietaIngredienteRow extends DataClass
+    implements Insertable<DietaIngredienteRow> {
+  final String id;
+  final String dietaId;
+  final String nombre;
+  final double costoAnimalDia;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const DietaIngredienteRow({
+    required this.id,
+    required this.dietaId,
+    required this.nombre,
+    required this.costoAnimalDia,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['dieta_id'] = Variable<String>(dietaId);
+    map['nombre'] = Variable<String>(nombre);
+    map['costo_animal_dia'] = Variable<double>(costoAnimalDia);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  DietaIngredientesCompanion toCompanion(bool nullToAbsent) {
+    return DietaIngredientesCompanion(
+      id: Value(id),
+      dietaId: Value(dietaId),
+      nombre: Value(nombre),
+      costoAnimalDia: Value(costoAnimalDia),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory DietaIngredienteRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DietaIngredienteRow(
+      id: serializer.fromJson<String>(json['id']),
+      dietaId: serializer.fromJson<String>(json['dietaId']),
+      nombre: serializer.fromJson<String>(json['nombre']),
+      costoAnimalDia: serializer.fromJson<double>(json['costoAnimalDia']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'dietaId': serializer.toJson<String>(dietaId),
+      'nombre': serializer.toJson<String>(nombre),
+      'costoAnimalDia': serializer.toJson<double>(costoAnimalDia),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  DietaIngredienteRow copyWith({
+    String? id,
+    String? dietaId,
+    String? nombre,
+    double? costoAnimalDia,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => DietaIngredienteRow(
+    id: id ?? this.id,
+    dietaId: dietaId ?? this.dietaId,
+    nombre: nombre ?? this.nombre,
+    costoAnimalDia: costoAnimalDia ?? this.costoAnimalDia,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  DietaIngredienteRow copyWithCompanion(DietaIngredientesCompanion data) {
+    return DietaIngredienteRow(
+      id: data.id.present ? data.id.value : this.id,
+      dietaId: data.dietaId.present ? data.dietaId.value : this.dietaId,
+      nombre: data.nombre.present ? data.nombre.value : this.nombre,
+      costoAnimalDia: data.costoAnimalDia.present
+          ? data.costoAnimalDia.value
+          : this.costoAnimalDia,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DietaIngredienteRow(')
+          ..write('id: $id, ')
+          ..write('dietaId: $dietaId, ')
+          ..write('nombre: $nombre, ')
+          ..write('costoAnimalDia: $costoAnimalDia, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    dietaId,
+    nombre,
+    costoAnimalDia,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DietaIngredienteRow &&
+          other.id == this.id &&
+          other.dietaId == this.dietaId &&
+          other.nombre == this.nombre &&
+          other.costoAnimalDia == this.costoAnimalDia &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class DietaIngredientesCompanion extends UpdateCompanion<DietaIngredienteRow> {
+  final Value<String> id;
+  final Value<String> dietaId;
+  final Value<String> nombre;
+  final Value<double> costoAnimalDia;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const DietaIngredientesCompanion({
+    this.id = const Value.absent(),
+    this.dietaId = const Value.absent(),
+    this.nombre = const Value.absent(),
+    this.costoAnimalDia = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DietaIngredientesCompanion.insert({
+    required String id,
+    required String dietaId,
+    required String nombre,
+    required double costoAnimalDia,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       dietaId = Value(dietaId),
+       nombre = Value(nombre),
+       costoAnimalDia = Value(costoAnimalDia),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<DietaIngredienteRow> custom({
+    Expression<String>? id,
+    Expression<String>? dietaId,
+    Expression<String>? nombre,
+    Expression<double>? costoAnimalDia,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (dietaId != null) 'dieta_id': dietaId,
+      if (nombre != null) 'nombre': nombre,
+      if (costoAnimalDia != null) 'costo_animal_dia': costoAnimalDia,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DietaIngredientesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? dietaId,
+    Value<String>? nombre,
+    Value<double>? costoAnimalDia,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return DietaIngredientesCompanion(
+      id: id ?? this.id,
+      dietaId: dietaId ?? this.dietaId,
+      nombre: nombre ?? this.nombre,
+      costoAnimalDia: costoAnimalDia ?? this.costoAnimalDia,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (dietaId.present) {
+      map['dieta_id'] = Variable<String>(dietaId.value);
+    }
+    if (nombre.present) {
+      map['nombre'] = Variable<String>(nombre.value);
+    }
+    if (costoAnimalDia.present) {
+      map['costo_animal_dia'] = Variable<double>(costoAnimalDia.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DietaIngredientesCompanion(')
+          ..write('id: $id, ')
+          ..write('dietaId: $dietaId, ')
+          ..write('nombre: $nombre, ')
+          ..write('costoAnimalDia: $costoAnimalDia, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $LoteDietasTable extends LoteDietas
     with TableInfo<$LoteDietasTable, LoteDietaRow> {
   @override
@@ -6123,6 +6641,855 @@ class MovimientosLoteCompanion extends UpdateCompanion<MovimientoLoteRow> {
   }
 }
 
+class $MedicamentosTable extends Medicamentos
+    with TableInfo<$MedicamentosTable, MedicamentoRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MedicamentosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fincaIdMeta = const VerificationMeta(
+    'fincaId',
+  );
+  @override
+  late final GeneratedColumn<String> fincaId = GeneratedColumn<String>(
+    'finca_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nombreMeta = const VerificationMeta('nombre');
+  @override
+  late final GeneratedColumn<String> nombre = GeneratedColumn<String>(
+    'nombre',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _costoEnvaseMeta = const VerificationMeta(
+    'costoEnvase',
+  );
+  @override
+  late final GeneratedColumn<double> costoEnvase = GeneratedColumn<double>(
+    'costo_envase',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tipoAplicacionMeta = const VerificationMeta(
+    'tipoAplicacion',
+  );
+  @override
+  late final GeneratedColumn<String> tipoAplicacion = GeneratedColumn<String>(
+    'tipo_aplicacion',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mlEnvaseMeta = const VerificationMeta(
+    'mlEnvase',
+  );
+  @override
+  late final GeneratedColumn<double> mlEnvase = GeneratedColumn<double>(
+    'ml_envase',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _aplicacionesPorEnvaseMeta =
+      const VerificationMeta('aplicacionesPorEnvase');
+  @override
+  late final GeneratedColumn<double> aplicacionesPorEnvase =
+      GeneratedColumn<double>(
+        'aplicaciones_por_envase',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _dosisCantidadMeta = const VerificationMeta(
+    'dosisCantidad',
+  );
+  @override
+  late final GeneratedColumn<double> dosisCantidad = GeneratedColumn<double>(
+    'dosis_cantidad',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dosisPorCadaKgMeta = const VerificationMeta(
+    'dosisPorCadaKg',
+  );
+  @override
+  late final GeneratedColumn<double> dosisPorCadaKg = GeneratedColumn<double>(
+    'dosis_por_cada_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _diasRetiroMeta = const VerificationMeta(
+    'diasRetiro',
+  );
+  @override
+  late final GeneratedColumn<int> diasRetiro = GeneratedColumn<int>(
+    'dias_retiro',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    fincaId,
+    nombre,
+    costoEnvase,
+    tipoAplicacion,
+    mlEnvase,
+    aplicacionesPorEnvase,
+    dosisCantidad,
+    dosisPorCadaKg,
+    diasRetiro,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'medicamentos';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MedicamentoRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('finca_id')) {
+      context.handle(
+        _fincaIdMeta,
+        fincaId.isAcceptableOrUnknown(data['finca_id']!, _fincaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fincaIdMeta);
+    }
+    if (data.containsKey('nombre')) {
+      context.handle(
+        _nombreMeta,
+        nombre.isAcceptableOrUnknown(data['nombre']!, _nombreMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nombreMeta);
+    }
+    if (data.containsKey('costo_envase')) {
+      context.handle(
+        _costoEnvaseMeta,
+        costoEnvase.isAcceptableOrUnknown(
+          data['costo_envase']!,
+          _costoEnvaseMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_costoEnvaseMeta);
+    }
+    if (data.containsKey('tipo_aplicacion')) {
+      context.handle(
+        _tipoAplicacionMeta,
+        tipoAplicacion.isAcceptableOrUnknown(
+          data['tipo_aplicacion']!,
+          _tipoAplicacionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_tipoAplicacionMeta);
+    }
+    if (data.containsKey('ml_envase')) {
+      context.handle(
+        _mlEnvaseMeta,
+        mlEnvase.isAcceptableOrUnknown(data['ml_envase']!, _mlEnvaseMeta),
+      );
+    }
+    if (data.containsKey('aplicaciones_por_envase')) {
+      context.handle(
+        _aplicacionesPorEnvaseMeta,
+        aplicacionesPorEnvase.isAcceptableOrUnknown(
+          data['aplicaciones_por_envase']!,
+          _aplicacionesPorEnvaseMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dosis_cantidad')) {
+      context.handle(
+        _dosisCantidadMeta,
+        dosisCantidad.isAcceptableOrUnknown(
+          data['dosis_cantidad']!,
+          _dosisCantidadMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dosis_por_cada_kg')) {
+      context.handle(
+        _dosisPorCadaKgMeta,
+        dosisPorCadaKg.isAcceptableOrUnknown(
+          data['dosis_por_cada_kg']!,
+          _dosisPorCadaKgMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dias_retiro')) {
+      context.handle(
+        _diasRetiroMeta,
+        diasRetiro.isAcceptableOrUnknown(data['dias_retiro']!, _diasRetiroMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MedicamentoRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MedicamentoRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      fincaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}finca_id'],
+      )!,
+      nombre: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nombre'],
+      )!,
+      costoEnvase: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}costo_envase'],
+      )!,
+      tipoAplicacion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tipo_aplicacion'],
+      )!,
+      mlEnvase: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}ml_envase'],
+      ),
+      aplicacionesPorEnvase: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}aplicaciones_por_envase'],
+      ),
+      dosisCantidad: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}dosis_cantidad'],
+      ),
+      dosisPorCadaKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}dosis_por_cada_kg'],
+      ),
+      diasRetiro: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dias_retiro'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $MedicamentosTable createAlias(String alias) {
+    return $MedicamentosTable(attachedDatabase, alias);
+  }
+}
+
+class MedicamentoRow extends DataClass implements Insertable<MedicamentoRow> {
+  final String id;
+  final String fincaId;
+  final String nombre;
+  final double costoEnvase;
+
+  /// por_peso | dosis_fija | por_aplicacion
+  final String tipoAplicacion;
+  final double? mlEnvase;
+  final double? aplicacionesPorEnvase;
+
+  /// ml de la dosis (por peso o fija).
+  final double? dosisCantidad;
+
+  /// "cada X kg" para por_peso.
+  final double? dosisPorCadaKg;
+  final int diasRetiro;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const MedicamentoRow({
+    required this.id,
+    required this.fincaId,
+    required this.nombre,
+    required this.costoEnvase,
+    required this.tipoAplicacion,
+    this.mlEnvase,
+    this.aplicacionesPorEnvase,
+    this.dosisCantidad,
+    this.dosisPorCadaKg,
+    required this.diasRetiro,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['finca_id'] = Variable<String>(fincaId);
+    map['nombre'] = Variable<String>(nombre);
+    map['costo_envase'] = Variable<double>(costoEnvase);
+    map['tipo_aplicacion'] = Variable<String>(tipoAplicacion);
+    if (!nullToAbsent || mlEnvase != null) {
+      map['ml_envase'] = Variable<double>(mlEnvase);
+    }
+    if (!nullToAbsent || aplicacionesPorEnvase != null) {
+      map['aplicaciones_por_envase'] = Variable<double>(aplicacionesPorEnvase);
+    }
+    if (!nullToAbsent || dosisCantidad != null) {
+      map['dosis_cantidad'] = Variable<double>(dosisCantidad);
+    }
+    if (!nullToAbsent || dosisPorCadaKg != null) {
+      map['dosis_por_cada_kg'] = Variable<double>(dosisPorCadaKg);
+    }
+    map['dias_retiro'] = Variable<int>(diasRetiro);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  MedicamentosCompanion toCompanion(bool nullToAbsent) {
+    return MedicamentosCompanion(
+      id: Value(id),
+      fincaId: Value(fincaId),
+      nombre: Value(nombre),
+      costoEnvase: Value(costoEnvase),
+      tipoAplicacion: Value(tipoAplicacion),
+      mlEnvase: mlEnvase == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mlEnvase),
+      aplicacionesPorEnvase: aplicacionesPorEnvase == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aplicacionesPorEnvase),
+      dosisCantidad: dosisCantidad == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dosisCantidad),
+      dosisPorCadaKg: dosisPorCadaKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dosisPorCadaKg),
+      diasRetiro: Value(diasRetiro),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory MedicamentoRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MedicamentoRow(
+      id: serializer.fromJson<String>(json['id']),
+      fincaId: serializer.fromJson<String>(json['fincaId']),
+      nombre: serializer.fromJson<String>(json['nombre']),
+      costoEnvase: serializer.fromJson<double>(json['costoEnvase']),
+      tipoAplicacion: serializer.fromJson<String>(json['tipoAplicacion']),
+      mlEnvase: serializer.fromJson<double?>(json['mlEnvase']),
+      aplicacionesPorEnvase: serializer.fromJson<double?>(
+        json['aplicacionesPorEnvase'],
+      ),
+      dosisCantidad: serializer.fromJson<double?>(json['dosisCantidad']),
+      dosisPorCadaKg: serializer.fromJson<double?>(json['dosisPorCadaKg']),
+      diasRetiro: serializer.fromJson<int>(json['diasRetiro']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'fincaId': serializer.toJson<String>(fincaId),
+      'nombre': serializer.toJson<String>(nombre),
+      'costoEnvase': serializer.toJson<double>(costoEnvase),
+      'tipoAplicacion': serializer.toJson<String>(tipoAplicacion),
+      'mlEnvase': serializer.toJson<double?>(mlEnvase),
+      'aplicacionesPorEnvase': serializer.toJson<double?>(
+        aplicacionesPorEnvase,
+      ),
+      'dosisCantidad': serializer.toJson<double?>(dosisCantidad),
+      'dosisPorCadaKg': serializer.toJson<double?>(dosisPorCadaKg),
+      'diasRetiro': serializer.toJson<int>(diasRetiro),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  MedicamentoRow copyWith({
+    String? id,
+    String? fincaId,
+    String? nombre,
+    double? costoEnvase,
+    String? tipoAplicacion,
+    Value<double?> mlEnvase = const Value.absent(),
+    Value<double?> aplicacionesPorEnvase = const Value.absent(),
+    Value<double?> dosisCantidad = const Value.absent(),
+    Value<double?> dosisPorCadaKg = const Value.absent(),
+    int? diasRetiro,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => MedicamentoRow(
+    id: id ?? this.id,
+    fincaId: fincaId ?? this.fincaId,
+    nombre: nombre ?? this.nombre,
+    costoEnvase: costoEnvase ?? this.costoEnvase,
+    tipoAplicacion: tipoAplicacion ?? this.tipoAplicacion,
+    mlEnvase: mlEnvase.present ? mlEnvase.value : this.mlEnvase,
+    aplicacionesPorEnvase: aplicacionesPorEnvase.present
+        ? aplicacionesPorEnvase.value
+        : this.aplicacionesPorEnvase,
+    dosisCantidad: dosisCantidad.present
+        ? dosisCantidad.value
+        : this.dosisCantidad,
+    dosisPorCadaKg: dosisPorCadaKg.present
+        ? dosisPorCadaKg.value
+        : this.dosisPorCadaKg,
+    diasRetiro: diasRetiro ?? this.diasRetiro,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  MedicamentoRow copyWithCompanion(MedicamentosCompanion data) {
+    return MedicamentoRow(
+      id: data.id.present ? data.id.value : this.id,
+      fincaId: data.fincaId.present ? data.fincaId.value : this.fincaId,
+      nombre: data.nombre.present ? data.nombre.value : this.nombre,
+      costoEnvase: data.costoEnvase.present
+          ? data.costoEnvase.value
+          : this.costoEnvase,
+      tipoAplicacion: data.tipoAplicacion.present
+          ? data.tipoAplicacion.value
+          : this.tipoAplicacion,
+      mlEnvase: data.mlEnvase.present ? data.mlEnvase.value : this.mlEnvase,
+      aplicacionesPorEnvase: data.aplicacionesPorEnvase.present
+          ? data.aplicacionesPorEnvase.value
+          : this.aplicacionesPorEnvase,
+      dosisCantidad: data.dosisCantidad.present
+          ? data.dosisCantidad.value
+          : this.dosisCantidad,
+      dosisPorCadaKg: data.dosisPorCadaKg.present
+          ? data.dosisPorCadaKg.value
+          : this.dosisPorCadaKg,
+      diasRetiro: data.diasRetiro.present
+          ? data.diasRetiro.value
+          : this.diasRetiro,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MedicamentoRow(')
+          ..write('id: $id, ')
+          ..write('fincaId: $fincaId, ')
+          ..write('nombre: $nombre, ')
+          ..write('costoEnvase: $costoEnvase, ')
+          ..write('tipoAplicacion: $tipoAplicacion, ')
+          ..write('mlEnvase: $mlEnvase, ')
+          ..write('aplicacionesPorEnvase: $aplicacionesPorEnvase, ')
+          ..write('dosisCantidad: $dosisCantidad, ')
+          ..write('dosisPorCadaKg: $dosisPorCadaKg, ')
+          ..write('diasRetiro: $diasRetiro, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    fincaId,
+    nombre,
+    costoEnvase,
+    tipoAplicacion,
+    mlEnvase,
+    aplicacionesPorEnvase,
+    dosisCantidad,
+    dosisPorCadaKg,
+    diasRetiro,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MedicamentoRow &&
+          other.id == this.id &&
+          other.fincaId == this.fincaId &&
+          other.nombre == this.nombre &&
+          other.costoEnvase == this.costoEnvase &&
+          other.tipoAplicacion == this.tipoAplicacion &&
+          other.mlEnvase == this.mlEnvase &&
+          other.aplicacionesPorEnvase == this.aplicacionesPorEnvase &&
+          other.dosisCantidad == this.dosisCantidad &&
+          other.dosisPorCadaKg == this.dosisPorCadaKg &&
+          other.diasRetiro == this.diasRetiro &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class MedicamentosCompanion extends UpdateCompanion<MedicamentoRow> {
+  final Value<String> id;
+  final Value<String> fincaId;
+  final Value<String> nombre;
+  final Value<double> costoEnvase;
+  final Value<String> tipoAplicacion;
+  final Value<double?> mlEnvase;
+  final Value<double?> aplicacionesPorEnvase;
+  final Value<double?> dosisCantidad;
+  final Value<double?> dosisPorCadaKg;
+  final Value<int> diasRetiro;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const MedicamentosCompanion({
+    this.id = const Value.absent(),
+    this.fincaId = const Value.absent(),
+    this.nombre = const Value.absent(),
+    this.costoEnvase = const Value.absent(),
+    this.tipoAplicacion = const Value.absent(),
+    this.mlEnvase = const Value.absent(),
+    this.aplicacionesPorEnvase = const Value.absent(),
+    this.dosisCantidad = const Value.absent(),
+    this.dosisPorCadaKg = const Value.absent(),
+    this.diasRetiro = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MedicamentosCompanion.insert({
+    required String id,
+    required String fincaId,
+    required String nombre,
+    required double costoEnvase,
+    required String tipoAplicacion,
+    this.mlEnvase = const Value.absent(),
+    this.aplicacionesPorEnvase = const Value.absent(),
+    this.dosisCantidad = const Value.absent(),
+    this.dosisPorCadaKg = const Value.absent(),
+    this.diasRetiro = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       fincaId = Value(fincaId),
+       nombre = Value(nombre),
+       costoEnvase = Value(costoEnvase),
+       tipoAplicacion = Value(tipoAplicacion),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<MedicamentoRow> custom({
+    Expression<String>? id,
+    Expression<String>? fincaId,
+    Expression<String>? nombre,
+    Expression<double>? costoEnvase,
+    Expression<String>? tipoAplicacion,
+    Expression<double>? mlEnvase,
+    Expression<double>? aplicacionesPorEnvase,
+    Expression<double>? dosisCantidad,
+    Expression<double>? dosisPorCadaKg,
+    Expression<int>? diasRetiro,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fincaId != null) 'finca_id': fincaId,
+      if (nombre != null) 'nombre': nombre,
+      if (costoEnvase != null) 'costo_envase': costoEnvase,
+      if (tipoAplicacion != null) 'tipo_aplicacion': tipoAplicacion,
+      if (mlEnvase != null) 'ml_envase': mlEnvase,
+      if (aplicacionesPorEnvase != null)
+        'aplicaciones_por_envase': aplicacionesPorEnvase,
+      if (dosisCantidad != null) 'dosis_cantidad': dosisCantidad,
+      if (dosisPorCadaKg != null) 'dosis_por_cada_kg': dosisPorCadaKg,
+      if (diasRetiro != null) 'dias_retiro': diasRetiro,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MedicamentosCompanion copyWith({
+    Value<String>? id,
+    Value<String>? fincaId,
+    Value<String>? nombre,
+    Value<double>? costoEnvase,
+    Value<String>? tipoAplicacion,
+    Value<double?>? mlEnvase,
+    Value<double?>? aplicacionesPorEnvase,
+    Value<double?>? dosisCantidad,
+    Value<double?>? dosisPorCadaKg,
+    Value<int>? diasRetiro,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return MedicamentosCompanion(
+      id: id ?? this.id,
+      fincaId: fincaId ?? this.fincaId,
+      nombre: nombre ?? this.nombre,
+      costoEnvase: costoEnvase ?? this.costoEnvase,
+      tipoAplicacion: tipoAplicacion ?? this.tipoAplicacion,
+      mlEnvase: mlEnvase ?? this.mlEnvase,
+      aplicacionesPorEnvase:
+          aplicacionesPorEnvase ?? this.aplicacionesPorEnvase,
+      dosisCantidad: dosisCantidad ?? this.dosisCantidad,
+      dosisPorCadaKg: dosisPorCadaKg ?? this.dosisPorCadaKg,
+      diasRetiro: diasRetiro ?? this.diasRetiro,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (fincaId.present) {
+      map['finca_id'] = Variable<String>(fincaId.value);
+    }
+    if (nombre.present) {
+      map['nombre'] = Variable<String>(nombre.value);
+    }
+    if (costoEnvase.present) {
+      map['costo_envase'] = Variable<double>(costoEnvase.value);
+    }
+    if (tipoAplicacion.present) {
+      map['tipo_aplicacion'] = Variable<String>(tipoAplicacion.value);
+    }
+    if (mlEnvase.present) {
+      map['ml_envase'] = Variable<double>(mlEnvase.value);
+    }
+    if (aplicacionesPorEnvase.present) {
+      map['aplicaciones_por_envase'] = Variable<double>(
+        aplicacionesPorEnvase.value,
+      );
+    }
+    if (dosisCantidad.present) {
+      map['dosis_cantidad'] = Variable<double>(dosisCantidad.value);
+    }
+    if (dosisPorCadaKg.present) {
+      map['dosis_por_cada_kg'] = Variable<double>(dosisPorCadaKg.value);
+    }
+    if (diasRetiro.present) {
+      map['dias_retiro'] = Variable<int>(diasRetiro.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MedicamentosCompanion(')
+          ..write('id: $id, ')
+          ..write('fincaId: $fincaId, ')
+          ..write('nombre: $nombre, ')
+          ..write('costoEnvase: $costoEnvase, ')
+          ..write('tipoAplicacion: $tipoAplicacion, ')
+          ..write('mlEnvase: $mlEnvase, ')
+          ..write('aplicacionesPorEnvase: $aplicacionesPorEnvase, ')
+          ..write('dosisCantidad: $dosisCantidad, ')
+          ..write('dosisPorCadaKg: $dosisPorCadaKg, ')
+          ..write('diasRetiro: $diasRetiro, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $EventosSanitariosTable extends EventosSanitarios
     with TableInfo<$EventosSanitariosTable, EventoSanitarioRow> {
   @override
@@ -6218,6 +7585,61 @@ class $EventosSanitariosTable extends EventosSanitarios
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _medicamentoIdMeta = const VerificationMeta(
+    'medicamentoId',
+  );
+  @override
+  late final GeneratedColumn<String> medicamentoId = GeneratedColumn<String>(
+    'medicamento_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _mlAplicadosMeta = const VerificationMeta(
+    'mlAplicados',
+  );
+  @override
+  late final GeneratedColumn<double> mlAplicados = GeneratedColumn<double>(
+    'ml_aplicados',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _aplicacionesMeta = const VerificationMeta(
+    'aplicaciones',
+  );
+  @override
+  late final GeneratedColumn<int> aplicaciones = GeneratedColumn<int>(
+    'aplicaciones',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _diasRetiroMeta = const VerificationMeta(
+    'diasRetiro',
+  );
+  @override
+  late final GeneratedColumn<int> diasRetiro = GeneratedColumn<int>(
+    'dias_retiro',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _retiroHastaMeta = const VerificationMeta(
+    'retiroHasta',
+  );
+  @override
+  late final GeneratedColumn<DateTime> retiroHasta = GeneratedColumn<DateTime>(
+    'retiro_hasta',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -6277,6 +7699,11 @@ class $EventosSanitariosTable extends EventosSanitarios
     responsableId,
     observaciones,
     costo,
+    medicamentoId,
+    mlAplicados,
+    aplicaciones,
+    diasRetiro,
+    retiroHasta,
     createdAt,
     updatedAt,
     deletedAt,
@@ -6361,6 +7788,48 @@ class $EventosSanitariosTable extends EventosSanitarios
         costo.isAcceptableOrUnknown(data['costo']!, _costoMeta),
       );
     }
+    if (data.containsKey('medicamento_id')) {
+      context.handle(
+        _medicamentoIdMeta,
+        medicamentoId.isAcceptableOrUnknown(
+          data['medicamento_id']!,
+          _medicamentoIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ml_aplicados')) {
+      context.handle(
+        _mlAplicadosMeta,
+        mlAplicados.isAcceptableOrUnknown(
+          data['ml_aplicados']!,
+          _mlAplicadosMeta,
+        ),
+      );
+    }
+    if (data.containsKey('aplicaciones')) {
+      context.handle(
+        _aplicacionesMeta,
+        aplicaciones.isAcceptableOrUnknown(
+          data['aplicaciones']!,
+          _aplicacionesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dias_retiro')) {
+      context.handle(
+        _diasRetiroMeta,
+        diasRetiro.isAcceptableOrUnknown(data['dias_retiro']!, _diasRetiroMeta),
+      );
+    }
+    if (data.containsKey('retiro_hasta')) {
+      context.handle(
+        _retiroHastaMeta,
+        retiroHasta.isAcceptableOrUnknown(
+          data['retiro_hasta']!,
+          _retiroHastaMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -6434,6 +7903,26 @@ class $EventosSanitariosTable extends EventosSanitarios
         DriftSqlType.double,
         data['${effectivePrefix}costo'],
       ),
+      medicamentoId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}medicamento_id'],
+      ),
+      mlAplicados: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}ml_aplicados'],
+      ),
+      aplicaciones: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}aplicaciones'],
+      ),
+      diasRetiro: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dias_retiro'],
+      ),
+      retiroHasta: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}retiro_hasta'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -6470,6 +7959,11 @@ class EventoSanitarioRow extends DataClass
   final String? responsableId;
   final String? observaciones;
   final double? costo;
+  final String? medicamentoId;
+  final double? mlAplicados;
+  final int? aplicaciones;
+  final int? diasRetiro;
+  final DateTime? retiroHasta;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -6484,6 +7978,11 @@ class EventoSanitarioRow extends DataClass
     this.responsableId,
     this.observaciones,
     this.costo,
+    this.medicamentoId,
+    this.mlAplicados,
+    this.aplicaciones,
+    this.diasRetiro,
+    this.retiroHasta,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -6508,6 +8007,21 @@ class EventoSanitarioRow extends DataClass
     }
     if (!nullToAbsent || costo != null) {
       map['costo'] = Variable<double>(costo);
+    }
+    if (!nullToAbsent || medicamentoId != null) {
+      map['medicamento_id'] = Variable<String>(medicamentoId);
+    }
+    if (!nullToAbsent || mlAplicados != null) {
+      map['ml_aplicados'] = Variable<double>(mlAplicados);
+    }
+    if (!nullToAbsent || aplicaciones != null) {
+      map['aplicaciones'] = Variable<int>(aplicaciones);
+    }
+    if (!nullToAbsent || diasRetiro != null) {
+      map['dias_retiro'] = Variable<int>(diasRetiro);
+    }
+    if (!nullToAbsent || retiroHasta != null) {
+      map['retiro_hasta'] = Variable<DateTime>(retiroHasta);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -6537,6 +8051,21 @@ class EventoSanitarioRow extends DataClass
       costo: costo == null && nullToAbsent
           ? const Value.absent()
           : Value(costo),
+      medicamentoId: medicamentoId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(medicamentoId),
+      mlAplicados: mlAplicados == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mlAplicados),
+      aplicaciones: aplicaciones == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aplicaciones),
+      diasRetiro: diasRetiro == null && nullToAbsent
+          ? const Value.absent()
+          : Value(diasRetiro),
+      retiroHasta: retiroHasta == null && nullToAbsent
+          ? const Value.absent()
+          : Value(retiroHasta),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -6561,6 +8090,11 @@ class EventoSanitarioRow extends DataClass
       responsableId: serializer.fromJson<String?>(json['responsableId']),
       observaciones: serializer.fromJson<String?>(json['observaciones']),
       costo: serializer.fromJson<double?>(json['costo']),
+      medicamentoId: serializer.fromJson<String?>(json['medicamentoId']),
+      mlAplicados: serializer.fromJson<double?>(json['mlAplicados']),
+      aplicaciones: serializer.fromJson<int?>(json['aplicaciones']),
+      diasRetiro: serializer.fromJson<int?>(json['diasRetiro']),
+      retiroHasta: serializer.fromJson<DateTime?>(json['retiroHasta']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -6580,6 +8114,11 @@ class EventoSanitarioRow extends DataClass
       'responsableId': serializer.toJson<String?>(responsableId),
       'observaciones': serializer.toJson<String?>(observaciones),
       'costo': serializer.toJson<double?>(costo),
+      'medicamentoId': serializer.toJson<String?>(medicamentoId),
+      'mlAplicados': serializer.toJson<double?>(mlAplicados),
+      'aplicaciones': serializer.toJson<int?>(aplicaciones),
+      'diasRetiro': serializer.toJson<int?>(diasRetiro),
+      'retiroHasta': serializer.toJson<DateTime?>(retiroHasta),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -6597,6 +8136,11 @@ class EventoSanitarioRow extends DataClass
     Value<String?> responsableId = const Value.absent(),
     Value<String?> observaciones = const Value.absent(),
     Value<double?> costo = const Value.absent(),
+    Value<String?> medicamentoId = const Value.absent(),
+    Value<double?> mlAplicados = const Value.absent(),
+    Value<int?> aplicaciones = const Value.absent(),
+    Value<int?> diasRetiro = const Value.absent(),
+    Value<DateTime?> retiroHasta = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -6615,6 +8159,13 @@ class EventoSanitarioRow extends DataClass
         ? observaciones.value
         : this.observaciones,
     costo: costo.present ? costo.value : this.costo,
+    medicamentoId: medicamentoId.present
+        ? medicamentoId.value
+        : this.medicamentoId,
+    mlAplicados: mlAplicados.present ? mlAplicados.value : this.mlAplicados,
+    aplicaciones: aplicaciones.present ? aplicaciones.value : this.aplicaciones,
+    diasRetiro: diasRetiro.present ? diasRetiro.value : this.diasRetiro,
+    retiroHasta: retiroHasta.present ? retiroHasta.value : this.retiroHasta,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -6635,6 +8186,21 @@ class EventoSanitarioRow extends DataClass
           ? data.observaciones.value
           : this.observaciones,
       costo: data.costo.present ? data.costo.value : this.costo,
+      medicamentoId: data.medicamentoId.present
+          ? data.medicamentoId.value
+          : this.medicamentoId,
+      mlAplicados: data.mlAplicados.present
+          ? data.mlAplicados.value
+          : this.mlAplicados,
+      aplicaciones: data.aplicaciones.present
+          ? data.aplicaciones.value
+          : this.aplicaciones,
+      diasRetiro: data.diasRetiro.present
+          ? data.diasRetiro.value
+          : this.diasRetiro,
+      retiroHasta: data.retiroHasta.present
+          ? data.retiroHasta.value
+          : this.retiroHasta,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -6654,6 +8220,11 @@ class EventoSanitarioRow extends DataClass
           ..write('responsableId: $responsableId, ')
           ..write('observaciones: $observaciones, ')
           ..write('costo: $costo, ')
+          ..write('medicamentoId: $medicamentoId, ')
+          ..write('mlAplicados: $mlAplicados, ')
+          ..write('aplicaciones: $aplicaciones, ')
+          ..write('diasRetiro: $diasRetiro, ')
+          ..write('retiroHasta: $retiroHasta, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -6673,6 +8244,11 @@ class EventoSanitarioRow extends DataClass
     responsableId,
     observaciones,
     costo,
+    medicamentoId,
+    mlAplicados,
+    aplicaciones,
+    diasRetiro,
+    retiroHasta,
     createdAt,
     updatedAt,
     deletedAt,
@@ -6691,6 +8267,11 @@ class EventoSanitarioRow extends DataClass
           other.responsableId == this.responsableId &&
           other.observaciones == this.observaciones &&
           other.costo == this.costo &&
+          other.medicamentoId == this.medicamentoId &&
+          other.mlAplicados == this.mlAplicados &&
+          other.aplicaciones == this.aplicaciones &&
+          other.diasRetiro == this.diasRetiro &&
+          other.retiroHasta == this.retiroHasta &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -6707,6 +8288,11 @@ class EventosSanitariosCompanion extends UpdateCompanion<EventoSanitarioRow> {
   final Value<String?> responsableId;
   final Value<String?> observaciones;
   final Value<double?> costo;
+  final Value<String?> medicamentoId;
+  final Value<double?> mlAplicados;
+  final Value<int?> aplicaciones;
+  final Value<int?> diasRetiro;
+  final Value<DateTime?> retiroHasta;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -6722,6 +8308,11 @@ class EventosSanitariosCompanion extends UpdateCompanion<EventoSanitarioRow> {
     this.responsableId = const Value.absent(),
     this.observaciones = const Value.absent(),
     this.costo = const Value.absent(),
+    this.medicamentoId = const Value.absent(),
+    this.mlAplicados = const Value.absent(),
+    this.aplicaciones = const Value.absent(),
+    this.diasRetiro = const Value.absent(),
+    this.retiroHasta = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -6738,6 +8329,11 @@ class EventosSanitariosCompanion extends UpdateCompanion<EventoSanitarioRow> {
     this.responsableId = const Value.absent(),
     this.observaciones = const Value.absent(),
     this.costo = const Value.absent(),
+    this.medicamentoId = const Value.absent(),
+    this.mlAplicados = const Value.absent(),
+    this.aplicaciones = const Value.absent(),
+    this.diasRetiro = const Value.absent(),
+    this.retiroHasta = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -6760,6 +8356,11 @@ class EventosSanitariosCompanion extends UpdateCompanion<EventoSanitarioRow> {
     Expression<String>? responsableId,
     Expression<String>? observaciones,
     Expression<double>? costo,
+    Expression<String>? medicamentoId,
+    Expression<double>? mlAplicados,
+    Expression<int>? aplicaciones,
+    Expression<int>? diasRetiro,
+    Expression<DateTime>? retiroHasta,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -6776,6 +8377,11 @@ class EventosSanitariosCompanion extends UpdateCompanion<EventoSanitarioRow> {
       if (responsableId != null) 'responsable_id': responsableId,
       if (observaciones != null) 'observaciones': observaciones,
       if (costo != null) 'costo': costo,
+      if (medicamentoId != null) 'medicamento_id': medicamentoId,
+      if (mlAplicados != null) 'ml_aplicados': mlAplicados,
+      if (aplicaciones != null) 'aplicaciones': aplicaciones,
+      if (diasRetiro != null) 'dias_retiro': diasRetiro,
+      if (retiroHasta != null) 'retiro_hasta': retiroHasta,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -6794,6 +8400,11 @@ class EventosSanitariosCompanion extends UpdateCompanion<EventoSanitarioRow> {
     Value<String?>? responsableId,
     Value<String?>? observaciones,
     Value<double?>? costo,
+    Value<String?>? medicamentoId,
+    Value<double?>? mlAplicados,
+    Value<int?>? aplicaciones,
+    Value<int?>? diasRetiro,
+    Value<DateTime?>? retiroHasta,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -6810,6 +8421,11 @@ class EventosSanitariosCompanion extends UpdateCompanion<EventoSanitarioRow> {
       responsableId: responsableId ?? this.responsableId,
       observaciones: observaciones ?? this.observaciones,
       costo: costo ?? this.costo,
+      medicamentoId: medicamentoId ?? this.medicamentoId,
+      mlAplicados: mlAplicados ?? this.mlAplicados,
+      aplicaciones: aplicaciones ?? this.aplicaciones,
+      diasRetiro: diasRetiro ?? this.diasRetiro,
+      retiroHasta: retiroHasta ?? this.retiroHasta,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -6848,6 +8464,21 @@ class EventosSanitariosCompanion extends UpdateCompanion<EventoSanitarioRow> {
     if (costo.present) {
       map['costo'] = Variable<double>(costo.value);
     }
+    if (medicamentoId.present) {
+      map['medicamento_id'] = Variable<String>(medicamentoId.value);
+    }
+    if (mlAplicados.present) {
+      map['ml_aplicados'] = Variable<double>(mlAplicados.value);
+    }
+    if (aplicaciones.present) {
+      map['aplicaciones'] = Variable<int>(aplicaciones.value);
+    }
+    if (diasRetiro.present) {
+      map['dias_retiro'] = Variable<int>(diasRetiro.value);
+    }
+    if (retiroHasta.present) {
+      map['retiro_hasta'] = Variable<DateTime>(retiroHasta.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -6878,6 +8509,475 @@ class EventosSanitariosCompanion extends UpdateCompanion<EventoSanitarioRow> {
           ..write('responsableId: $responsableId, ')
           ..write('observaciones: $observaciones, ')
           ..write('costo: $costo, ')
+          ..write('medicamentoId: $medicamentoId, ')
+          ..write('mlAplicados: $mlAplicados, ')
+          ..write('aplicaciones: $aplicaciones, ')
+          ..write('diasRetiro: $diasRetiro, ')
+          ..write('retiroHasta: $retiroHasta, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LotesVentaTable extends LotesVenta
+    with TableInfo<$LotesVentaTable, LoteVentaRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LotesVentaTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fincaIdMeta = const VerificationMeta(
+    'fincaId',
+  );
+  @override
+  late final GeneratedColumn<String> fincaId = GeneratedColumn<String>(
+    'finca_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fechaMeta = const VerificationMeta('fecha');
+  @override
+  late final GeneratedColumn<DateTime> fecha = GeneratedColumn<DateTime>(
+    'fecha',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    fincaId,
+    fecha,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'lotes_venta';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LoteVentaRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('finca_id')) {
+      context.handle(
+        _fincaIdMeta,
+        fincaId.isAcceptableOrUnknown(data['finca_id']!, _fincaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fincaIdMeta);
+    }
+    if (data.containsKey('fecha')) {
+      context.handle(
+        _fechaMeta,
+        fecha.isAcceptableOrUnknown(data['fecha']!, _fechaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fechaMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LoteVentaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LoteVentaRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      fincaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}finca_id'],
+      )!,
+      fecha: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $LotesVentaTable createAlias(String alias) {
+    return $LotesVentaTable(attachedDatabase, alias);
+  }
+}
+
+class LoteVentaRow extends DataClass implements Insertable<LoteVentaRow> {
+  final String id;
+  final String fincaId;
+  final DateTime fecha;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const LoteVentaRow({
+    required this.id,
+    required this.fincaId,
+    required this.fecha,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['finca_id'] = Variable<String>(fincaId);
+    map['fecha'] = Variable<DateTime>(fecha);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  LotesVentaCompanion toCompanion(bool nullToAbsent) {
+    return LotesVentaCompanion(
+      id: Value(id),
+      fincaId: Value(fincaId),
+      fecha: Value(fecha),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory LoteVentaRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LoteVentaRow(
+      id: serializer.fromJson<String>(json['id']),
+      fincaId: serializer.fromJson<String>(json['fincaId']),
+      fecha: serializer.fromJson<DateTime>(json['fecha']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'fincaId': serializer.toJson<String>(fincaId),
+      'fecha': serializer.toJson<DateTime>(fecha),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  LoteVentaRow copyWith({
+    String? id,
+    String? fincaId,
+    DateTime? fecha,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => LoteVentaRow(
+    id: id ?? this.id,
+    fincaId: fincaId ?? this.fincaId,
+    fecha: fecha ?? this.fecha,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  LoteVentaRow copyWithCompanion(LotesVentaCompanion data) {
+    return LoteVentaRow(
+      id: data.id.present ? data.id.value : this.id,
+      fincaId: data.fincaId.present ? data.fincaId.value : this.fincaId,
+      fecha: data.fecha.present ? data.fecha.value : this.fecha,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoteVentaRow(')
+          ..write('id: $id, ')
+          ..write('fincaId: $fincaId, ')
+          ..write('fecha: $fecha, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    fincaId,
+    fecha,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoteVentaRow &&
+          other.id == this.id &&
+          other.fincaId == this.fincaId &&
+          other.fecha == this.fecha &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class LotesVentaCompanion extends UpdateCompanion<LoteVentaRow> {
+  final Value<String> id;
+  final Value<String> fincaId;
+  final Value<DateTime> fecha;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const LotesVentaCompanion({
+    this.id = const Value.absent(),
+    this.fincaId = const Value.absent(),
+    this.fecha = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LotesVentaCompanion.insert({
+    required String id,
+    required String fincaId,
+    required DateTime fecha,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       fincaId = Value(fincaId),
+       fecha = Value(fecha),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<LoteVentaRow> custom({
+    Expression<String>? id,
+    Expression<String>? fincaId,
+    Expression<DateTime>? fecha,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fincaId != null) 'finca_id': fincaId,
+      if (fecha != null) 'fecha': fecha,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LotesVentaCompanion copyWith({
+    Value<String>? id,
+    Value<String>? fincaId,
+    Value<DateTime>? fecha,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return LotesVentaCompanion(
+      id: id ?? this.id,
+      fincaId: fincaId ?? this.fincaId,
+      fecha: fecha ?? this.fecha,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (fincaId.present) {
+      map['finca_id'] = Variable<String>(fincaId.value);
+    }
+    if (fecha.present) {
+      map['fecha'] = Variable<DateTime>(fecha.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LotesVentaCompanion(')
+          ..write('id: $id, ')
+          ..write('fincaId: $fincaId, ')
+          ..write('fecha: $fecha, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -6913,6 +9013,17 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _loteVentaIdMeta = const VerificationMeta(
+    'loteVentaId',
+  );
+  @override
+  late final GeneratedColumn<String> loteVentaId = GeneratedColumn<String>(
+    'lote_venta_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _fechaMeta = const VerificationMeta('fecha');
   @override
   late final GeneratedColumn<DateTime> fecha = GeneratedColumn<DateTime>(
@@ -6930,6 +9041,15 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
     false,
     type: DriftSqlType.double,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pesoMeta = const VerificationMeta('peso');
+  @override
+  late final GeneratedColumn<double> peso = GeneratedColumn<double>(
+    'peso',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _compradorMeta = const VerificationMeta(
     'comprador',
@@ -7005,8 +9125,10 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
   List<GeneratedColumn> get $columns => [
     id,
     animalId,
+    loteVentaId,
     fecha,
     precio,
+    peso,
     comprador,
     observaciones,
     createdAt,
@@ -7039,6 +9161,15 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
     } else if (isInserting) {
       context.missing(_animalIdMeta);
     }
+    if (data.containsKey('lote_venta_id')) {
+      context.handle(
+        _loteVentaIdMeta,
+        loteVentaId.isAcceptableOrUnknown(
+          data['lote_venta_id']!,
+          _loteVentaIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('fecha')) {
       context.handle(
         _fechaMeta,
@@ -7054,6 +9185,12 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
       );
     } else if (isInserting) {
       context.missing(_precioMeta);
+    }
+    if (data.containsKey('peso')) {
+      context.handle(
+        _pesoMeta,
+        peso.isAcceptableOrUnknown(data['peso']!, _pesoMeta),
+      );
     }
     if (data.containsKey('comprador')) {
       context.handle(
@@ -7115,6 +9252,10 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
         DriftSqlType.string,
         data['${effectivePrefix}animal_id'],
       )!,
+      loteVentaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lote_venta_id'],
+      ),
       fecha: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}fecha'],
@@ -7123,6 +9264,10 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
         DriftSqlType.double,
         data['${effectivePrefix}precio'],
       )!,
+      peso: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}peso'],
+      ),
       comprador: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}comprador'],
@@ -7159,8 +9304,10 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
 class VentaRow extends DataClass implements Insertable<VentaRow> {
   final String id;
   final String animalId;
+  final String? loteVentaId;
   final DateTime fecha;
   final double precio;
+  final double? peso;
   final String? comprador;
   final String? observaciones;
   final DateTime createdAt;
@@ -7170,8 +9317,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
   const VentaRow({
     required this.id,
     required this.animalId,
+    this.loteVentaId,
     required this.fecha,
     required this.precio,
+    this.peso,
     this.comprador,
     this.observaciones,
     required this.createdAt,
@@ -7184,8 +9333,14 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['animal_id'] = Variable<String>(animalId);
+    if (!nullToAbsent || loteVentaId != null) {
+      map['lote_venta_id'] = Variable<String>(loteVentaId);
+    }
     map['fecha'] = Variable<DateTime>(fecha);
     map['precio'] = Variable<double>(precio);
+    if (!nullToAbsent || peso != null) {
+      map['peso'] = Variable<double>(peso);
+    }
     if (!nullToAbsent || comprador != null) {
       map['comprador'] = Variable<String>(comprador);
     }
@@ -7205,8 +9360,12 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     return VentasCompanion(
       id: Value(id),
       animalId: Value(animalId),
+      loteVentaId: loteVentaId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loteVentaId),
       fecha: Value(fecha),
       precio: Value(precio),
+      peso: peso == null && nullToAbsent ? const Value.absent() : Value(peso),
       comprador: comprador == null && nullToAbsent
           ? const Value.absent()
           : Value(comprador),
@@ -7230,8 +9389,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     return VentaRow(
       id: serializer.fromJson<String>(json['id']),
       animalId: serializer.fromJson<String>(json['animalId']),
+      loteVentaId: serializer.fromJson<String?>(json['loteVentaId']),
       fecha: serializer.fromJson<DateTime>(json['fecha']),
       precio: serializer.fromJson<double>(json['precio']),
+      peso: serializer.fromJson<double?>(json['peso']),
       comprador: serializer.fromJson<String?>(json['comprador']),
       observaciones: serializer.fromJson<String?>(json['observaciones']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -7246,8 +9407,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'animalId': serializer.toJson<String>(animalId),
+      'loteVentaId': serializer.toJson<String?>(loteVentaId),
       'fecha': serializer.toJson<DateTime>(fecha),
       'precio': serializer.toJson<double>(precio),
+      'peso': serializer.toJson<double?>(peso),
       'comprador': serializer.toJson<String?>(comprador),
       'observaciones': serializer.toJson<String?>(observaciones),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -7260,8 +9423,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
   VentaRow copyWith({
     String? id,
     String? animalId,
+    Value<String?> loteVentaId = const Value.absent(),
     DateTime? fecha,
     double? precio,
+    Value<double?> peso = const Value.absent(),
     Value<String?> comprador = const Value.absent(),
     Value<String?> observaciones = const Value.absent(),
     DateTime? createdAt,
@@ -7271,8 +9436,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
   }) => VentaRow(
     id: id ?? this.id,
     animalId: animalId ?? this.animalId,
+    loteVentaId: loteVentaId.present ? loteVentaId.value : this.loteVentaId,
     fecha: fecha ?? this.fecha,
     precio: precio ?? this.precio,
+    peso: peso.present ? peso.value : this.peso,
     comprador: comprador.present ? comprador.value : this.comprador,
     observaciones: observaciones.present
         ? observaciones.value
@@ -7286,8 +9453,12 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     return VentaRow(
       id: data.id.present ? data.id.value : this.id,
       animalId: data.animalId.present ? data.animalId.value : this.animalId,
+      loteVentaId: data.loteVentaId.present
+          ? data.loteVentaId.value
+          : this.loteVentaId,
       fecha: data.fecha.present ? data.fecha.value : this.fecha,
       precio: data.precio.present ? data.precio.value : this.precio,
+      peso: data.peso.present ? data.peso.value : this.peso,
       comprador: data.comprador.present ? data.comprador.value : this.comprador,
       observaciones: data.observaciones.present
           ? data.observaciones.value
@@ -7304,8 +9475,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     return (StringBuffer('VentaRow(')
           ..write('id: $id, ')
           ..write('animalId: $animalId, ')
+          ..write('loteVentaId: $loteVentaId, ')
           ..write('fecha: $fecha, ')
           ..write('precio: $precio, ')
+          ..write('peso: $peso, ')
           ..write('comprador: $comprador, ')
           ..write('observaciones: $observaciones, ')
           ..write('createdAt: $createdAt, ')
@@ -7320,8 +9493,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
   int get hashCode => Object.hash(
     id,
     animalId,
+    loteVentaId,
     fecha,
     precio,
+    peso,
     comprador,
     observaciones,
     createdAt,
@@ -7335,8 +9510,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
       (other is VentaRow &&
           other.id == this.id &&
           other.animalId == this.animalId &&
+          other.loteVentaId == this.loteVentaId &&
           other.fecha == this.fecha &&
           other.precio == this.precio &&
+          other.peso == this.peso &&
           other.comprador == this.comprador &&
           other.observaciones == this.observaciones &&
           other.createdAt == this.createdAt &&
@@ -7348,8 +9525,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
 class VentasCompanion extends UpdateCompanion<VentaRow> {
   final Value<String> id;
   final Value<String> animalId;
+  final Value<String?> loteVentaId;
   final Value<DateTime> fecha;
   final Value<double> precio;
+  final Value<double?> peso;
   final Value<String?> comprador;
   final Value<String?> observaciones;
   final Value<DateTime> createdAt;
@@ -7360,8 +9539,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
   const VentasCompanion({
     this.id = const Value.absent(),
     this.animalId = const Value.absent(),
+    this.loteVentaId = const Value.absent(),
     this.fecha = const Value.absent(),
     this.precio = const Value.absent(),
+    this.peso = const Value.absent(),
     this.comprador = const Value.absent(),
     this.observaciones = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -7373,8 +9554,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
   VentasCompanion.insert({
     required String id,
     required String animalId,
+    this.loteVentaId = const Value.absent(),
     required DateTime fecha,
     required double precio,
+    this.peso = const Value.absent(),
     this.comprador = const Value.absent(),
     this.observaciones = const Value.absent(),
     required DateTime createdAt,
@@ -7391,8 +9574,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
   static Insertable<VentaRow> custom({
     Expression<String>? id,
     Expression<String>? animalId,
+    Expression<String>? loteVentaId,
     Expression<DateTime>? fecha,
     Expression<double>? precio,
+    Expression<double>? peso,
     Expression<String>? comprador,
     Expression<String>? observaciones,
     Expression<DateTime>? createdAt,
@@ -7404,8 +9589,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (animalId != null) 'animal_id': animalId,
+      if (loteVentaId != null) 'lote_venta_id': loteVentaId,
       if (fecha != null) 'fecha': fecha,
       if (precio != null) 'precio': precio,
+      if (peso != null) 'peso': peso,
       if (comprador != null) 'comprador': comprador,
       if (observaciones != null) 'observaciones': observaciones,
       if (createdAt != null) 'created_at': createdAt,
@@ -7419,8 +9606,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
   VentasCompanion copyWith({
     Value<String>? id,
     Value<String>? animalId,
+    Value<String?>? loteVentaId,
     Value<DateTime>? fecha,
     Value<double>? precio,
+    Value<double?>? peso,
     Value<String?>? comprador,
     Value<String?>? observaciones,
     Value<DateTime>? createdAt,
@@ -7432,8 +9621,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     return VentasCompanion(
       id: id ?? this.id,
       animalId: animalId ?? this.animalId,
+      loteVentaId: loteVentaId ?? this.loteVentaId,
       fecha: fecha ?? this.fecha,
       precio: precio ?? this.precio,
+      peso: peso ?? this.peso,
       comprador: comprador ?? this.comprador,
       observaciones: observaciones ?? this.observaciones,
       createdAt: createdAt ?? this.createdAt,
@@ -7453,11 +9644,17 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     if (animalId.present) {
       map['animal_id'] = Variable<String>(animalId.value);
     }
+    if (loteVentaId.present) {
+      map['lote_venta_id'] = Variable<String>(loteVentaId.value);
+    }
     if (fecha.present) {
       map['fecha'] = Variable<DateTime>(fecha.value);
     }
     if (precio.present) {
       map['precio'] = Variable<double>(precio.value);
+    }
+    if (peso.present) {
+      map['peso'] = Variable<double>(peso.value);
     }
     if (comprador.present) {
       map['comprador'] = Variable<String>(comprador.value);
@@ -7488,8 +9685,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     return (StringBuffer('VentasCompanion(')
           ..write('id: $id, ')
           ..write('animalId: $animalId, ')
+          ..write('loteVentaId: $loteVentaId, ')
           ..write('fecha: $fecha, ')
           ..write('precio: $precio, ')
+          ..write('peso: $peso, ')
           ..write('comprador: $comprador, ')
           ..write('observaciones: $observaciones, ')
           ..write('createdAt: $createdAt, ')
@@ -9691,12 +11890,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AnimalesTable animales = $AnimalesTable(this);
   late final $PesajesTable pesajes = $PesajesTable(this);
   late final $DietasTable dietas = $DietasTable(this);
+  late final $DietaIngredientesTable dietaIngredientes =
+      $DietaIngredientesTable(this);
   late final $LoteDietasTable loteDietas = $LoteDietasTable(this);
   late final $MovimientosLoteTable movimientosLote = $MovimientosLoteTable(
     this,
   );
+  late final $MedicamentosTable medicamentos = $MedicamentosTable(this);
   late final $EventosSanitariosTable eventosSanitarios =
       $EventosSanitariosTable(this);
+  late final $LotesVentaTable lotesVenta = $LotesVentaTable(this);
   late final $VentasTable ventas = $VentasTable(this);
   late final $CostosOtrosTable costosOtros = $CostosOtrosTable(this);
   late final $FeatureFlagsTable featureFlags = $FeatureFlagsTable(this);
@@ -9719,9 +11922,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     animales,
     pesajes,
     dietas,
+    dietaIngredientes,
     loteDietas,
     movimientosLote,
+    medicamentos,
     eventosSanitarios,
+    lotesVenta,
     ventas,
     costosOtros,
     featureFlags,
@@ -12135,6 +14341,278 @@ typedef $$DietasTableProcessedTableManager =
       DietaRow,
       PrefetchHooks Function()
     >;
+typedef $$DietaIngredientesTableCreateCompanionBuilder =
+    DietaIngredientesCompanion Function({
+      required String id,
+      required String dietaId,
+      required String nombre,
+      required double costoAnimalDia,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$DietaIngredientesTableUpdateCompanionBuilder =
+    DietaIngredientesCompanion Function({
+      Value<String> id,
+      Value<String> dietaId,
+      Value<String> nombre,
+      Value<double> costoAnimalDia,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$DietaIngredientesTableFilterComposer
+    extends Composer<_$AppDatabase, $DietaIngredientesTable> {
+  $$DietaIngredientesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dietaId => $composableBuilder(
+    column: $table.dietaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get costoAnimalDia => $composableBuilder(
+    column: $table.costoAnimalDia,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DietaIngredientesTableOrderingComposer
+    extends Composer<_$AppDatabase, $DietaIngredientesTable> {
+  $$DietaIngredientesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dietaId => $composableBuilder(
+    column: $table.dietaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get costoAnimalDia => $composableBuilder(
+    column: $table.costoAnimalDia,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DietaIngredientesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DietaIngredientesTable> {
+  $$DietaIngredientesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get dietaId =>
+      $composableBuilder(column: $table.dietaId, builder: (column) => column);
+
+  GeneratedColumn<String> get nombre =>
+      $composableBuilder(column: $table.nombre, builder: (column) => column);
+
+  GeneratedColumn<double> get costoAnimalDia => $composableBuilder(
+    column: $table.costoAnimalDia,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$DietaIngredientesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DietaIngredientesTable,
+          DietaIngredienteRow,
+          $$DietaIngredientesTableFilterComposer,
+          $$DietaIngredientesTableOrderingComposer,
+          $$DietaIngredientesTableAnnotationComposer,
+          $$DietaIngredientesTableCreateCompanionBuilder,
+          $$DietaIngredientesTableUpdateCompanionBuilder,
+          (
+            DietaIngredienteRow,
+            BaseReferences<
+              _$AppDatabase,
+              $DietaIngredientesTable,
+              DietaIngredienteRow
+            >,
+          ),
+          DietaIngredienteRow,
+          PrefetchHooks Function()
+        > {
+  $$DietaIngredientesTableTableManager(
+    _$AppDatabase db,
+    $DietaIngredientesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DietaIngredientesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DietaIngredientesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DietaIngredientesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> dietaId = const Value.absent(),
+                Value<String> nombre = const Value.absent(),
+                Value<double> costoAnimalDia = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DietaIngredientesCompanion(
+                id: id,
+                dietaId: dietaId,
+                nombre: nombre,
+                costoAnimalDia: costoAnimalDia,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String dietaId,
+                required String nombre,
+                required double costoAnimalDia,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DietaIngredientesCompanion.insert(
+                id: id,
+                dietaId: dietaId,
+                nombre: nombre,
+                costoAnimalDia: costoAnimalDia,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DietaIngredientesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DietaIngredientesTable,
+      DietaIngredienteRow,
+      $$DietaIngredientesTableFilterComposer,
+      $$DietaIngredientesTableOrderingComposer,
+      $$DietaIngredientesTableAnnotationComposer,
+      $$DietaIngredientesTableCreateCompanionBuilder,
+      $$DietaIngredientesTableUpdateCompanionBuilder,
+      (
+        DietaIngredienteRow,
+        BaseReferences<
+          _$AppDatabase,
+          $DietaIngredientesTable,
+          DietaIngredienteRow
+        >,
+      ),
+      DietaIngredienteRow,
+      PrefetchHooks Function()
+    >;
 typedef $$LoteDietasTableCreateCompanionBuilder =
     LoteDietasCompanion Function({
       required String id,
@@ -12718,6 +15196,389 @@ typedef $$MovimientosLoteTableProcessedTableManager =
       MovimientoLoteRow,
       PrefetchHooks Function()
     >;
+typedef $$MedicamentosTableCreateCompanionBuilder =
+    MedicamentosCompanion Function({
+      required String id,
+      required String fincaId,
+      required String nombre,
+      required double costoEnvase,
+      required String tipoAplicacion,
+      Value<double?> mlEnvase,
+      Value<double?> aplicacionesPorEnvase,
+      Value<double?> dosisCantidad,
+      Value<double?> dosisPorCadaKg,
+      Value<int> diasRetiro,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$MedicamentosTableUpdateCompanionBuilder =
+    MedicamentosCompanion Function({
+      Value<String> id,
+      Value<String> fincaId,
+      Value<String> nombre,
+      Value<double> costoEnvase,
+      Value<String> tipoAplicacion,
+      Value<double?> mlEnvase,
+      Value<double?> aplicacionesPorEnvase,
+      Value<double?> dosisCantidad,
+      Value<double?> dosisPorCadaKg,
+      Value<int> diasRetiro,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$MedicamentosTableFilterComposer
+    extends Composer<_$AppDatabase, $MedicamentosTable> {
+  $$MedicamentosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fincaId => $composableBuilder(
+    column: $table.fincaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get costoEnvase => $composableBuilder(
+    column: $table.costoEnvase,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tipoAplicacion => $composableBuilder(
+    column: $table.tipoAplicacion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get mlEnvase => $composableBuilder(
+    column: $table.mlEnvase,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get aplicacionesPorEnvase => $composableBuilder(
+    column: $table.aplicacionesPorEnvase,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get dosisCantidad => $composableBuilder(
+    column: $table.dosisCantidad,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get dosisPorCadaKg => $composableBuilder(
+    column: $table.dosisPorCadaKg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get diasRetiro => $composableBuilder(
+    column: $table.diasRetiro,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MedicamentosTableOrderingComposer
+    extends Composer<_$AppDatabase, $MedicamentosTable> {
+  $$MedicamentosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fincaId => $composableBuilder(
+    column: $table.fincaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get costoEnvase => $composableBuilder(
+    column: $table.costoEnvase,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tipoAplicacion => $composableBuilder(
+    column: $table.tipoAplicacion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get mlEnvase => $composableBuilder(
+    column: $table.mlEnvase,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get aplicacionesPorEnvase => $composableBuilder(
+    column: $table.aplicacionesPorEnvase,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get dosisCantidad => $composableBuilder(
+    column: $table.dosisCantidad,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get dosisPorCadaKg => $composableBuilder(
+    column: $table.dosisPorCadaKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get diasRetiro => $composableBuilder(
+    column: $table.diasRetiro,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MedicamentosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MedicamentosTable> {
+  $$MedicamentosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fincaId =>
+      $composableBuilder(column: $table.fincaId, builder: (column) => column);
+
+  GeneratedColumn<String> get nombre =>
+      $composableBuilder(column: $table.nombre, builder: (column) => column);
+
+  GeneratedColumn<double> get costoEnvase => $composableBuilder(
+    column: $table.costoEnvase,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get tipoAplicacion => $composableBuilder(
+    column: $table.tipoAplicacion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get mlEnvase =>
+      $composableBuilder(column: $table.mlEnvase, builder: (column) => column);
+
+  GeneratedColumn<double> get aplicacionesPorEnvase => $composableBuilder(
+    column: $table.aplicacionesPorEnvase,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get dosisCantidad => $composableBuilder(
+    column: $table.dosisCantidad,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get dosisPorCadaKg => $composableBuilder(
+    column: $table.dosisPorCadaKg,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get diasRetiro => $composableBuilder(
+    column: $table.diasRetiro,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$MedicamentosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MedicamentosTable,
+          MedicamentoRow,
+          $$MedicamentosTableFilterComposer,
+          $$MedicamentosTableOrderingComposer,
+          $$MedicamentosTableAnnotationComposer,
+          $$MedicamentosTableCreateCompanionBuilder,
+          $$MedicamentosTableUpdateCompanionBuilder,
+          (
+            MedicamentoRow,
+            BaseReferences<_$AppDatabase, $MedicamentosTable, MedicamentoRow>,
+          ),
+          MedicamentoRow,
+          PrefetchHooks Function()
+        > {
+  $$MedicamentosTableTableManager(_$AppDatabase db, $MedicamentosTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MedicamentosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MedicamentosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MedicamentosTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> fincaId = const Value.absent(),
+                Value<String> nombre = const Value.absent(),
+                Value<double> costoEnvase = const Value.absent(),
+                Value<String> tipoAplicacion = const Value.absent(),
+                Value<double?> mlEnvase = const Value.absent(),
+                Value<double?> aplicacionesPorEnvase = const Value.absent(),
+                Value<double?> dosisCantidad = const Value.absent(),
+                Value<double?> dosisPorCadaKg = const Value.absent(),
+                Value<int> diasRetiro = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MedicamentosCompanion(
+                id: id,
+                fincaId: fincaId,
+                nombre: nombre,
+                costoEnvase: costoEnvase,
+                tipoAplicacion: tipoAplicacion,
+                mlEnvase: mlEnvase,
+                aplicacionesPorEnvase: aplicacionesPorEnvase,
+                dosisCantidad: dosisCantidad,
+                dosisPorCadaKg: dosisPorCadaKg,
+                diasRetiro: diasRetiro,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String fincaId,
+                required String nombre,
+                required double costoEnvase,
+                required String tipoAplicacion,
+                Value<double?> mlEnvase = const Value.absent(),
+                Value<double?> aplicacionesPorEnvase = const Value.absent(),
+                Value<double?> dosisCantidad = const Value.absent(),
+                Value<double?> dosisPorCadaKg = const Value.absent(),
+                Value<int> diasRetiro = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MedicamentosCompanion.insert(
+                id: id,
+                fincaId: fincaId,
+                nombre: nombre,
+                costoEnvase: costoEnvase,
+                tipoAplicacion: tipoAplicacion,
+                mlEnvase: mlEnvase,
+                aplicacionesPorEnvase: aplicacionesPorEnvase,
+                dosisCantidad: dosisCantidad,
+                dosisPorCadaKg: dosisPorCadaKg,
+                diasRetiro: diasRetiro,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MedicamentosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MedicamentosTable,
+      MedicamentoRow,
+      $$MedicamentosTableFilterComposer,
+      $$MedicamentosTableOrderingComposer,
+      $$MedicamentosTableAnnotationComposer,
+      $$MedicamentosTableCreateCompanionBuilder,
+      $$MedicamentosTableUpdateCompanionBuilder,
+      (
+        MedicamentoRow,
+        BaseReferences<_$AppDatabase, $MedicamentosTable, MedicamentoRow>,
+      ),
+      MedicamentoRow,
+      PrefetchHooks Function()
+    >;
 typedef $$EventosSanitariosTableCreateCompanionBuilder =
     EventosSanitariosCompanion Function({
       required String id,
@@ -12729,6 +15590,11 @@ typedef $$EventosSanitariosTableCreateCompanionBuilder =
       Value<String?> responsableId,
       Value<String?> observaciones,
       Value<double?> costo,
+      Value<String?> medicamentoId,
+      Value<double?> mlAplicados,
+      Value<int?> aplicaciones,
+      Value<int?> diasRetiro,
+      Value<DateTime?> retiroHasta,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
@@ -12746,6 +15612,11 @@ typedef $$EventosSanitariosTableUpdateCompanionBuilder =
       Value<String?> responsableId,
       Value<String?> observaciones,
       Value<double?> costo,
+      Value<String?> medicamentoId,
+      Value<double?> mlAplicados,
+      Value<int?> aplicaciones,
+      Value<int?> diasRetiro,
+      Value<DateTime?> retiroHasta,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -12804,6 +15675,31 @@ class $$EventosSanitariosTableFilterComposer
 
   ColumnFilters<double> get costo => $composableBuilder(
     column: $table.costo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get medicamentoId => $composableBuilder(
+    column: $table.medicamentoId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get mlAplicados => $composableBuilder(
+    column: $table.mlAplicados,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get aplicaciones => $composableBuilder(
+    column: $table.aplicaciones,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get diasRetiro => $composableBuilder(
+    column: $table.diasRetiro,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get retiroHasta => $composableBuilder(
+    column: $table.retiroHasta,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12882,6 +15778,31 @@ class $$EventosSanitariosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get medicamentoId => $composableBuilder(
+    column: $table.medicamentoId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get mlAplicados => $composableBuilder(
+    column: $table.mlAplicados,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get aplicaciones => $composableBuilder(
+    column: $table.aplicaciones,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get diasRetiro => $composableBuilder(
+    column: $table.diasRetiro,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get retiroHasta => $composableBuilder(
+    column: $table.retiroHasta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -12942,6 +15863,31 @@ class $$EventosSanitariosTableAnnotationComposer
 
   GeneratedColumn<double> get costo =>
       $composableBuilder(column: $table.costo, builder: (column) => column);
+
+  GeneratedColumn<String> get medicamentoId => $composableBuilder(
+    column: $table.medicamentoId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get mlAplicados => $composableBuilder(
+    column: $table.mlAplicados,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get aplicaciones => $composableBuilder(
+    column: $table.aplicaciones,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get diasRetiro => $composableBuilder(
+    column: $table.diasRetiro,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get retiroHasta => $composableBuilder(
+    column: $table.retiroHasta,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -13005,6 +15951,11 @@ class $$EventosSanitariosTableTableManager
                 Value<String?> responsableId = const Value.absent(),
                 Value<String?> observaciones = const Value.absent(),
                 Value<double?> costo = const Value.absent(),
+                Value<String?> medicamentoId = const Value.absent(),
+                Value<double?> mlAplicados = const Value.absent(),
+                Value<int?> aplicaciones = const Value.absent(),
+                Value<int?> diasRetiro = const Value.absent(),
+                Value<DateTime?> retiroHasta = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -13020,6 +15971,11 @@ class $$EventosSanitariosTableTableManager
                 responsableId: responsableId,
                 observaciones: observaciones,
                 costo: costo,
+                medicamentoId: medicamentoId,
+                mlAplicados: mlAplicados,
+                aplicaciones: aplicaciones,
+                diasRetiro: diasRetiro,
+                retiroHasta: retiroHasta,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -13037,6 +15993,11 @@ class $$EventosSanitariosTableTableManager
                 Value<String?> responsableId = const Value.absent(),
                 Value<String?> observaciones = const Value.absent(),
                 Value<double?> costo = const Value.absent(),
+                Value<String?> medicamentoId = const Value.absent(),
+                Value<double?> mlAplicados = const Value.absent(),
+                Value<int?> aplicaciones = const Value.absent(),
+                Value<int?> diasRetiro = const Value.absent(),
+                Value<DateTime?> retiroHasta = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -13052,6 +16013,11 @@ class $$EventosSanitariosTableTableManager
                 responsableId: responsableId,
                 observaciones: observaciones,
                 costo: costo,
+                medicamentoId: medicamentoId,
+                mlAplicados: mlAplicados,
+                aplicaciones: aplicaciones,
+                diasRetiro: diasRetiro,
+                retiroHasta: retiroHasta,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -13087,12 +16053,252 @@ typedef $$EventosSanitariosTableProcessedTableManager =
       EventoSanitarioRow,
       PrefetchHooks Function()
     >;
+typedef $$LotesVentaTableCreateCompanionBuilder =
+    LotesVentaCompanion Function({
+      required String id,
+      required String fincaId,
+      required DateTime fecha,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$LotesVentaTableUpdateCompanionBuilder =
+    LotesVentaCompanion Function({
+      Value<String> id,
+      Value<String> fincaId,
+      Value<DateTime> fecha,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$LotesVentaTableFilterComposer
+    extends Composer<_$AppDatabase, $LotesVentaTable> {
+  $$LotesVentaTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fincaId => $composableBuilder(
+    column: $table.fincaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LotesVentaTableOrderingComposer
+    extends Composer<_$AppDatabase, $LotesVentaTable> {
+  $$LotesVentaTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fincaId => $composableBuilder(
+    column: $table.fincaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LotesVentaTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LotesVentaTable> {
+  $$LotesVentaTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fincaId =>
+      $composableBuilder(column: $table.fincaId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fecha =>
+      $composableBuilder(column: $table.fecha, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$LotesVentaTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LotesVentaTable,
+          LoteVentaRow,
+          $$LotesVentaTableFilterComposer,
+          $$LotesVentaTableOrderingComposer,
+          $$LotesVentaTableAnnotationComposer,
+          $$LotesVentaTableCreateCompanionBuilder,
+          $$LotesVentaTableUpdateCompanionBuilder,
+          (
+            LoteVentaRow,
+            BaseReferences<_$AppDatabase, $LotesVentaTable, LoteVentaRow>,
+          ),
+          LoteVentaRow,
+          PrefetchHooks Function()
+        > {
+  $$LotesVentaTableTableManager(_$AppDatabase db, $LotesVentaTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LotesVentaTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LotesVentaTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LotesVentaTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> fincaId = const Value.absent(),
+                Value<DateTime> fecha = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LotesVentaCompanion(
+                id: id,
+                fincaId: fincaId,
+                fecha: fecha,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String fincaId,
+                required DateTime fecha,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LotesVentaCompanion.insert(
+                id: id,
+                fincaId: fincaId,
+                fecha: fecha,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LotesVentaTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LotesVentaTable,
+      LoteVentaRow,
+      $$LotesVentaTableFilterComposer,
+      $$LotesVentaTableOrderingComposer,
+      $$LotesVentaTableAnnotationComposer,
+      $$LotesVentaTableCreateCompanionBuilder,
+      $$LotesVentaTableUpdateCompanionBuilder,
+      (
+        LoteVentaRow,
+        BaseReferences<_$AppDatabase, $LotesVentaTable, LoteVentaRow>,
+      ),
+      LoteVentaRow,
+      PrefetchHooks Function()
+    >;
 typedef $$VentasTableCreateCompanionBuilder =
     VentasCompanion Function({
       required String id,
       required String animalId,
+      Value<String?> loteVentaId,
       required DateTime fecha,
       required double precio,
+      Value<double?> peso,
       Value<String?> comprador,
       Value<String?> observaciones,
       required DateTime createdAt,
@@ -13105,8 +16311,10 @@ typedef $$VentasTableUpdateCompanionBuilder =
     VentasCompanion Function({
       Value<String> id,
       Value<String> animalId,
+      Value<String?> loteVentaId,
       Value<DateTime> fecha,
       Value<double> precio,
+      Value<double?> peso,
       Value<String?> comprador,
       Value<String?> observaciones,
       Value<DateTime> createdAt,
@@ -13135,6 +16343,11 @@ class $$VentasTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get loteVentaId => $composableBuilder(
+    column: $table.loteVentaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get fecha => $composableBuilder(
     column: $table.fecha,
     builder: (column) => ColumnFilters(column),
@@ -13142,6 +16355,11 @@ class $$VentasTableFilterComposer
 
   ColumnFilters<double> get precio => $composableBuilder(
     column: $table.precio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get peso => $composableBuilder(
+    column: $table.peso,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13195,6 +16413,11 @@ class $$VentasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get loteVentaId => $composableBuilder(
+    column: $table.loteVentaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get fecha => $composableBuilder(
     column: $table.fecha,
     builder: (column) => ColumnOrderings(column),
@@ -13202,6 +16425,11 @@ class $$VentasTableOrderingComposer
 
   ColumnOrderings<double> get precio => $composableBuilder(
     column: $table.precio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get peso => $composableBuilder(
+    column: $table.peso,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -13251,11 +16479,19 @@ class $$VentasTableAnnotationComposer
   GeneratedColumn<String> get animalId =>
       $composableBuilder(column: $table.animalId, builder: (column) => column);
 
+  GeneratedColumn<String> get loteVentaId => $composableBuilder(
+    column: $table.loteVentaId,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get fecha =>
       $composableBuilder(column: $table.fecha, builder: (column) => column);
 
   GeneratedColumn<double> get precio =>
       $composableBuilder(column: $table.precio, builder: (column) => column);
+
+  GeneratedColumn<double> get peso =>
+      $composableBuilder(column: $table.peso, builder: (column) => column);
 
   GeneratedColumn<String> get comprador =>
       $composableBuilder(column: $table.comprador, builder: (column) => column);
@@ -13308,8 +16544,10 @@ class $$VentasTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> animalId = const Value.absent(),
+                Value<String?> loteVentaId = const Value.absent(),
                 Value<DateTime> fecha = const Value.absent(),
                 Value<double> precio = const Value.absent(),
+                Value<double?> peso = const Value.absent(),
                 Value<String?> comprador = const Value.absent(),
                 Value<String?> observaciones = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -13320,8 +16558,10 @@ class $$VentasTableTableManager
               }) => VentasCompanion(
                 id: id,
                 animalId: animalId,
+                loteVentaId: loteVentaId,
                 fecha: fecha,
                 precio: precio,
+                peso: peso,
                 comprador: comprador,
                 observaciones: observaciones,
                 createdAt: createdAt,
@@ -13334,8 +16574,10 @@ class $$VentasTableTableManager
               ({
                 required String id,
                 required String animalId,
+                Value<String?> loteVentaId = const Value.absent(),
                 required DateTime fecha,
                 required double precio,
+                Value<double?> peso = const Value.absent(),
                 Value<String?> comprador = const Value.absent(),
                 Value<String?> observaciones = const Value.absent(),
                 required DateTime createdAt,
@@ -13346,8 +16588,10 @@ class $$VentasTableTableManager
               }) => VentasCompanion.insert(
                 id: id,
                 animalId: animalId,
+                loteVentaId: loteVentaId,
                 fecha: fecha,
                 precio: precio,
+                peso: peso,
                 comprador: comprador,
                 observaciones: observaciones,
                 createdAt: createdAt,
@@ -14536,12 +17780,18 @@ class $AppDatabaseManager {
       $$PesajesTableTableManager(_db, _db.pesajes);
   $$DietasTableTableManager get dietas =>
       $$DietasTableTableManager(_db, _db.dietas);
+  $$DietaIngredientesTableTableManager get dietaIngredientes =>
+      $$DietaIngredientesTableTableManager(_db, _db.dietaIngredientes);
   $$LoteDietasTableTableManager get loteDietas =>
       $$LoteDietasTableTableManager(_db, _db.loteDietas);
   $$MovimientosLoteTableTableManager get movimientosLote =>
       $$MovimientosLoteTableTableManager(_db, _db.movimientosLote);
+  $$MedicamentosTableTableManager get medicamentos =>
+      $$MedicamentosTableTableManager(_db, _db.medicamentos);
   $$EventosSanitariosTableTableManager get eventosSanitarios =>
       $$EventosSanitariosTableTableManager(_db, _db.eventosSanitarios);
+  $$LotesVentaTableTableManager get lotesVenta =>
+      $$LotesVentaTableTableManager(_db, _db.lotesVenta);
   $$VentasTableTableManager get ventas =>
       $$VentasTableTableManager(_db, _db.ventas);
   $$CostosOtrosTableTableManager get costosOtros =>

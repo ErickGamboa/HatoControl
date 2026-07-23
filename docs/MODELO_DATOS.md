@@ -8,6 +8,11 @@ Módulo 2 (dietas + movimientos de lote) documentado abajo; aplicar el schema
 via `supabase db push` (`supabase/migrations/20260707203015_module2_dietas.sql`)
 antes de sincronizar — ver `docs/SUPABASE_SQL_ORDER.md`.
 Módulo 3 (sanidad): `supabase/migrations/20260707203017_module3_sanidad.sql`.
+**Documento oro (jul 2026):** catálogo `medicamentos`, `dieta_ingredientes`,
+`lotes_venta`, columnas de retiro/dosis en `eventos_sanitarios` y
+`peso`/`lote_venta_id` en `ventas` — Drift v12 +
+`supabase/migrations/20260723120000_oro_medicamentos_ventas.sql`.
+Comportamiento de producto: `docs/ESPECIFICACION_FUNCIONAL.md`.
 
 > **Estado:** tablas + seguridad (RLS) aplicadas en Supabase (`geocoundyilwxrnbhcqu`).
 > Funciones auxiliares en el esquema `private` (`es_miembro`, `es_admin`, `comparte_finca`,

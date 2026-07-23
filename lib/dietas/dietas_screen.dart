@@ -20,6 +20,7 @@ class DietasScreen extends StatelessWidget {
     final costoCtrl = TextEditingController(
       text: dieta != null ? dieta.costoAnimalDia.toString() : '',
     );
+    final ingredientesCtrl = TextEditingController();
 
     final guardar = await showDialog<bool>(
       context: context,
@@ -58,7 +59,23 @@ class DietasScreen extends StatelessWidget {
                   FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
                 ],
                 decoration: const InputDecoration(
-                  labelText: 'Costo por animal/día (₡)',
+                  labelText:
+                      'Costo total/animal/día (₡) si no hay ingredientes',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'O ingredientes (nombre · ₡/animal/día), uno por línea:\n'
+                'Pasto, 50\nConcentrado, 120',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: ingredientesCtrl,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Ingredientes (opcional)',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -81,7 +98,22 @@ class DietasScreen extends StatelessWidget {
     if (guardar != true) return;
     final nombre = nombreCtrl.text.trim();
     if (nombre.isEmpty) return;
-    final costo = double.tryParse(costoCtrl.text.replaceAll(',', '.'));
+
+    final ings = <({String nombre, double costoAnimalDia})>[];
+    for (final line in ingredientesCtrl.text.split('\n')) {
+      final parts = line.split(',');
+      if (parts.length < 2) continue;
+      final n = parts.first.trim();
+      final c = double.tryParse(
+        parts.sublist(1).join(',').trim().replaceAll(',', '.'),
+      );
+      if (n.isEmpty || c == null || c < 0) continue;
+      ings.add((nombre: n, costoAnimalDia: c));
+    }
+
+    final costo = ings.isNotEmpty
+        ? ings.fold<double>(0, (s, i) => s + i.costoAnimalDia)
+        : double.tryParse(costoCtrl.text.replaceAll(',', '.'));
     if (costo == null || costo < 0) return;
 
     if (esEdicion) {
@@ -91,12 +123,19 @@ class DietasScreen extends StatelessWidget {
         descripcion: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
         costoAnimalDia: costo,
       );
+      if (ings.isNotEmpty) {
+        await repo.reemplazarIngredientes(
+          dietaId: dieta.id,
+          ingredientes: ings,
+        );
+      }
     } else {
       await repo.crearDieta(
         fincaId: finca.id,
         nombre: nombre,
         descripcion: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
         costoAnimalDia: costo,
+        ingredientes: ings,
       );
     }
     sincronizarSiSePuede();

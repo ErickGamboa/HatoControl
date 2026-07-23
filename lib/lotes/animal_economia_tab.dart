@@ -83,119 +83,6 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
     await _recargar();
   }
 
-  Future<void> _registrarVenta() async {
-    if (widget.animal.estado == EstadoAnimal.vendido) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Este animal ya está vendido.')),
-      );
-      return;
-    }
-    final precioCtrl = TextEditingController();
-    final compradorCtrl = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Registrar venta'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: precioCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Precio de venta ₡',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: compradorCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Comprador (opcional)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Vender'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    final precio = double.tryParse(precioCtrl.text.trim().replaceAll(',', '.'));
-    if (precio == null || precio <= 0) return;
-    await widget.ventasRepository.registrarVenta(
-      animalId: widget.animal.id,
-      precio: precio,
-      comprador: compradorCtrl.text.trim().isEmpty
-          ? null
-          : compradorCtrl.text.trim(),
-    );
-    sincronizarSiSePuede();
-    await _recargar();
-  }
-
-  Future<void> _agregarOtroCosto() async {
-    final conceptoCtrl = TextEditingController();
-    final montoCtrl = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Otro costo'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: conceptoCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Concepto',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: montoCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Monto ₡',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Agregar'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    final concepto = conceptoCtrl.text.trim();
-    final monto = double.tryParse(montoCtrl.text.trim().replaceAll(',', '.'));
-    if (concepto.isEmpty || monto == null || monto <= 0) return;
-    await widget.ventasRepository.registrarCostoOtro(
-      animalId: widget.animal.id,
-      concepto: concepto,
-      monto: monto,
-    );
-    sincronizarSiSePuede();
-    await _recargar();
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -244,44 +131,35 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Resumen económico', style: theme.textTheme.titleLarge),
+        Text('Utilidad (oro)', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 4),
+        Text(
+          'Venta − (compra + dietas + sanidad)',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.outline,
+          ),
+        ),
         const SizedBox(height: 12),
         fila('Compra', _fmt(r.precioCompra)),
-        fila('Alimentación', _fmt(r.costoAlimentacion)),
+        fila('Dietas', _fmt(r.costoAlimentacion)),
         fila('Sanidad', _fmt(r.costoSanitario)),
-        fila('Otros costos', _fmt(r.costoOtros)),
         const Divider(height: 24),
         fila('Costo total', _fmt(r.costoTotal)),
         fila('Venta', _fmt(r.precioVenta)),
         fila('Utilidad', _fmt(r.utilidad), style: utilidadStyle),
-        if (r.margenPorcentaje != null)
-          fila('Margen', '${r.margenPorcentaje!.toStringAsFixed(1)} %'),
-        if (r.rentabilidadPorcentaje != null)
-          fila(
-            'Rentabilidad',
-            '${r.rentabilidadPorcentaje!.toStringAsFixed(1)} %',
-          ),
         const SizedBox(height: 20),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            OutlinedButton.icon(
-              onPressed: _editarCompra,
-              icon: const Icon(Icons.shopping_cart_outlined),
-              label: const Text('Compra'),
-            ),
-            FilledButton.tonalIcon(
-              onPressed: _registrarVenta,
-              icon: const Icon(Icons.sell_outlined),
-              label: const Text('Vender'),
-            ),
-            OutlinedButton.icon(
-              onPressed: _agregarOtroCosto,
-              icon: const Icon(Icons.receipt_long_outlined),
-              label: const Text('Otro costo'),
-            ),
-          ],
+        Text(
+          'Para vender varios animales usá el módulo Venta en la finca '
+          '(valida retiro y arma el lote de venta).',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.outline,
+          ),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _editarCompra,
+          icon: const Icon(Icons.shopping_cart_outlined),
+          label: const Text('Precio de compra'),
         ),
       ],
     );

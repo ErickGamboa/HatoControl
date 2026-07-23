@@ -132,6 +132,19 @@ class PesajesRepository {
     });
   }
 
+  /// Stream de animales vendidos de la finca (historial de ventas).
+  Stream<List<AnimalRow>> observarAnimalesVendidos(String fincaId) {
+    return (db.select(db.animales)
+          ..where(
+            (t) =>
+                t.fincaId.equals(fincaId) &
+                t.deletedAt.isNull() &
+                t.estado.equals(EstadoAnimal.vendido),
+          )
+          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+        .watch();
+  }
+
   /// Busca un animal activo por arete dentro de una finca (corral / pesaje).
   Future<AnimalRow?> buscarAnimalActivo(String fincaId, String identificador) {
     return (db.select(db.animales)..where(
@@ -158,12 +171,14 @@ class PesajesRepository {
 
   /// Crea un animal nuevo en un lote y registra su primer pesaje (peso de
   /// entrada), todo en una transacción. Ambas filas quedan pendientes de subir.
+  /// [precioCompra] null = nació en la finca / sin precio de compra.
   Future<void> crearAnimalConPesaje({
     required String fincaId,
     required String loteId,
     required String identificador,
     required double peso,
     required String registradoPor,
+    double? precioCompra,
   }) async {
     final existente = await buscarAnimal(fincaId, identificador);
     if (existente != null) {
@@ -181,6 +196,8 @@ class PesajesRepository {
               fincaId: fincaId,
               loteId: loteId,
               identificador: identificador,
+              precioCompra: Value(precioCompra),
+              fechaCompra: Value(precioCompra == null ? null : ahora),
               createdAt: ahora,
               updatedAt: ahora,
               pendiente: const Value(true),
@@ -391,6 +408,39 @@ class PesajesRepository {
       PesajesCompanion(
         deletedAt: Value(DateTime.now()),
         updatedAt: Value(DateTime.now()),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
+  /// Pesaje de hoy (día de calendario) del animal, si existe.
+  Future<PesajeRow?> pesajeDeHoy(String animalId, {DateTime? dia}) async {
+    final base = dia ?? DateTime.now();
+    final inicio = DateTime(base.year, base.month, base.day);
+    final fin = inicio.add(const Duration(days: 1));
+    return (db.select(db.pesajes)
+          ..where(
+            (t) =>
+                t.animalId.equals(animalId) &
+                t.deletedAt.isNull() &
+                t.fecha.isBiggerOrEqualValue(inicio) &
+                t.fecha.isSmallerThanValue(fin),
+          )
+          ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// Corrige el peso de un pesaje existente (mismo día / oro: no duplicar).
+  Future<void> actualizarPesaje({
+    required String pesajeId,
+    required double peso,
+  }) async {
+    final ahora = DateTime.now();
+    await (db.update(db.pesajes)..where((t) => t.id.equals(pesajeId))).write(
+      PesajesCompanion(
+        peso: Value(peso),
+        updatedAt: Value(ahora),
         pendiente: const Value(true),
       ),
     );

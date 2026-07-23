@@ -13,7 +13,10 @@ void main() {
       envolver(const SyncStatusSheet(pendientes: {}, estados: [])),
     );
 
-    expect(find.text('Todo sincronizado, sin errores pendientes.'), findsOneWidget);
+    expect(
+      find.text('Todo sincronizado, sin errores pendientes.'),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('syncStatus.list')), findsNothing);
   });
 

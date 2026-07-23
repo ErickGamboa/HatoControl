@@ -23,7 +23,8 @@ Flutter UI → Repositories → Drift/SQLite
 
 Useful docs:
 - `AGENTS.md` — guide and guardrails for coding agents
-- `docs/ROADMAP.md` — product roadmap: módulos (historial, dietas, sanidad, corral, ventas), order, and quality bar
+- `docs/ESPECIFICACION_FUNCIONAL.md` — **documento oro**: how the app must behave (source of truth)
+- `docs/ROADMAP.md` — implementation order and gaps vs the oro (what to build / remove)
 - `docs/DECISIONES.md` — decision log: decisions made and decisions still open per module
 - `docs/MODELO_DATOS.md` — domain model and Supabase assumptions
 - `docs/ARCHITECTURE_REVIEW.md` — technical architecture review and hardening roadmap

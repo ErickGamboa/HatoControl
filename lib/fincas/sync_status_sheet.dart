@@ -14,7 +14,8 @@ Future<void> mostrarSyncStatusSheet(
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    builder: (context) => SyncStatusSheet(pendientes: pendientes, estados: estados),
+    builder: (context) =>
+        SyncStatusSheet(pendientes: pendientes, estados: estados),
   );
 }
 
@@ -35,13 +36,11 @@ class SyncStatusSheet extends StatelessWidget {
       for (final e in estados)
         if (e.ultimoError != null) e.tabla: e,
     };
-    final tablas =
-        {
-            for (final entry in pendientes.entries)
-              if (entry.value > 0) entry.key,
-            ...erroresPorTabla.keys,
-          }.toList()
-          ..sort();
+    final tablas = {
+      for (final entry in pendientes.entries)
+        if (entry.value > 0) entry.key,
+      ...erroresPorTabla.keys,
+    }.toList()..sort();
 
     return SafeArea(
       child: Padding(
@@ -50,7 +49,10 @@ class SyncStatusSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Estado de sincronización', style: theme.textTheme.titleMedium),
+            Text(
+              'Estado de sincronización',
+              style: theme.textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             if (tablas.isEmpty)
               Padding(

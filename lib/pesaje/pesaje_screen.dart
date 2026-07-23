@@ -1,20 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../app/theme.dart';
+import '../app/widgets/quick_number_field.dart';
+import '../app/widgets/scan_field.dart';
 import '../data/local/database.dart';
+import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
+import '../data/repositories/sanidad_repository.dart';
+import '../sanidad/sanidad_aplicar_sheet.dart';
 import '../services.dart';
 
-/// Registro de pesajes. Se ingresa el identificador (arete) y el peso.
-/// Si el animal no existe, se pide elegir el lote y se crea con ese peso.
-/// El identificador se puede escribir a mano o lo "teclea" el lector RFID
-/// (modo HID) cuando este campo está enfocado.
-/// Abajo se muestran todos los pesajes de HOY, agrupados por lote en pestañas.
+/// Pantalla de Trabajo (documento oro): pesaje en la manga.
+/// Identificador (RFID o manual) + peso → lista del día con GMD + FAB sanidad.
 class PesajeScreen extends StatefulWidget {
-  const PesajeScreen({super.key, required this.finca, required this.usuarioId});
+  PesajeScreen({
+    super.key,
+    required this.finca,
+    required this.usuarioId,
+    PesajesRepository? pesajesRepository,
+    LotesRepository? lotesRepository,
+    SanidadRepository? sanidadRepository,
+  }) : pesajesRepository = pesajesRepository ?? pesajesRepo,
+       lotesRepository = lotesRepository ?? lotesRepo,
+       sanidadRepository = sanidadRepository ?? sanidadRepo;
 
   final FincaRow finca;
   final String usuarioId;
+  final PesajesRepository pesajesRepository;
+  final LotesRepository lotesRepository;
+  final SanidadRepository sanidadRepository;
 
   @override
   State<PesajeScreen> createState() => _PesajeScreenState();
@@ -27,37 +41,17 @@ class _PesajeScreenState extends State<PesajeScreen> {
   final _pesoFocus = FocusNode();
   bool _guardando = false;
 
-  String get _usuarioId => widget.usuarioId;
+  /// Último animal pesado en esta sesión → habilita FAB de sanidad.
+  AnimalRow? _ultimoAnimal;
+  double? _ultimoPeso;
 
-  /// Inicio del día de hoy (medianoche), para filtrar los pesajes de hoy.
   DateTime get _inicioDeHoy {
     final n = DateTime.now();
     return DateTime(n.year, n.month, n.day);
   }
 
   @override
-  void initState() {
-    super.initState();
-    // Al enfocar el campo de ID, seleccionar todo: así un nuevo escaneo del
-    // lector reemplaza el valor anterior completo (no se pega al final).
-    _identFocus.addListener(_seleccionarTodoId);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _identFocus.requestFocus();
-    });
-  }
-
-  void _seleccionarTodoId() {
-    if (_identFocus.hasFocus && _identCtrl.text.isNotEmpty) {
-      _identCtrl.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _identCtrl.text.length,
-      );
-    }
-  }
-
-  @override
   void dispose() {
-    _identFocus.removeListener(_seleccionarTodoId);
     _identCtrl.dispose();
     _pesoCtrl.dispose();
     _identFocus.dispose();
@@ -70,8 +64,8 @@ class _PesajeScreenState extends State<PesajeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
   }
 
-  double? _parsePeso() {
-    final raw = _pesoCtrl.text.trim().replaceAll(',', '.');
+  double? _parsePeso([TextEditingController? ctrl]) {
+    final raw = (ctrl ?? _pesoCtrl).text.trim().replaceAll(',', '.');
     final v = double.tryParse(raw);
     if (v == null || v <= 0) return null;
     return v;
@@ -84,27 +78,24 @@ class _PesajeScreenState extends State<PesajeScreen> {
     final ident = _identCtrl.text.trim();
     final peso = _parsePeso();
     if (ident.isEmpty) {
-      _mostrar('Ingresá el identificador del animal.');
+      _mostrar('Escaneá o escribí el identificador.');
       _identFocus.requestFocus();
       return;
     }
     if (peso == null) {
-      _mostrar('Ingresá un peso válido (kg).');
+      _mostrar('Ingresá el peso (kg).');
       _pesoFocus.requestFocus();
       return;
     }
 
     setState(() => _guardando = true);
     try {
-      final animal = await pesajesRepo.buscarAnimal(widget.finca.id, ident);
+      final animal = await widget.pesajesRepository.buscarAnimalActivo(
+        widget.finca.id,
+        ident,
+      );
       if (animal != null) {
-        await pesajesRepo.agregarPesaje(
-          animalId: animal.id,
-          peso: peso,
-          registradoPor: _usuarioId,
-        );
-        sincronizarSiSePuede();
-        _exito('Pesaje registrado: $ident — ${_pesoFmt(peso)} kg');
+        await _pesarExistente(animal, peso);
       } else {
         await _animalNuevo(ident, peso);
       }
@@ -113,8 +104,60 @@ class _PesajeScreenState extends State<PesajeScreen> {
     }
   }
 
+  Future<void> _pesarExistente(AnimalRow animal, double peso) async {
+    final hoy = await widget.pesajesRepository.pesajeDeHoy(animal.id);
+    if (hoy != null) {
+      if (!mounted) return;
+      final corregir = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Ya se pesó hoy'),
+          content: Text(
+            'El animal "${animal.identificador}" ya tiene '
+            '${_pesoFmt(hoy.peso)} kg registrados hoy.\n\n'
+            '¿Querés corregir el peso a ${_pesoFmt(peso)} kg?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Corregir'),
+            ),
+          ],
+        ),
+      );
+      if (corregir != true) return;
+      await widget.pesajesRepository.actualizarPesaje(
+        pesajeId: hoy.id,
+        peso: peso,
+      );
+      sincronizarSiSePuede();
+      _exito(
+        animal,
+        peso,
+        'Pesaje corregido: ${animal.identificador} — ${_pesoFmt(peso)} kg',
+      );
+      return;
+    }
+
+    await widget.pesajesRepository.agregarPesaje(
+      animalId: animal.id,
+      peso: peso,
+      registradoPor: widget.usuarioId,
+    );
+    sincronizarSiSePuede();
+    _exito(
+      animal,
+      peso,
+      'Pesaje: ${animal.identificador} — ${_pesoFmt(peso)} kg',
+    );
+  }
+
   Future<void> _animalNuevo(String ident, double peso) async {
-    final lotes = await lotesRepo.lotesActivos(widget.finca.id);
+    final lotes = await widget.lotesRepository.lotesActivos(widget.finca.id);
     if (!mounted) return;
 
     if (lotes.isEmpty) {
@@ -124,7 +167,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
           title: const Text('Animal nuevo'),
           content: Text(
             'El animal "$ident" no existe y esta finca no tiene lotes. '
-            'Creá un lote primero en la sección Lotes.',
+            'Creá un lote primero en Lotes.',
           ),
           actions: [
             FilledButton(
@@ -137,124 +180,138 @@ class _PesajeScreenState extends State<PesajeScreen> {
       return;
     }
 
-    final loteId = await showModalBottomSheet<String>(
+    final alta = await showModalBottomSheet<_AltaAnimal>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(
-                'El animal "$ident" es nuevo. ¿En qué lote lo ponés?',
-                style: Theme.of(ctx).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  for (final l in lotes)
-                    ListTile(
-                      leading: CircleAvatar(
-                        child: Text(l.numero?.toString() ?? '–'),
-                      ),
-                      title: Text(l.nombre),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.pop(ctx, l.id),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
+      builder: (ctx) => _AltaAnimalSheet(
+        identificador: ident,
+        pesoInicial: peso,
+        lotes: lotes,
       ),
     );
+    if (alta == null) return;
 
-    if (loteId == null) return; // canceló
-    await pesajesRepo.crearAnimalConPesaje(
+    await widget.pesajesRepository.crearAnimalConPesaje(
       fincaId: widget.finca.id,
-      loteId: loteId,
+      loteId: alta.loteId,
       identificador: ident,
-      peso: peso,
-      registradoPor: _usuarioId,
+      peso: alta.pesoCompra,
+      registradoPor: widget.usuarioId,
+      precioCompra: alta.nacioEnFinca ? null : alta.precioCompra,
     );
     sincronizarSiSePuede();
-    _exito('Animal "$ident" creado y pesado: ${_pesoFmt(peso)} kg');
+
+    final animal = await widget.pesajesRepository.buscarAnimalActivo(
+      widget.finca.id,
+      ident,
+    );
+    if (animal == null) return;
+    _exito(
+      animal,
+      alta.pesoCompra,
+      'Animal "$ident" registrado · ${_pesoFmt(alta.pesoCompra)} kg',
+    );
   }
 
-  void _exito(String mensaje) {
+  void _exito(AnimalRow animal, double peso, String mensaje) {
     _mostrar(mensaje);
+    setState(() {
+      _ultimoAnimal = animal;
+      _ultimoPeso = peso;
+    });
     _identCtrl.clear();
     _pesoCtrl.clear();
     _identFocus.requestFocus();
   }
 
+  Future<void> _abrirSanidad() async {
+    final animal = _ultimoAnimal;
+    final peso = _ultimoPeso;
+    if (animal == null || peso == null) return;
+    await mostrarSanidadAplicarSheet(
+      context: context,
+      finca: widget.finca,
+      animal: animal,
+      pesoKg: peso,
+      usuarioId: widget.usuarioId,
+      sanidadRepository: widget.sanidadRepository,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fabActivo = _ultimoAnimal != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Pesaje')),
+      appBar: AppBar(
+        title: const Text('Trabajo'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(28),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Pesaje · identificador + peso',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        key: const ValueKey('pesaje.sanidadFab'),
+        onPressed: fabActivo ? _abrirSanidad : null,
+        backgroundColor: fabActivo
+            ? theme.colorScheme.secondary
+            : theme.colorScheme.surfaceContainerHighest,
+        foregroundColor: fabActivo
+            ? theme.colorScheme.onSecondary
+            : theme.colorScheme.outline,
+        icon: const Icon(Icons.add_box_outlined),
+        label: const Text('Sanidad'),
+        tooltip: fabActivo
+            ? 'Aplicar medicamentos a ${_ultimoAnimal!.identificador}'
+            : 'Registrá un pesaje primero',
+      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(
+            HatoSpacing.lg,
+            HatoSpacing.md,
+            HatoSpacing.lg,
+            HatoSpacing.lg,
+          ),
           child: Column(
             children: [
-              TextField(
+              ScanField(
                 key: const ValueKey('pesaje.animalId'),
                 controller: _identCtrl,
                 focusNode: _identFocus,
-                keyboardType: TextInputType.number,
+                labelText: 'Identificador (RFID o manual)',
                 textInputAction: TextInputAction.next,
                 onSubmitted: (_) => _pesoFocus.requestFocus(),
-                style: const TextStyle(fontSize: 20),
-                decoration: InputDecoration(
-                  labelText: 'Identificador del animal (arete)',
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Image.asset(
-                      'assets/iconos/arete.png',
-                      width: 24,
-                      height: 24,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Image.asset(
+                    'assets/iconos/arete.png',
+                    width: 24,
+                    height: 24,
+                    color: theme.colorScheme.primary,
                   ),
-                  border: const OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
-              TextField(
+              const SizedBox(height: HatoSpacing.md),
+              QuickNumberField(
                 key: const ValueKey('pesaje.weight'),
                 controller: _pesoCtrl,
                 focusNode: _pesoFocus,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                ],
-                textInputAction: TextInputAction.done,
+                labelText: 'Peso',
+                suffixText: 'kg',
                 onSubmitted: (_) => _registrar(),
-                style: const TextStyle(fontSize: 20),
-                decoration: InputDecoration(
-                  labelText: 'Peso',
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Image.asset(
-                      'assets/iconos/peso.png',
-                      width: 24,
-                      height: 24,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  suffixText: 'kg',
-                  border: const OutlineInputBorder(),
-                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: HatoSpacing.lg),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
@@ -266,21 +323,21 @@ class _PesajeScreenState extends State<PesajeScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.check),
-                  label: const Text('Registrar pesaje'),
+                      : const Icon(Icons.check_circle_outline),
+                  label: Text(_guardando ? 'Guardando…' : 'Registrar pesaje'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     textStyle: const TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: HatoSpacing.lg),
               Expanded(
                 child: StreamBuilder<List<PesajeHoy>>(
-                  stream: pesajesRepo.observarPesajesDelDia(
+                  stream: widget.pesajesRepository.observarPesajesDelDia(
                     widget.finca.id,
                     _inicioDeHoy,
                   ),
@@ -298,7 +355,180 @@ class _PesajeScreenState extends State<PesajeScreen> {
   }
 }
 
-/// Muestra los pesajes de hoy agrupados por lote, en pestañas deslizables.
+class _AltaAnimal {
+  const _AltaAnimal({
+    required this.loteId,
+    required this.pesoCompra,
+    required this.nacioEnFinca,
+    this.precioCompra,
+  });
+
+  final String loteId;
+  final double pesoCompra;
+  final bool nacioEnFinca;
+  final double? precioCompra;
+}
+
+class _AltaAnimalSheet extends StatefulWidget {
+  const _AltaAnimalSheet({
+    required this.identificador,
+    required this.pesoInicial,
+    required this.lotes,
+  });
+
+  final String identificador;
+  final double pesoInicial;
+  final List<LoteRow> lotes;
+
+  @override
+  State<_AltaAnimalSheet> createState() => _AltaAnimalSheetState();
+}
+
+class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
+  late final _pesoCtrl = TextEditingController(
+    text: widget.pesoInicial == widget.pesoInicial.roundToDouble()
+        ? widget.pesoInicial.toInt().toString()
+        : widget.pesoInicial.toString(),
+  );
+  final _precioCtrl = TextEditingController();
+  bool _nacioEnFinca = false;
+  String? _loteId;
+
+  @override
+  void dispose() {
+    _pesoCtrl.dispose();
+    _precioCtrl.dispose();
+    super.dispose();
+  }
+
+  double? _parse(TextEditingController c) {
+    final v = double.tryParse(c.text.trim().replaceAll(',', '.'));
+    if (v == null || v < 0) return null;
+    return v;
+  }
+
+  void _continuar() {
+    final loteId = _loteId;
+    if (loteId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Elegí el lote')));
+      return;
+    }
+    final peso = _parse(_pesoCtrl);
+    if (peso == null || peso <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Peso de compra inválido')));
+      return;
+    }
+    double? precio;
+    if (!_nacioEnFinca) {
+      precio = _parse(_precioCtrl);
+      if (precio == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Precio de compra o marcá “nació”')),
+        );
+        return;
+      }
+    }
+    Navigator.pop(
+      context,
+      _AltaAnimal(
+        loteId: loteId,
+        pesoCompra: peso,
+        nacioEnFinca: _nacioEnFinca,
+        precioCompra: precio,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottom),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Animal nuevo · ${widget.identificador}',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Solo lo mínimo para registrarlo',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+              const SizedBox(height: HatoSpacing.lg),
+              Text('Lote', style: theme.textTheme.titleSmall),
+              const SizedBox(height: HatoSpacing.sm),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final l in widget.lotes)
+                    ChoiceChip(
+                      key: ValueKey('pesaje.lote.${l.id}'),
+                      selected: _loteId == l.id,
+                      label: Text(
+                        l.numero == null
+                            ? l.nombre
+                            : '${l.numero} · ${l.nombre}',
+                      ),
+                      onSelected: (_) => setState(() => _loteId = l.id),
+                    ),
+                ],
+              ),
+              const SizedBox(height: HatoSpacing.lg),
+              QuickNumberField(
+                controller: _pesoCtrl,
+                labelText: 'Peso de compra',
+                suffixText: 'kg',
+              ),
+              const SizedBox(height: HatoSpacing.md),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Nació en la finca'),
+                subtitle: const Text('Sin precio de compra'),
+                value: _nacioEnFinca,
+                onChanged: (v) => setState(() => _nacioEnFinca = v),
+              ),
+              if (!_nacioEnFinca) ...[
+                const SizedBox(height: HatoSpacing.sm),
+                QuickNumberField(
+                  controller: _precioCtrl,
+                  labelText: 'Precio de compra',
+                  suffixText: '₡',
+                ),
+              ],
+              const SizedBox(height: HatoSpacing.xl),
+              FilledButton(
+                onPressed: _continuar,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Registrar animal'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PesajesDeHoy extends StatelessWidget {
   const _PesajesDeHoy({required this.pesajes});
 
@@ -307,10 +537,12 @@ class _PesajesDeHoy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final totalAnimales = pesajes.map((p) => p.identificador).toSet().length;
+
     if (pesajes.isEmpty) {
       return Center(
         child: Text(
-          'Acá aparecerán los animales que peses hoy.',
+          'Acá aparecen los animales que peses hoy.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.outline,
@@ -319,7 +551,6 @@ class _PesajesDeHoy extends StatelessWidget {
       );
     }
 
-    // Agrupar por lote, conservando el orden de aparición (más reciente primero).
     final lotesOrden = <String>[];
     final nombres = <String, String>{};
     final porLote = <String, List<PesajeHoy>>{};
@@ -333,17 +564,47 @@ class _PesajesDeHoy extends StatelessWidget {
     }
 
     return DefaultTabController(
-      // key liga el controlador a la cantidad de lotes (se recrea si cambia).
       key: ValueKey(lotesOrden.join(',')),
       length: lotesOrden.length,
       child: Column(
         children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Hoy',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Container(
+                key: const ValueKey('pesaje.contador'),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$totalAnimales pesados',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: HatoSpacing.sm),
           TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             tabs: [for (final id in lotesOrden) Tab(text: nombres[id])],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: HatoSpacing.sm),
           Expanded(
             child: TabBarView(
               children: [
@@ -357,7 +618,6 @@ class _PesajesDeHoy extends StatelessWidget {
   }
 }
 
-/// Tabla de pesajes de un lote: ID, peso y ganancia, con total abajo.
 class _TablaLote extends StatelessWidget {
   const _TablaLote({required this.filas});
 
@@ -366,16 +626,20 @@ class _TablaLote extends StatelessWidget {
   String _fmt(double p) =>
       p == p.roundToDouble() ? p.toInt().toString() : p.toStringAsFixed(1);
 
+  String _fmtGmd(double? g) {
+    if (g == null) return '—';
+    return g.toStringAsFixed(2);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cantidad = filas.map((f) => f.identificador).toSet().length;
 
     Widget celdaEncabezado(String t, {TextAlign align = TextAlign.start}) =>
         Text(
           t,
           textAlign: align,
-          style: theme.textTheme.labelLarge?.copyWith(
+          style: theme.textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         );
@@ -383,21 +647,25 @@ class _TablaLote extends StatelessWidget {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
           ),
           child: Row(
             children: [
-              Expanded(flex: 4, child: celdaEncabezado('Animal')),
+              Expanded(flex: 3, child: celdaEncabezado('Animal')),
               Expanded(
-                flex: 3,
-                child: celdaEncabezado('Peso (kg)', align: TextAlign.end),
+                flex: 2,
+                child: celdaEncabezado('Peso', align: TextAlign.end),
               ),
               Expanded(
-                flex: 3,
-                child: celdaEncabezado('Ganancia', align: TextAlign.end),
+                flex: 2,
+                child: celdaEncabezado('Gan.', align: TextAlign.end),
+              ),
+              Expanded(
+                flex: 2,
+                child: celdaEncabezado('GMD', align: TextAlign.end),
               ),
             ],
           ),
@@ -408,112 +676,54 @@ class _TablaLote extends StatelessWidget {
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, i) {
               final f = filas[i];
-              return Dismissible(
-                key: ValueKey(f.id),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: const Color(0xFFC62828),
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Icon(Icons.delete, color: Colors.white),
-                      SizedBox(width: 6),
-                      Text(
-                        'Eliminar',
-                        style: TextStyle(
-                          color: Colors.white,
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        f.identificador,
+                        style: const TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                confirmDismiss: (_) async {
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Eliminar pesaje'),
-                      content: Text(
-                        '¿Eliminar el pesaje del animal "${f.identificador}" '
-                        '(${_fmt(f.peso)} kg)?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Cancelar'),
-                        ),
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFC62828),
-                          ),
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Eliminar'),
-                        ),
-                      ],
                     ),
-                  );
-                  if (ok == true) {
-                    await pesajesRepo.eliminarPesaje(f.id);
-                    sincronizarSiSePuede();
-                  }
-                  // La lista se actualiza sola por el stream; devolvemos false
-                  // para no duplicar la remoción del widget.
-                  return false;
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 4,
-                        child: Text(
-                          f.identificador,
-                          style: const TextStyle(fontSize: 16),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        _fmt(f.peso),
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: _ValorGanancia(
+                        valor: f.ganancia,
+                        esEntrada: f.ganancia == null,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        _fmtGmd(f.gananciaDiaria),
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.secondary,
                         ),
                       ),
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          _fmt(f.peso),
-                          textAlign: TextAlign.end,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 3,
-                        child: _ValorGanancia(
-                          valor: f.ganancia,
-                          sufijo: 'kg',
-                          esEntrada: f.ganancia == null,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
-          ),
-        ),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(10),
-            ),
-          ),
-          child: Text(
-            'Animales pesados: $cantidad',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
           ),
         ),
       ],
@@ -521,17 +731,10 @@ class _TablaLote extends StatelessWidget {
   }
 }
 
-/// Muestra un valor de ganancia coloreado: verde si es positivo, rojo si es
-/// negativo, gris si es 0. "Entrada" si es el primer pesaje. "—" si no aplica.
 class _ValorGanancia extends StatelessWidget {
-  const _ValorGanancia({
-    required this.valor,
-    required this.sufijo,
-    required this.esEntrada,
-  });
+  const _ValorGanancia({required this.valor, required this.esEntrada});
 
   final double? valor;
-  final String sufijo;
   final bool esEntrada;
 
   String _fmt(double p) {
@@ -549,15 +752,14 @@ class _ValorGanancia extends StatelessWidget {
       return Text(
         'Entrada',
         textAlign: TextAlign.end,
-        style: TextStyle(fontSize: 14, color: theme.colorScheme.outline),
+        style: TextStyle(fontSize: 13, color: theme.colorScheme.outline),
       );
     }
     if (valor == null) {
-      // No se puede calcular (p. ej. kg/día con menos de un día transcurrido).
       return Text(
         '—',
         textAlign: TextAlign.end,
-        style: TextStyle(fontSize: 15, color: theme.colorScheme.outline),
+        style: TextStyle(fontSize: 14, color: theme.colorScheme.outline),
       );
     }
 
@@ -575,29 +777,10 @@ class _ValorGanancia extends StatelessWidget {
         ? '-'
         : '';
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        if (v != 0)
-          Icon(
-            v > 0 ? Icons.arrow_upward : Icons.arrow_downward,
-            size: 14,
-            color: color,
-          ),
-        const SizedBox(width: 1),
-        Flexible(
-          child: Text(
-            '$signo${_fmt(v)} $sufijo',
-            textAlign: TextAlign.end,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ),
-      ],
+    return Text(
+      '$signo${_fmt(v)}',
+      textAlign: TextAlign.end,
+      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color),
     );
   }
 }

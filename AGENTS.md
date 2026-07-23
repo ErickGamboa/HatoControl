@@ -3,6 +3,8 @@
 ## Product context
 Flutter offline-first app for cattle farm management: fincas, lotes, animals, weights, account/licensing. Local state is Drift/SQLite; Supabase is remote sync/auth/storage backend.
 
+**Product behavior source of truth:** `docs/ESPECIFICACION_FUNCIONAL.md` (documento oro). If a feature is not described there, do not build it; remove or align existing code that contradicts it. Implementation sequencing lives in `docs/ROADMAP.md`.
+
 ## Language and documentation policy
 - The product domain is Spanish-first (`finca`, `lote`, `animal`, `pesaje`, `cuenta`). Preserve domain names in code and UI unless a product decision changes them.
 - Agent/developer docs should be understandable in English. When adding user-facing setup or QA instructions, prefer bilingual headings or short Spanish/English notes.
@@ -15,7 +17,8 @@ Flutter offline-first app for cattle farm management: fincas, lotes, animals, we
 - `lib/data/local/database.dart`: Drift schema and migrations.
 - `lib/data/repositories/`: local-first business operations. UI should call repositories, not Supabase directly.
 - `lib/data/sync/sync_service.dart`: bidirectional sync between local Drift tables and Supabase.
-- Feature UI folders: `auth/`, `cuenta/`, `fincas/`, `lotes/`, `pesaje/`, `home/`.
+- Feature UI folders: `auth/`, `cuenta/`, `fincas/`, `lotes/`, `pesaje/`, `dietas/`, `sanidad/`, `venta/`, `home/`.
+- `docs/ESPECIFICACION_FUNCIONAL.md`: product behavior (oro).
 - `docs/MODELO_DATOS.md`: domain model and Supabase/RLS expectations.
 
 ## Non-negotiable invariants

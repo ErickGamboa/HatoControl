@@ -104,7 +104,8 @@ class AnimalSanidadTab extends StatelessWidget {
                     subtitle: Text(
                       '${TipoEventoSanitario.etiqueta(e.tipo)} · ${_fecha(e.fecha)}'
                       '${e.dosis != null ? ' · ${e.dosis}' : ''}'
-                      '${e.costo != null ? ' · ₡${e.costo!.toStringAsFixed(0)}' : ''}',
+                      '${e.costo != null ? ' · ₡${e.costo!.toStringAsFixed(0)}' : ''}'
+                      '${e.retiroHasta != null ? ' · retiro hasta ${_fecha(e.retiroHasta!)}' : ''}',
                     ),
                     isThreeLine: e.observaciones != null,
                     trailing: e.pendiente

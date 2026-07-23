@@ -5,20 +5,20 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../data/local/database.dart';
-import '../data/repositories/feature_flags_repository.dart';
 import '../data/repositories/fincas_repository.dart';
 import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/ventas_repository.dart' show EstadoAnimal;
-import '../corral/corral_screen.dart';
 import '../dietas/dietas_screen.dart';
 import '../lotes/lotes_screen.dart';
 import '../pesaje/pesaje_screen.dart';
+import '../sanidad/sanidad_screen.dart';
 import '../services.dart';
+import '../venta/venta_screen.dart';
 import 'compartir_finca_screen.dart';
 import 'foto_picker.dart';
 
-/// Detalle de una finca: KPIs rápidos + menú de opciones (botonera) + editar
-/// la finca.
+/// Home de la finca según el documento oro: Trabajo (Pesaje) como acción
+/// principal, y módulos Sanidad · Lotes · Dietas · Venta.
 class FincaDetalleScreen extends StatefulWidget {
   FincaDetalleScreen({
     super.key,
@@ -28,11 +28,9 @@ class FincaDetalleScreen extends StatefulWidget {
     AppDatabase? database,
     FincasRepository? fincasRepository,
     LotesRepository? lotesRepository,
-    FeatureFlagsRepository? featureFlagsRepository,
   }) : database = database ?? db,
        fincasRepository = fincasRepository ?? fincasRepo,
-       lotesRepository = lotesRepository ?? lotesRepo,
-       featureFlagsRepository = featureFlagsRepository ?? featureFlagsRepo;
+       lotesRepository = lotesRepository ?? lotesRepo;
 
   final FincaRow finca;
   final String usuarioId;
@@ -40,7 +38,6 @@ class FincaDetalleScreen extends StatefulWidget {
   final AppDatabase database;
   final FincasRepository fincasRepository;
   final LotesRepository lotesRepository;
-  final FeatureFlagsRepository featureFlagsRepository;
 
   @override
   State<FincaDetalleScreen> createState() => _FincaDetalleScreenState();
@@ -75,14 +72,14 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
   }
 
   Stream<int> _contarAnimalesActivos(String fincaId) {
-    final db = widget.database;
-    final conteo = db.animales.id.count();
-    final consulta = db.selectOnly(db.animales)
+    final database = widget.database;
+    final conteo = database.animales.id.count();
+    final consulta = database.selectOnly(database.animales)
       ..addColumns([conteo])
       ..where(
-        db.animales.fincaId.equals(fincaId) &
-            db.animales.deletedAt.isNull() &
-            db.animales.estado.equals(EstadoAnimal.activo),
+        database.animales.fincaId.equals(fincaId) &
+            database.animales.deletedAt.isNull() &
+            database.animales.estado.equals(EstadoAnimal.activo),
       );
     return consulta.watchSingle().map((fila) => fila.read(conteo) ?? 0);
   }
@@ -157,64 +154,45 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
             ],
           ),
           body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _kpiHeader(finca),
               Expanded(
-                child: StreamBuilder<bool>(
-                  stream: widget.featureFlagsRepository.observarHabilitado(
-                    'dietas',
-                    fincaId: finca.id,
-                    cuentaId: finca.cuentaId,
-                  ),
-                  initialData: true,
-                  builder: (context, dietasSnap) {
-                    final dietasHabilitado = dietasSnap.data ?? true;
-                    return GridView.count(
-                      padding: const EdgeInsets.all(HatoSpacing.lg),
+                child: ListView(
+                  padding: const EdgeInsets.all(HatoSpacing.lg),
+                  children: [
+                    _TrabajoHero(
+                      key: const ValueKey('fincaDetail.pesaje'),
+                      onTap: () => _abrir(
+                        PesajeScreen(finca: finca, usuarioId: widget.usuarioId),
+                      ),
+                    ),
+                    const SizedBox(height: HatoSpacing.lg),
+                    Text(
+                      'Módulos',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: HatoSpacing.sm),
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
                       crossAxisCount: 2,
-                      mainAxisSpacing: HatoSpacing.lg,
-                      crossAxisSpacing: HatoSpacing.lg,
-                      childAspectRatio: 1,
+                      mainAxisSpacing: HatoSpacing.md,
+                      crossAxisSpacing: HatoSpacing.md,
+                      childAspectRatio: 1.15,
                       children: [
                         _BotonOpcion(
-                          key: const ValueKey('fincaDetail.corral'),
-                          icono: Icon(
-                            Icons.agriculture_outlined,
-                            size: 60,
-                            color: theme.colorScheme.primary,
-                          ),
-                          label: 'Corral',
-                          onTap: () => _abrir(
-                            CorralScreen(
-                              finca: finca,
-                              usuarioId: widget.usuarioId,
-                            ),
-                          ),
-                        ),
-                        _BotonOpcion(
-                          key: const ValueKey('fincaDetail.pesaje'),
-                          icono: Image.asset(
-                            'assets/iconos/pesaje.png',
-                            width: 60,
-                            height: 60,
-                            color: theme.colorScheme.primary,
-                          ),
-                          label: 'Pesaje',
-                          onTap: () => _abrir(
-                            PesajeScreen(
-                              finca: finca,
-                              usuarioId: widget.usuarioId,
-                            ),
-                          ),
+                          key: const ValueKey('fincaDetail.sanidad'),
+                          icono: Icons.medical_services_outlined,
+                          label: 'Sanidad',
+                          onTap: () => _abrir(SanidadScreen(finca: finca)),
                         ),
                         _BotonOpcion(
                           key: const ValueKey('fincaDetail.lotes'),
-                          icono: Image.asset(
-                            'assets/iconos/lotes.png',
-                            width: 60,
-                            height: 60,
-                            color: theme.colorScheme.primary,
-                          ),
+                          icono: Icons.grid_view_rounded,
                           label: 'Lotes',
                           onTap: () => _abrir(
                             LotesScreen(
@@ -223,20 +201,26 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
                             ),
                           ),
                         ),
-                        if (dietasHabilitado)
-                          _BotonOpcion(
-                            key: const ValueKey('fincaDetail.dietas'),
-                            icono: Icon(
-                              Icons.restaurant_menu,
-                              size: 60,
-                              color: theme.colorScheme.primary,
+                        _BotonOpcion(
+                          key: const ValueKey('fincaDetail.dietas'),
+                          icono: Icons.restaurant_menu,
+                          label: 'Dietas',
+                          onTap: () => _abrir(DietasScreen(finca: finca)),
+                        ),
+                        _BotonOpcion(
+                          key: const ValueKey('fincaDetail.venta'),
+                          icono: Icons.sell_outlined,
+                          label: 'Venta',
+                          onTap: () => _abrir(
+                            VentaScreen(
+                              finca: finca,
+                              usuarioId: widget.usuarioId,
                             ),
-                            label: 'Dietas',
-                            onTap: () => _abrir(DietasScreen(finca: finca)),
                           ),
+                        ),
                       ],
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -247,9 +231,76 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
   }
 }
 
-/// Tarjeta compacta con un número (KPI) y su etiqueta, para el encabezado de
-/// la finca. [valor] null mientras el stream todavía no entrega el primer
-/// dato.
+/// CTA principal de la finca: Pantalla de Trabajo (Pesaje).
+class _TrabajoHero extends StatelessWidget {
+  const _TrabajoHero({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.primary,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: HatoSpacing.xl,
+            vertical: HatoSpacing.xl,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.monitor_weight_outlined,
+                  size: 36,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: HatoSpacing.lg),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Trabajo',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Pesaje en la manga · tocar y listo',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: Colors.white.withValues(alpha: 0.9),
+                size: 28,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _KpiTile extends StatelessWidget {
   const _KpiTile({
     super.key,
@@ -301,7 +352,6 @@ class _KpiTile extends StatelessWidget {
   }
 }
 
-/// Botón cuadrado con un ícono (widget) y etiqueta para el menú de la finca.
 class _BotonOpcion extends StatelessWidget {
   const _BotonOpcion({
     super.key,
@@ -310,7 +360,7 @@ class _BotonOpcion extends StatelessWidget {
     required this.onTap,
   });
 
-  final Widget icono;
+  final IconData icono;
   final String label;
   final VoidCallback onTap;
 
@@ -325,8 +375,8 @@ class _BotonOpcion extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(height: 64, child: Center(child: icono)),
-            const SizedBox(height: 12),
+            Icon(icono, size: 40, color: theme.colorScheme.primary),
+            const SizedBox(height: HatoSpacing.sm),
             Text(
               label,
               style: theme.textTheme.titleMedium?.copyWith(
@@ -340,8 +390,6 @@ class _BotonOpcion extends StatelessWidget {
   }
 }
 
-/// Diálogo para editar una finca: nombre + (opcional) reemplazar la foto.
-/// Devuelve (nombre, nuevaFotoLocalPath?). nuevaFotoLocalPath null = no cambió.
 class _DialogoEditarFinca extends StatefulWidget {
   const _DialogoEditarFinca({required this.finca});
 

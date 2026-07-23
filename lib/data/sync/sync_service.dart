@@ -43,7 +43,8 @@ class PullSpec {
   /// coincidir con lo que [idDe] lee del mapa remoto.
   final String idColumnaRemota;
 
-  static String _idPorDefecto(Map<String, dynamic> fila) => fila['id'] as String;
+  static String _idPorDefecto(Map<String, dynamic> fila) =>
+      fila['id'] as String;
 }
 
 /// Todo lo que el motor de sync necesita saber de una tabla. `subida` es
@@ -207,7 +208,8 @@ class SyncService {
 
   /// Estado de sync por tabla (D-13): para una pantalla de "sincronizando…"
   /// con detalle, o para soporte/debug.
-  Future<List<SyncEstadoRow>> estadoPorTabla() => db.select(db.syncEstados).get();
+  Future<List<SyncEstadoRow>> estadoPorTabla() =>
+      db.select(db.syncEstados).get();
 
   /// Cantidad de filas `pendiente=true` por tabla (solo las que suben algo).
   Future<Map<String, int>> pendientesPorTabla() async {
@@ -339,10 +341,13 @@ class SyncService {
     _fincaMiembrosSpec,
     _lotesSpec,
     _dietasSpec,
+    _dietaIngredientesSpec,
     _loteDietasSpec,
     _animalesSpec,
     _movimientosLoteSpec,
+    _medicamentosSpec,
     _eventosSanitariosSpec,
+    _lotesVentaSpec,
     _ventasSpec,
     _costosOtrosSpec,
     _pesajesSpec,
@@ -653,6 +658,58 @@ class SyncService {
     ),
   );
 
+  TableSyncSpec get _dietaIngredientesSpec => TableSyncSpec(
+    tabla: 'dieta_ingredientes',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.dietaIngredientes,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final i in filas)
+            (
+              i.id,
+              {
+                'id': i.id,
+                'dieta_id': i.dietaId,
+                'nombre': i.nombre,
+                'costo_animal_dia': i.costoAnimalDia,
+                'created_at': i.createdAt.toIso8601String(),
+                'deleted_at': i.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.dietaIngredientes)..where((t) => t.id.equals(id)))
+              .write(const DietaIngredientesCompanion(pendiente: Value(false))),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.dietaIngredientes,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.dietaIngredientes)
+          .insertOnConflictUpdate(
+            DietaIngredienteRow(
+              id: r['id'] as String,
+              dietaId: r['dieta_id'] as String,
+              nombre: r['nombre'] as String,
+              costoAnimalDia: (r['costo_animal_dia'] as num).toDouble(),
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          ),
+    ),
+  );
+
   TableSyncSpec get _loteDietasSpec => TableSyncSpec(
     tabla: 'lote_dietas',
     subida: PushSpec(
@@ -831,6 +888,79 @@ class SyncService {
     ),
   );
 
+  TableSyncSpec get _medicamentosSpec => TableSyncSpec(
+    tabla: 'medicamentos',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.medicamentos,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final m in filas)
+            (
+              m.id,
+              {
+                'id': m.id,
+                'finca_id': m.fincaId,
+                'nombre': m.nombre,
+                'costo_envase': m.costoEnvase,
+                'tipo_aplicacion': m.tipoAplicacion,
+                'ml_envase': m.mlEnvase,
+                'aplicaciones_por_envase': m.aplicacionesPorEnvase,
+                'dosis_cantidad': m.dosisCantidad,
+                'dosis_por_cada_kg': m.dosisPorCadaKg,
+                'dias_retiro': m.diasRetiro,
+                'created_at': m.createdAt.toIso8601String(),
+                'deleted_at': m.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.medicamentos)..where((t) => t.id.equals(id))).write(
+            const MedicamentosCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.medicamentos,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.medicamentos)
+          .insertOnConflictUpdate(
+            MedicamentoRow(
+              id: r['id'] as String,
+              fincaId: r['finca_id'] as String,
+              nombre: r['nombre'] as String,
+              costoEnvase: (r['costo_envase'] as num).toDouble(),
+              tipoAplicacion: r['tipo_aplicacion'] as String,
+              mlEnvase: r['ml_envase'] != null
+                  ? (r['ml_envase'] as num).toDouble()
+                  : null,
+              aplicacionesPorEnvase: r['aplicaciones_por_envase'] != null
+                  ? (r['aplicaciones_por_envase'] as num).toDouble()
+                  : null,
+              dosisCantidad: r['dosis_cantidad'] != null
+                  ? (r['dosis_cantidad'] as num).toDouble()
+                  : null,
+              dosisPorCadaKg: r['dosis_por_cada_kg'] != null
+                  ? (r['dosis_por_cada_kg'] as num).toDouble()
+                  : null,
+              diasRetiro: r['dias_retiro'] as int? ?? 0,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          ),
+    ),
+  );
+
   TableSyncSpec get _eventosSanitariosSpec => TableSyncSpec(
     tabla: 'eventos_sanitarios',
     subida: PushSpec(
@@ -852,6 +982,11 @@ class SyncService {
                 'responsable_id': e.responsableId,
                 'observaciones': e.observaciones,
                 'costo': e.costo,
+                'medicamento_id': e.medicamentoId,
+                'ml_aplicados': e.mlAplicados,
+                'aplicaciones': e.aplicaciones,
+                'dias_retiro': e.diasRetiro,
+                'retiro_hasta': e.retiroHasta?.toIso8601String(),
                 'created_at': e.createdAt.toIso8601String(),
                 'deleted_at': e.deletedAt?.toIso8601String(),
               },
@@ -882,6 +1017,66 @@ class SyncService {
               responsableId: r['responsable_id'] as String?,
               observaciones: r['observaciones'] as String?,
               costo: r['costo'] != null ? (r['costo'] as num).toDouble() : null,
+              medicamentoId: r['medicamento_id'] as String?,
+              mlAplicados: r['ml_aplicados'] != null
+                  ? (r['ml_aplicados'] as num).toDouble()
+                  : null,
+              aplicaciones: r['aplicaciones'] as int?,
+              diasRetiro: r['dias_retiro'] as int?,
+              retiroHasta: r['retiro_hasta'] != null
+                  ? DateTime.parse(r['retiro_hasta'] as String)
+                  : null,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          ),
+    ),
+  );
+
+  TableSyncSpec get _lotesVentaSpec => TableSyncSpec(
+    tabla: 'lotes_venta',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.lotesVenta,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final l in filas)
+            (
+              l.id,
+              {
+                'id': l.id,
+                'finca_id': l.fincaId,
+                'fecha': l.fecha.toIso8601String(),
+                'created_at': l.createdAt.toIso8601String(),
+                'deleted_at': l.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.lotesVenta)..where((t) => t.id.equals(id))).write(
+            const LotesVentaCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.lotesVenta,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.lotesVenta)
+          .insertOnConflictUpdate(
+            LoteVentaRow(
+              id: r['id'] as String,
+              fincaId: r['finca_id'] as String,
+              fecha: DateTime.parse(r['fecha'] as String),
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
@@ -907,8 +1102,10 @@ class SyncService {
               {
                 'id': v.id,
                 'animal_id': v.animalId,
+                'lote_venta_id': v.loteVentaId,
                 'fecha': v.fecha.toIso8601String(),
                 'precio': v.precio,
+                'peso': v.peso,
                 'comprador': v.comprador,
                 'observaciones': v.observaciones,
                 'created_at': v.createdAt.toIso8601String(),
@@ -935,8 +1132,10 @@ class SyncService {
             VentaRow(
               id: r['id'] as String,
               animalId: r['animal_id'] as String,
+              loteVentaId: r['lote_venta_id'] as String?,
               fecha: DateTime.parse(r['fecha'] as String),
               precio: (r['precio'] as num).toDouble(),
+              peso: r['peso'] != null ? (r['peso'] as num).toDouble() : null,
               comprador: r['comprador'] as String?,
               observaciones: r['observaciones'] as String?,
               createdAt: DateTime.parse(r['created_at'] as String),

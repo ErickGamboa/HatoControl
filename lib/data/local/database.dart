@@ -204,7 +204,8 @@ class MovimientosLote extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Aplicación sanitaria por animal (D-04): vacuna, medicamento, etc.
+/// Aplicación sanitaria por animal. Con catálogo oro: medicamentoId + dosis/
+/// retiro calculados; `producto`/`dosis` texto se conservan para UI e historial.
 @DataClassName('EventoSanitarioRow')
 class EventosSanitarios extends Table {
   TextColumn get id => text()();
@@ -217,6 +218,11 @@ class EventosSanitarios extends Table {
   TextColumn get responsableId => text().nullable()();
   TextColumn get observaciones => text().nullable()();
   RealColumn get costo => real().nullable()();
+  TextColumn get medicamentoId => text().nullable()();
+  RealColumn get mlAplicados => real().nullable()();
+  IntColumn get aplicaciones => integer().nullable()();
+  IntColumn get diasRetiro => integer().nullable()();
+  DateTimeColumn get retiroHasta => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -232,13 +238,84 @@ class EventosSanitarios extends Table {
   ];
 }
 
+/// Catálogo de medicamentos de la finca (documento oro, Módulo 2).
+@DataClassName('MedicamentoRow')
+class Medicamentos extends Table {
+  TextColumn get id => text()();
+  TextColumn get fincaId => text()();
+  TextColumn get nombre => text()();
+  RealColumn get costoEnvase => real()();
+
+  /// por_peso | dosis_fija | por_aplicacion
+  TextColumn get tipoAplicacion => text()();
+  RealColumn get mlEnvase => real().nullable()();
+  RealColumn get aplicacionesPorEnvase => real().nullable()();
+
+  /// ml de la dosis (por peso o fija).
+  RealColumn get dosisCantidad => real().nullable()();
+
+  /// "cada X kg" para por_peso.
+  RealColumn get dosisPorCadaKg => real().nullable()();
+  IntColumn get diasRetiro => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    "CHECK (tipo_aplicacion IN ('por_peso','dosis_fija','por_aplicacion'))",
+    'CHECK (costo_envase >= 0)',
+    'CHECK (dias_retiro >= 0)',
+  ];
+}
+
+/// Ingrediente de una dieta con costo por animal/día (oro Módulo 4).
+@DataClassName('DietaIngredienteRow')
+class DietaIngredientes extends Table {
+  TextColumn get id => text()();
+  TextColumn get dietaId => text()();
+  TextColumn get nombre => text()();
+  RealColumn get costoAnimalDia => real()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => ['CHECK (costo_animal_dia >= 0)'];
+}
+
+/// Lote de venta: grupo de animales vendidos juntos (oro Módulo 6).
+@DataClassName('LoteVentaRow')
+class LotesVenta extends Table {
+  TextColumn get id => text()();
+  TextColumn get fincaId => text()();
+  DateTimeColumn get fecha => dateTime()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Venta de un animal (Module 4). Al registrar, el animal pasa a estado vendido.
 @DataClassName('VentaRow')
 class Ventas extends Table {
   TextColumn get id => text()();
   TextColumn get animalId => text()();
+  TextColumn get loteVentaId => text().nullable()();
   DateTimeColumn get fecha => dateTime()();
   RealColumn get precio => real()();
+  RealColumn get peso => real().nullable()();
   TextColumn get comprador => text().nullable()();
   TextColumn get observaciones => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
@@ -250,7 +327,10 @@ class Ventas extends Table {
   Set<Column> get primaryKey => {id};
 
   @override
-  List<String> get customConstraints => ['CHECK (precio >= 0)'];
+  List<String> get customConstraints => [
+    'CHECK (precio >= 0)',
+    'CHECK (peso IS NULL OR peso > 0)',
+  ];
 }
 
 /// Otros costos directos del animal (Module 4).
@@ -377,9 +457,12 @@ class SesionesLocales extends Table {
     Animales,
     Pesajes,
     Dietas,
+    DietaIngredientes,
     LoteDietas,
     MovimientosLote,
+    Medicamentos,
     EventosSanitarios,
+    LotesVenta,
     Ventas,
     CostosOtros,
     FeatureFlags,
@@ -396,7 +479,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -478,8 +561,67 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(syncCursores, syncCursores.ultimaBajadaId);
         await m.createTable(syncEstados);
       }
+      if (from < 12) {
+        // v12: documento oro — catálogo medicamentos, ingredientes de dieta,
+        // lotes de venta, retiro/dosis en eventos, peso/lote en ventas.
+        // Idempotent: if [from] < 11, v11 already recreated `eventos_sanitarios`
+        // / `ventas` with the current Drift schema (incl. v12 columns).
+        await _crearTablaSiFalta(m, medicamentos);
+        await _crearTablaSiFalta(m, dietaIngredientes);
+        await _crearTablaSiFalta(m, lotesVenta);
+        await _agregarColumnaSiFalta(
+          m,
+          eventosSanitarios,
+          eventosSanitarios.medicamentoId,
+        );
+        await _agregarColumnaSiFalta(
+          m,
+          eventosSanitarios,
+          eventosSanitarios.mlAplicados,
+        );
+        await _agregarColumnaSiFalta(
+          m,
+          eventosSanitarios,
+          eventosSanitarios.aplicaciones,
+        );
+        await _agregarColumnaSiFalta(
+          m,
+          eventosSanitarios,
+          eventosSanitarios.diasRetiro,
+        );
+        await _agregarColumnaSiFalta(
+          m,
+          eventosSanitarios,
+          eventosSanitarios.retiroHasta,
+        );
+        await _agregarColumnaSiFalta(m, ventas, ventas.loteVentaId);
+        await _agregarColumnaSiFalta(m, ventas, ventas.peso);
+      }
     },
   );
+
+  Future<void> _crearTablaSiFalta(Migrator m, TableInfo table) async {
+    final filas = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+      variables: [Variable.withString(table.actualTableName)],
+    ).get();
+    if (filas.isEmpty) {
+      await m.createTable(table);
+    }
+  }
+
+  Future<void> _agregarColumnaSiFalta(
+    Migrator m,
+    TableInfo table,
+    GeneratedColumn column,
+  ) async {
+    final filas = await customSelect(
+      'PRAGMA table_info(`${table.actualTableName}`)',
+    ).get();
+    final nombres = filas.map((f) => f.read<String>('name')).toSet();
+    if (nombres.contains(column.name)) return;
+    await m.addColumn(table, column);
+  }
 
   Future<void> _crearIndicesUnicosLocales() async {
     await customStatement(
