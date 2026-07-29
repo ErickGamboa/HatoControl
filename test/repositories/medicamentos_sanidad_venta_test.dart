@@ -110,7 +110,7 @@ void main() {
     expect(
       () => ventas.confirmarLoteVenta(
         fincaId: 'f1',
-        items: [(animalId: 'a1', precio: 1000, peso: 200)],
+        items: [(animalId: 'a1', peso: 200, precioKg: 5)],
       ),
       throwsA(isA<AnimalEnRetiroException>()),
     );

@@ -4,6 +4,7 @@ import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/data/repositories/dietas_repository.dart';
 import 'package:hato_control/data/repositories/fincas_repository.dart';
 import 'package:hato_control/data/repositories/lotes_repository.dart';
+import 'package:hato_control/data/repositories/medicamentos_repository.dart';
 import 'package:hato_control/data/repositories/pesajes_repository.dart';
 import 'package:hato_control/data/repositories/sanidad_repository.dart';
 import 'package:hato_control/data/repositories/ventas_repository.dart';
@@ -11,6 +12,7 @@ import 'package:hato_control/demo/demo_seed.dart';
 import 'package:hato_control/demo/demo_seed_ids.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late AppDatabase db;
 
   setUp(() {
@@ -31,6 +33,7 @@ void main() {
       dietas: DietasRepository(db),
       sanidad: SanidadRepository(db),
       ventas: VentasRepository(db),
+      medicamentos: MedicamentosRepository(db),
     );
 
     final snap = await seed.seedIfAbsent(usuarioId: uid);

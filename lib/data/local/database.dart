@@ -130,7 +130,15 @@ class Animales extends Table {
 
   /// activo | vendido | muerto (D-08)
   TextColumn get estado => text().withDefault(const Constant('activo'))();
+
+  /// Total derivado: pesoCompra × precioKgCompra (0 si nació en la finca).
   RealColumn get precioCompra => real().nullable()();
+
+  /// Kilos de entrada al comprar (nullable en datos legacy).
+  RealColumn get pesoCompra => real().nullable()();
+
+  /// ₡/kg de compra. 0 = nació en la finca. null = legacy / sin precio.
+  RealColumn get precioKgCompra => real().nullable()();
   DateTimeColumn get fechaCompra => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
@@ -144,6 +152,8 @@ class Animales extends Table {
   List<String> get customConstraints => [
     "CHECK (estado IN ('activo','vendido','muerto'))",
     'CHECK (precio_compra IS NULL OR precio_compra >= 0)',
+    'CHECK (peso_compra IS NULL OR peso_compra > 0)',
+    'CHECK (precio_kg_compra IS NULL OR precio_kg_compra >= 0)',
   ];
 }
 
@@ -154,6 +164,11 @@ class Dietas extends Table {
   TextColumn get fincaId => text()();
   TextColumn get nombre => text()();
   TextColumn get descripcion => text().nullable()();
+
+  /// Costo semanal por animal (como lo digita el ganadero).
+  RealColumn get costoAnimalSemana => real().withDefault(const Constant(0))();
+
+  /// Derivado: costoAnimalSemana ÷ 7 (para períodos y snapshots).
   RealColumn get costoAnimalDia => real()();
   TextColumn get moneda => text().withDefault(const Constant('CRC'))();
   DateTimeColumn get createdAt => dateTime()();
@@ -165,7 +180,10 @@ class Dietas extends Table {
   Set<Column> get primaryKey => {id};
 
   @override
-  List<String> get customConstraints => ['CHECK (costo_animal_dia >= 0)'];
+  List<String> get customConstraints => [
+    'CHECK (costo_animal_dia >= 0)',
+    'CHECK (costo_animal_semana >= 0)',
+  ];
 }
 
 /// Historial de asignación de dieta a un lote. `hasta` null = vigente.
@@ -273,13 +291,15 @@ class Medicamentos extends Table {
   ];
 }
 
-/// Ingrediente de una dieta con costo por animal/día (oro Módulo 4).
+/// Ingrediente de una dieta: solo nombre informativo (costo queda en 0).
 @DataClassName('DietaIngredienteRow')
 class DietaIngredientes extends Table {
   TextColumn get id => text()();
   TextColumn get dietaId => text()();
   TextColumn get nombre => text()();
-  RealColumn get costoAnimalDia => real()();
+
+  /// Deja de usarse; se graba 0 para no romper sync con Supabase.
+  RealColumn get costoAnimalDia => real().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -314,8 +334,15 @@ class Ventas extends Table {
   TextColumn get animalId => text()();
   TextColumn get loteVentaId => text().nullable()();
   DateTimeColumn get fecha => dateTime()();
+
+  /// Total derivado: peso × precioKg.
   RealColumn get precio => real()();
+
+  /// Kilos de salida (obligatorio en ventas nuevas).
   RealColumn get peso => real().nullable()();
+
+  /// ₡ por kilo de venta.
+  RealColumn get precioKg => real().nullable()();
   TextColumn get comprador => text().nullable()();
   TextColumn get observaciones => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
@@ -330,6 +357,7 @@ class Ventas extends Table {
   List<String> get customConstraints => [
     'CHECK (precio >= 0)',
     'CHECK (peso IS NULL OR peso > 0)',
+    'CHECK (precio_kg IS NULL OR precio_kg >= 0)',
   ];
 }
 
@@ -479,7 +507,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -596,6 +624,18 @@ class AppDatabase extends _$AppDatabase {
         );
         await _agregarColumnaSiFalta(m, ventas, ventas.loteVentaId);
         await _agregarColumnaSiFalta(m, ventas, ventas.peso);
+      }
+      if (from < 13) {
+        // v13: utilidad por kg/semana — columnas derivadas + costo semanal.
+        await _agregarColumnaSiFalta(m, animales, animales.pesoCompra);
+        await _agregarColumnaSiFalta(m, animales, animales.precioKgCompra);
+        await _agregarColumnaSiFalta(m, ventas, ventas.precioKg);
+        await _agregarColumnaSiFalta(m, dietas, dietas.costoAnimalSemana);
+        // Datos existentes se digitaron como costo/día → semanal = día × 7.
+        await customStatement(
+          'UPDATE dietas SET costo_animal_semana = costo_animal_dia * 7 '
+          'WHERE costo_animal_semana = 0 OR costo_animal_semana IS NULL',
+        );
       }
     },
   );

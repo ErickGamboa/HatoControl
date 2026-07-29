@@ -47,6 +47,15 @@ Quality checks / comandos de calidad:
 ./scripts/test.sh
 ```
 
+Round-1 money/sync evaluator (utilidad ₡/kg, dieta semanal, sync columns):
+
+```bash
+chmod +x scripts/verify_ronda1.sh   # once
+./scripts/verify_ronda1.sh
+```
+
+Coverage matrix (what is automated vs manual/cloud): [`test/QA_CORRECCIONES_R1.md`](test/QA_CORRECCIONES_R1.md).
+
 Or manually:
 
 ```bash

@@ -52,13 +52,14 @@ void main() {
     await dietasRepo.crearDieta(
       fincaId: 'finca-1',
       nombre: 'Concentrado Premium',
-      costoAnimalDia: 180,
+      costoAnimalSemana: 180,
     );
 
     final dietas = await db.select(db.dietas).get();
     expect(dietas, hasLength(1));
     expect(dietas.single.nombre, 'Concentrado Premium');
-    expect(dietas.single.costoAnimalDia, 180);
+    expect(dietas.single.costoAnimalSemana, 180);
+    expect(dietas.single.costoAnimalDia, closeTo(180 / 7, 0.0001));
     expect(dietas.single.moneda, 'CRC');
     expect(dietas.single.pendiente, isTrue);
   });
@@ -70,12 +71,12 @@ void main() {
       await dietasRepo.crearDieta(
         fincaId: 'finca-1',
         nombre: 'Dieta A',
-        costoAnimalDia: 100,
+        costoAnimalSemana: 100,
       );
       await dietasRepo.crearDieta(
         fincaId: 'finca-1',
         nombre: 'Dieta B',
-        costoAnimalDia: 180,
+        costoAnimalSemana: 180,
       );
       final dietas = await db.select(db.dietas).get();
       final dietaA = dietas.firstWhere((d) => d.nombre == 'Dieta A');
@@ -85,7 +86,7 @@ void main() {
       await dietasRepo.editarDieta(
         dietaId: dietaA.id,
         nombre: 'Dieta A',
-        costoAnimalDia: 999,
+        costoAnimalSemana: 999,
       );
       await dietasRepo.asignarDietaALote(loteId: 'lote-1', dietaId: dietaB.id);
 
@@ -94,9 +95,9 @@ void main() {
       final cerrada = asignaciones.firstWhere((a) => a.dietaId == dietaA.id);
       final vigente = asignaciones.firstWhere((a) => a.hasta == null);
       expect(cerrada.hasta, isNotNull);
-      expect(cerrada.costoAnimalDiaSnapshot, 100);
+      expect(cerrada.costoAnimalDiaSnapshot, closeTo(100 / 7, 0.0001));
       expect(vigente.dietaId, dietaB.id);
-      expect(vigente.costoAnimalDiaSnapshot, 180);
+      expect(vigente.costoAnimalDiaSnapshot, closeTo(180 / 7, 0.0001));
 
       final stream = await dietasRepo.observarDietaVigente('lote-1').first;
       expect(stream?.dieta.nombre, 'Dieta B');

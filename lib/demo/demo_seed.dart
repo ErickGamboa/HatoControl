@@ -109,13 +109,13 @@ class DemoSeed {
     await _dietas.crearDieta(
       fincaId: finca.id,
       nombre: 'Concentrado engorde',
-      costoAnimalDia: 450,
+      costoAnimalSemana: 3150,
       descripcion: 'Demo — ración alta energía',
     );
     await _dietas.crearDieta(
       fincaId: finca.id,
       nombre: 'Pasto + mineral',
-      costoAnimalDia: 120,
+      costoAnimalSemana: 840,
     );
     final dietas = await _db.select(_db.dietas).get();
     final dietaEngorde = dietas.firstWhere(

@@ -10,14 +10,20 @@ import '../data/repositories/ventas_repository.dart';
 import '../services.dart';
 
 class _ItemVenta {
-  _ItemVenta({required this.animal, required this.peso, required this.precio});
+  _ItemVenta({
+    required this.animal,
+    required this.peso,
+    required this.precioKg,
+  });
 
   final AnimalRow animal;
-  final double peso;
-  final double precio;
+  double peso;
+  double precioKg;
+
+  double get total => peso * precioKg;
 }
 
-/// Módulo Venta (oro): retiro bloquea · lote de venta · historial con utilidad.
+/// Módulo Venta: retiro bloquea · lote de venta · ₡/kg del lote editable por animal.
 class VentaScreen extends StatefulWidget {
   VentaScreen({
     super.key,
@@ -46,10 +52,9 @@ class _VentaScreenState extends State<VentaScreen>
 
   final _identCtrl = TextEditingController();
   final _pesoCtrl = TextEditingController();
-  final _precioCtrl = TextEditingController();
+  final _precioLoteCtrl = TextEditingController();
   final _identFocus = FocusNode();
   final _pesoFocus = FocusNode();
-  final _precioFocus = FocusNode();
 
   final _enCurso = <_ItemVenta>[];
   bool _guardando = false;
@@ -59,10 +64,9 @@ class _VentaScreenState extends State<VentaScreen>
     _tabs.dispose();
     _identCtrl.dispose();
     _pesoCtrl.dispose();
-    _precioCtrl.dispose();
+    _precioLoteCtrl.dispose();
     _identFocus.dispose();
     _pesoFocus.dispose();
-    _precioFocus.dispose();
     super.dispose();
   }
 
@@ -80,13 +84,16 @@ class _VentaScreenState extends State<VentaScreen>
   String _fmt(double p) =>
       p == p.roundToDouble() ? p.toInt().toString() : p.toStringAsFixed(1);
 
+  String _fmtColon(double p) =>
+      p == p.roundToDouble() ? p.toInt().toString() : p.toStringAsFixed(0);
+
   String _fecha(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   Future<void> _agregarALista() async {
     final ident = _identCtrl.text.trim();
     final peso = _parse(_pesoCtrl);
-    final precio = _parse(_precioCtrl);
+    final precioLote = _parse(_precioLoteCtrl);
     if (ident.isEmpty) {
       _snack('Escaneá o escribí el identificador.');
       _identFocus.requestFocus();
@@ -97,9 +104,8 @@ class _VentaScreenState extends State<VentaScreen>
       _pesoFocus.requestFocus();
       return;
     }
-    if (precio == null) {
-      _snack('Ingresá el precio de venta.');
-      _precioFocus.requestFocus();
+    if (precioLote == null) {
+      _snack('Ingresá el precio del lote (₡/kg).');
       return;
     }
 
@@ -140,23 +146,56 @@ class _VentaScreenState extends State<VentaScreen>
     }
 
     setState(() {
-      _enCurso.add(_ItemVenta(animal: animal, peso: peso, precio: precio));
+      _enCurso.add(
+        _ItemVenta(animal: animal, peso: peso, precioKg: precioLote),
+      );
     });
     _identCtrl.clear();
     _pesoCtrl.clear();
-    _precioCtrl.clear();
     _identFocus.requestFocus();
     _snack('${animal.identificador} agregado');
   }
 
+  Future<void> _editarPrecioAnimal(_ItemVenta item) async {
+    final ctrl = TextEditingController(text: _fmt(item.precioKg));
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('₡/kg · ${item.animal.identificador}'),
+        content: QuickNumberField(
+          controller: ctrl,
+          labelText: 'Precio por kilo',
+          suffixText: '₡/kg',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final v = double.tryParse(ctrl.text.trim().replaceAll(',', '.'));
+    if (v == null || v <= 0) return;
+    setState(() => item.precioKg = v);
+  }
+
   Future<void> _confirmar() async {
     if (_enCurso.isEmpty) return;
+    final totalKg = _enCurso.fold<double>(0, (s, i) => s + i.peso);
+    final totalColon = _enCurso.fold<double>(0, (s, i) => s + i.total);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmar venta'),
         content: Text(
           'Se venden ${_enCurso.length} animal(es).\n'
+          '${_fmt(totalKg)} kg · ₡${_fmtColon(totalColon)}\n\n'
           'Salen del lote de manejo y quedan en el historial.',
         ),
         actions: [
@@ -179,7 +218,7 @@ class _VentaScreenState extends State<VentaScreen>
         fincaId: widget.finca.id,
         items: [
           for (final i in _enCurso)
-            (animalId: i.animal.id, precio: i.precio, peso: i.peso),
+            (animalId: i.animal.id, peso: i.peso, precioKg: i.precioKg),
         ],
       );
       sincronizarSiSePuede();
@@ -222,11 +261,21 @@ class _VentaScreenState extends State<VentaScreen>
   }
 
   Widget _tabEnCurso(ThemeData theme) {
+    final totalKg = _enCurso.fold<double>(0, (s, i) => s + i.peso);
+    final totalColon = _enCurso.fold<double>(0, (s, i) => s + i.total);
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(HatoSpacing.lg),
         child: Column(
           children: [
+            QuickNumberField(
+              key: const ValueKey('venta.precioLote'),
+              controller: _precioLoteCtrl,
+              labelText: 'Precio del lote',
+              suffixText: '₡/kg',
+            ),
+            const SizedBox(height: HatoSpacing.md),
             ScanField(
               key: const ValueKey('venta.animalId'),
               controller: _identCtrl,
@@ -235,30 +284,13 @@ class _VentaScreenState extends State<VentaScreen>
               onSubmitted: (_) => _pesoFocus.requestFocus(),
             ),
             const SizedBox(height: HatoSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: QuickNumberField(
-                    key: const ValueKey('venta.peso'),
-                    controller: _pesoCtrl,
-                    focusNode: _pesoFocus,
-                    labelText: 'Peso',
-                    suffixText: 'kg',
-                    onSubmitted: (_) => _precioFocus.requestFocus(),
-                  ),
-                ),
-                const SizedBox(width: HatoSpacing.md),
-                Expanded(
-                  child: QuickNumberField(
-                    key: const ValueKey('venta.precio'),
-                    controller: _precioCtrl,
-                    focusNode: _precioFocus,
-                    labelText: 'Precio',
-                    suffixText: '₡',
-                    onSubmitted: (_) => _agregarALista(),
-                  ),
-                ),
-              ],
+            QuickNumberField(
+              key: const ValueKey('venta.peso'),
+              controller: _pesoCtrl,
+              focusNode: _pesoFocus,
+              labelText: 'Peso',
+              suffixText: 'kg',
+              onSubmitted: (_) => _agregarALista(),
             ),
             const SizedBox(height: HatoSpacing.md),
             SizedBox(
@@ -279,7 +311,7 @@ class _VentaScreenState extends State<VentaScreen>
               child: Text(
                 _enCurso.isEmpty
                     ? 'Lista vacía'
-                    : '${_enCurso.length} en este lote de venta',
+                    : '${_enCurso.length} · ${_fmt(totalKg)} kg · ₡${_fmtColon(totalColon)}',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -290,7 +322,8 @@ class _VentaScreenState extends State<VentaScreen>
               child: _enCurso.isEmpty
                   ? Center(
                       child: Text(
-                        'Escaneá · peso · precio.\n'
+                        'Precio del lote (₡/kg) · escaneá · peso.\n'
+                        'Podés corregir el ₡/kg de cada animal.\n'
                         'Si hay retiro activo, la app no deja vender.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -309,12 +342,28 @@ class _VentaScreenState extends State<VentaScreen>
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           subtitle: Text(
-                            '${_fmt(item.peso)} kg · ₡${_fmt(item.precio)}',
+                            '${_fmt(item.peso)} kg · ₡${_fmt(item.precioKg)}/kg',
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () =>
-                                setState(() => _enCurso.removeAt(i)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '₡${_fmtColon(item.total)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Corregir ₡/kg',
+                                icon: const Icon(Icons.edit_outlined, size: 20),
+                                onPressed: () => _editarPrecioAnimal(item),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () =>
+                                    setState(() => _enCurso.removeAt(i)),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -403,8 +452,9 @@ class _HistorialVentas extends StatelessWidget {
                       dense: true,
                       title: Text(v.animal.identificador),
                       subtitle: Text(
-                        '${v.venta.peso?.toStringAsFixed(0) ?? '—'} kg · '
-                        '₡${v.venta.precio.toStringAsFixed(0)}',
+                        '${v.venta.peso?.toStringAsFixed(0) ?? '—'} kg'
+                        '${v.venta.precioKg != null ? ' · ₡${v.venta.precioKg!.toStringAsFixed(0)}/kg' : ''}'
+                        ' · ₡${v.venta.precio.toStringAsFixed(0)}',
                       ),
                       trailing: Text(
                         v.utilidad == null

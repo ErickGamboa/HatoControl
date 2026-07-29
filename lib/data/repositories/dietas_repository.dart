@@ -42,18 +42,18 @@ class DietasRepository {
         .watch();
   }
 
+  /// [costoAnimalSemana] es lo que digita el ganadero; el diario = semanal ÷ 7.
+  /// [ingredientes] son solo nombres informativos (costo de ingrediente = 0).
   Future<void> crearDieta({
     required String fincaId,
     required String nombre,
     String? descripcion,
-    required double costoAnimalDia,
+    required double costoAnimalSemana,
     String moneda = 'CRC',
-    List<({String nombre, double costoAnimalDia})> ingredientes = const [],
+    List<String> ingredientes = const [],
   }) async {
     final ahora = DateTime.now();
-    final total = ingredientes.isEmpty
-        ? costoAnimalDia
-        : ingredientes.fold<double>(0, (s, i) => s + i.costoAnimalDia);
+    final costoDia = costoAnimalSemana / 7;
     final dietaId = _uuid.v4();
     await db.transaction(() async {
       await db
@@ -64,22 +64,25 @@ class DietasRepository {
               fincaId: fincaId,
               nombre: nombre,
               descripcion: Value(descripcion),
-              costoAnimalDia: total,
+              costoAnimalSemana: Value(costoAnimalSemana),
+              costoAnimalDia: costoDia,
               moneda: Value(moneda),
               createdAt: ahora,
               updatedAt: ahora,
               pendiente: const Value(true),
             ),
           );
-      for (final ing in ingredientes) {
+      for (final nombreIng in ingredientes) {
+        final n = nombreIng.trim();
+        if (n.isEmpty) continue;
         await db
             .into(db.dietaIngredientes)
             .insert(
               DietaIngredientesCompanion.insert(
                 id: _uuid.v4(),
                 dietaId: dietaId,
-                nombre: ing.nombre,
-                costoAnimalDia: ing.costoAnimalDia,
+                nombre: n,
+                costoAnimalDia: const Value(0),
                 createdAt: ahora,
                 updatedAt: ahora,
                 pendiente: const Value(true),
@@ -103,13 +106,12 @@ class DietasRepository {
         .get();
   }
 
-  /// Reemplaza ingredientes y recalcula costoAnimalDia = Σ costos.
+  /// Reemplaza ingredientes (solo nombres). No toca el costo de la dieta.
   Future<void> reemplazarIngredientes({
     required String dietaId,
-    required List<({String nombre, double costoAnimalDia})> ingredientes,
+    required List<String> ingredientes,
   }) async {
     final ahora = DateTime.now();
-    final total = ingredientes.fold<double>(0, (s, i) => s + i.costoAnimalDia);
     await db.transaction(() async {
       final viejos = await (db.select(
         db.dietaIngredientes,
@@ -125,28 +127,23 @@ class DietasRepository {
           ),
         );
       }
-      for (final ing in ingredientes) {
+      for (final nombreIng in ingredientes) {
+        final n = nombreIng.trim();
+        if (n.isEmpty) continue;
         await db
             .into(db.dietaIngredientes)
             .insert(
               DietaIngredientesCompanion.insert(
                 id: _uuid.v4(),
                 dietaId: dietaId,
-                nombre: ing.nombre,
-                costoAnimalDia: ing.costoAnimalDia,
+                nombre: n,
+                costoAnimalDia: const Value(0),
                 createdAt: ahora,
                 updatedAt: ahora,
                 pendiente: const Value(true),
               ),
             );
       }
-      await (db.update(db.dietas)..where((t) => t.id.equals(dietaId))).write(
-        DietasCompanion(
-          costoAnimalDia: Value(total),
-          updatedAt: Value(ahora),
-          pendiente: const Value(true),
-        ),
-      );
     });
   }
 
@@ -154,16 +151,40 @@ class DietasRepository {
     required String dietaId,
     required String nombre,
     String? descripcion,
-    required double costoAnimalDia,
+    required double costoAnimalSemana,
     String moneda = 'CRC',
   }) async {
     await (db.update(db.dietas)..where((t) => t.id.equals(dietaId))).write(
       DietasCompanion(
         nombre: Value(nombre),
         descripcion: Value(descripcion),
-        costoAnimalDia: Value(costoAnimalDia),
+        costoAnimalSemana: Value(costoAnimalSemana),
+        costoAnimalDia: Value(costoAnimalSemana / 7),
         moneda: Value(moneda),
         updatedAt: Value(DateTime.now()),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
+  /// Cierra la dieta vigente del lote (queda sin dieta). El historial se conserva.
+  Future<void> quitarDietaDeLote(String loteId) async {
+    final ahora = DateTime.now();
+    final vigente =
+        await (db.select(db.loteDietas)..where(
+              (t) =>
+                  t.loteId.equals(loteId) &
+                  t.hasta.isNull() &
+                  t.deletedAt.isNull(),
+            ))
+            .getSingleOrNull();
+    if (vigente == null) return;
+    await (db.update(
+      db.loteDietas,
+    )..where((t) => t.id.equals(vigente.id))).write(
+      LoteDietasCompanion(
+        hasta: Value(ahora),
+        updatedAt: Value(ahora),
         pendiente: const Value(true),
       ),
     );

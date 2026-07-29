@@ -3152,6 +3152,28 @@ class $AnimalesTable extends Animales
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _pesoCompraMeta = const VerificationMeta(
+    'pesoCompra',
+  );
+  @override
+  late final GeneratedColumn<double> pesoCompra = GeneratedColumn<double>(
+    'peso_compra',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _precioKgCompraMeta = const VerificationMeta(
+    'precioKgCompra',
+  );
+  @override
+  late final GeneratedColumn<double> precioKgCompra = GeneratedColumn<double>(
+    'precio_kg_compra',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _fechaCompraMeta = const VerificationMeta(
     'fechaCompra',
   );
@@ -3219,6 +3241,8 @@ class $AnimalesTable extends Animales
     identificador,
     estado,
     precioCompra,
+    pesoCompra,
+    precioKgCompra,
     fechaCompra,
     createdAt,
     updatedAt,
@@ -3281,6 +3305,21 @@ class $AnimalesTable extends Animales
         precioCompra.isAcceptableOrUnknown(
           data['precio_compra']!,
           _precioCompraMeta,
+        ),
+      );
+    }
+    if (data.containsKey('peso_compra')) {
+      context.handle(
+        _pesoCompraMeta,
+        pesoCompra.isAcceptableOrUnknown(data['peso_compra']!, _pesoCompraMeta),
+      );
+    }
+    if (data.containsKey('precio_kg_compra')) {
+      context.handle(
+        _precioKgCompraMeta,
+        precioKgCompra.isAcceptableOrUnknown(
+          data['precio_kg_compra']!,
+          _precioKgCompraMeta,
         ),
       );
     }
@@ -3354,6 +3393,14 @@ class $AnimalesTable extends Animales
         DriftSqlType.double,
         data['${effectivePrefix}precio_compra'],
       ),
+      pesoCompra: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}peso_compra'],
+      ),
+      precioKgCompra: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}precio_kg_compra'],
+      ),
       fechaCompra: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}fecha_compra'],
@@ -3391,7 +3438,15 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
 
   /// activo | vendido | muerto (D-08)
   final String estado;
+
+  /// Total derivado: pesoCompra × precioKgCompra (0 si nació en la finca).
   final double? precioCompra;
+
+  /// Kilos de entrada al comprar (nullable en datos legacy).
+  final double? pesoCompra;
+
+  /// ₡/kg de compra. 0 = nació en la finca. null = legacy / sin precio.
+  final double? precioKgCompra;
   final DateTime? fechaCompra;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -3404,6 +3459,8 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     required this.identificador,
     required this.estado,
     this.precioCompra,
+    this.pesoCompra,
+    this.precioKgCompra,
     this.fechaCompra,
     required this.createdAt,
     required this.updatedAt,
@@ -3420,6 +3477,12 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     map['estado'] = Variable<String>(estado);
     if (!nullToAbsent || precioCompra != null) {
       map['precio_compra'] = Variable<double>(precioCompra);
+    }
+    if (!nullToAbsent || pesoCompra != null) {
+      map['peso_compra'] = Variable<double>(pesoCompra);
+    }
+    if (!nullToAbsent || precioKgCompra != null) {
+      map['precio_kg_compra'] = Variable<double>(precioKgCompra);
     }
     if (!nullToAbsent || fechaCompra != null) {
       map['fecha_compra'] = Variable<DateTime>(fechaCompra);
@@ -3443,6 +3506,12 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       precioCompra: precioCompra == null && nullToAbsent
           ? const Value.absent()
           : Value(precioCompra),
+      pesoCompra: pesoCompra == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pesoCompra),
+      precioKgCompra: precioKgCompra == null && nullToAbsent
+          ? const Value.absent()
+          : Value(precioKgCompra),
       fechaCompra: fechaCompra == null && nullToAbsent
           ? const Value.absent()
           : Value(fechaCompra),
@@ -3467,6 +3536,8 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       identificador: serializer.fromJson<String>(json['identificador']),
       estado: serializer.fromJson<String>(json['estado']),
       precioCompra: serializer.fromJson<double?>(json['precioCompra']),
+      pesoCompra: serializer.fromJson<double?>(json['pesoCompra']),
+      precioKgCompra: serializer.fromJson<double?>(json['precioKgCompra']),
       fechaCompra: serializer.fromJson<DateTime?>(json['fechaCompra']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -3484,6 +3555,8 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       'identificador': serializer.toJson<String>(identificador),
       'estado': serializer.toJson<String>(estado),
       'precioCompra': serializer.toJson<double?>(precioCompra),
+      'pesoCompra': serializer.toJson<double?>(pesoCompra),
+      'precioKgCompra': serializer.toJson<double?>(precioKgCompra),
       'fechaCompra': serializer.toJson<DateTime?>(fechaCompra),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -3499,6 +3572,8 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     String? identificador,
     String? estado,
     Value<double?> precioCompra = const Value.absent(),
+    Value<double?> pesoCompra = const Value.absent(),
+    Value<double?> precioKgCompra = const Value.absent(),
     Value<DateTime?> fechaCompra = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -3511,6 +3586,10 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     identificador: identificador ?? this.identificador,
     estado: estado ?? this.estado,
     precioCompra: precioCompra.present ? precioCompra.value : this.precioCompra,
+    pesoCompra: pesoCompra.present ? pesoCompra.value : this.pesoCompra,
+    precioKgCompra: precioKgCompra.present
+        ? precioKgCompra.value
+        : this.precioKgCompra,
     fechaCompra: fechaCompra.present ? fechaCompra.value : this.fechaCompra,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -3529,6 +3608,12 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       precioCompra: data.precioCompra.present
           ? data.precioCompra.value
           : this.precioCompra,
+      pesoCompra: data.pesoCompra.present
+          ? data.pesoCompra.value
+          : this.pesoCompra,
+      precioKgCompra: data.precioKgCompra.present
+          ? data.precioKgCompra.value
+          : this.precioKgCompra,
       fechaCompra: data.fechaCompra.present
           ? data.fechaCompra.value
           : this.fechaCompra,
@@ -3548,6 +3633,8 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           ..write('identificador: $identificador, ')
           ..write('estado: $estado, ')
           ..write('precioCompra: $precioCompra, ')
+          ..write('pesoCompra: $pesoCompra, ')
+          ..write('precioKgCompra: $precioKgCompra, ')
           ..write('fechaCompra: $fechaCompra, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -3565,6 +3652,8 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     identificador,
     estado,
     precioCompra,
+    pesoCompra,
+    precioKgCompra,
     fechaCompra,
     createdAt,
     updatedAt,
@@ -3581,6 +3670,8 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           other.identificador == this.identificador &&
           other.estado == this.estado &&
           other.precioCompra == this.precioCompra &&
+          other.pesoCompra == this.pesoCompra &&
+          other.precioKgCompra == this.precioKgCompra &&
           other.fechaCompra == this.fechaCompra &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -3595,6 +3686,8 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
   final Value<String> identificador;
   final Value<String> estado;
   final Value<double?> precioCompra;
+  final Value<double?> pesoCompra;
+  final Value<double?> precioKgCompra;
   final Value<DateTime?> fechaCompra;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -3608,6 +3701,8 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     this.identificador = const Value.absent(),
     this.estado = const Value.absent(),
     this.precioCompra = const Value.absent(),
+    this.pesoCompra = const Value.absent(),
+    this.precioKgCompra = const Value.absent(),
     this.fechaCompra = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -3622,6 +3717,8 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     required String identificador,
     this.estado = const Value.absent(),
     this.precioCompra = const Value.absent(),
+    this.pesoCompra = const Value.absent(),
+    this.precioKgCompra = const Value.absent(),
     this.fechaCompra = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -3641,6 +3738,8 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     Expression<String>? identificador,
     Expression<String>? estado,
     Expression<double>? precioCompra,
+    Expression<double>? pesoCompra,
+    Expression<double>? precioKgCompra,
     Expression<DateTime>? fechaCompra,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -3655,6 +3754,8 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
       if (identificador != null) 'identificador': identificador,
       if (estado != null) 'estado': estado,
       if (precioCompra != null) 'precio_compra': precioCompra,
+      if (pesoCompra != null) 'peso_compra': pesoCompra,
+      if (precioKgCompra != null) 'precio_kg_compra': precioKgCompra,
       if (fechaCompra != null) 'fecha_compra': fechaCompra,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -3671,6 +3772,8 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     Value<String>? identificador,
     Value<String>? estado,
     Value<double?>? precioCompra,
+    Value<double?>? pesoCompra,
+    Value<double?>? precioKgCompra,
     Value<DateTime?>? fechaCompra,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -3685,6 +3788,8 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
       identificador: identificador ?? this.identificador,
       estado: estado ?? this.estado,
       precioCompra: precioCompra ?? this.precioCompra,
+      pesoCompra: pesoCompra ?? this.pesoCompra,
+      precioKgCompra: precioKgCompra ?? this.precioKgCompra,
       fechaCompra: fechaCompra ?? this.fechaCompra,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -3714,6 +3819,12 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     }
     if (precioCompra.present) {
       map['precio_compra'] = Variable<double>(precioCompra.value);
+    }
+    if (pesoCompra.present) {
+      map['peso_compra'] = Variable<double>(pesoCompra.value);
+    }
+    if (precioKgCompra.present) {
+      map['precio_kg_compra'] = Variable<double>(precioKgCompra.value);
     }
     if (fechaCompra.present) {
       map['fecha_compra'] = Variable<DateTime>(fechaCompra.value);
@@ -3745,6 +3856,8 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
           ..write('identificador: $identificador, ')
           ..write('estado: $estado, ')
           ..write('precioCompra: $precioCompra, ')
+          ..write('pesoCompra: $pesoCompra, ')
+          ..write('precioKgCompra: $precioKgCompra, ')
           ..write('fechaCompra: $fechaCompra, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -4366,6 +4479,19 @@ class $DietasTable extends Dietas with TableInfo<$DietasTable, DietaRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _costoAnimalSemanaMeta = const VerificationMeta(
+    'costoAnimalSemana',
+  );
+  @override
+  late final GeneratedColumn<double> costoAnimalSemana =
+      GeneratedColumn<double>(
+        'costo_animal_semana',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0),
+      );
   static const VerificationMeta _costoAnimalDiaMeta = const VerificationMeta(
     'costoAnimalDia',
   );
@@ -4441,6 +4567,7 @@ class $DietasTable extends Dietas with TableInfo<$DietasTable, DietaRow> {
     fincaId,
     nombre,
     descripcion,
+    costoAnimalSemana,
     costoAnimalDia,
     moneda,
     createdAt,
@@ -4487,6 +4614,15 @@ class $DietasTable extends Dietas with TableInfo<$DietasTable, DietaRow> {
         descripcion.isAcceptableOrUnknown(
           data['descripcion']!,
           _descripcionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('costo_animal_semana')) {
+      context.handle(
+        _costoAnimalSemanaMeta,
+        costoAnimalSemana.isAcceptableOrUnknown(
+          data['costo_animal_semana']!,
+          _costoAnimalSemanaMeta,
         ),
       );
     }
@@ -4560,6 +4696,10 @@ class $DietasTable extends Dietas with TableInfo<$DietasTable, DietaRow> {
         DriftSqlType.string,
         data['${effectivePrefix}descripcion'],
       ),
+      costoAnimalSemana: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}costo_animal_semana'],
+      )!,
       costoAnimalDia: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}costo_animal_dia'],
@@ -4598,6 +4738,11 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
   final String fincaId;
   final String nombre;
   final String? descripcion;
+
+  /// Costo semanal por animal (como lo digita el ganadero).
+  final double costoAnimalSemana;
+
+  /// Derivado: costoAnimalSemana ÷ 7 (para períodos y snapshots).
   final double costoAnimalDia;
   final String moneda;
   final DateTime createdAt;
@@ -4609,6 +4754,7 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
     required this.fincaId,
     required this.nombre,
     this.descripcion,
+    required this.costoAnimalSemana,
     required this.costoAnimalDia,
     required this.moneda,
     required this.createdAt,
@@ -4625,6 +4771,7 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
     if (!nullToAbsent || descripcion != null) {
       map['descripcion'] = Variable<String>(descripcion);
     }
+    map['costo_animal_semana'] = Variable<double>(costoAnimalSemana);
     map['costo_animal_dia'] = Variable<double>(costoAnimalDia);
     map['moneda'] = Variable<String>(moneda);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -4644,6 +4791,7 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
       descripcion: descripcion == null && nullToAbsent
           ? const Value.absent()
           : Value(descripcion),
+      costoAnimalSemana: Value(costoAnimalSemana),
       costoAnimalDia: Value(costoAnimalDia),
       moneda: Value(moneda),
       createdAt: Value(createdAt),
@@ -4665,6 +4813,7 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
       fincaId: serializer.fromJson<String>(json['fincaId']),
       nombre: serializer.fromJson<String>(json['nombre']),
       descripcion: serializer.fromJson<String?>(json['descripcion']),
+      costoAnimalSemana: serializer.fromJson<double>(json['costoAnimalSemana']),
       costoAnimalDia: serializer.fromJson<double>(json['costoAnimalDia']),
       moneda: serializer.fromJson<String>(json['moneda']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -4681,6 +4830,7 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
       'fincaId': serializer.toJson<String>(fincaId),
       'nombre': serializer.toJson<String>(nombre),
       'descripcion': serializer.toJson<String?>(descripcion),
+      'costoAnimalSemana': serializer.toJson<double>(costoAnimalSemana),
       'costoAnimalDia': serializer.toJson<double>(costoAnimalDia),
       'moneda': serializer.toJson<String>(moneda),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -4695,6 +4845,7 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
     String? fincaId,
     String? nombre,
     Value<String?> descripcion = const Value.absent(),
+    double? costoAnimalSemana,
     double? costoAnimalDia,
     String? moneda,
     DateTime? createdAt,
@@ -4706,6 +4857,7 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
     fincaId: fincaId ?? this.fincaId,
     nombre: nombre ?? this.nombre,
     descripcion: descripcion.present ? descripcion.value : this.descripcion,
+    costoAnimalSemana: costoAnimalSemana ?? this.costoAnimalSemana,
     costoAnimalDia: costoAnimalDia ?? this.costoAnimalDia,
     moneda: moneda ?? this.moneda,
     createdAt: createdAt ?? this.createdAt,
@@ -4721,6 +4873,9 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
       descripcion: data.descripcion.present
           ? data.descripcion.value
           : this.descripcion,
+      costoAnimalSemana: data.costoAnimalSemana.present
+          ? data.costoAnimalSemana.value
+          : this.costoAnimalSemana,
       costoAnimalDia: data.costoAnimalDia.present
           ? data.costoAnimalDia.value
           : this.costoAnimalDia,
@@ -4739,6 +4894,7 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
           ..write('fincaId: $fincaId, ')
           ..write('nombre: $nombre, ')
           ..write('descripcion: $descripcion, ')
+          ..write('costoAnimalSemana: $costoAnimalSemana, ')
           ..write('costoAnimalDia: $costoAnimalDia, ')
           ..write('moneda: $moneda, ')
           ..write('createdAt: $createdAt, ')
@@ -4755,6 +4911,7 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
     fincaId,
     nombre,
     descripcion,
+    costoAnimalSemana,
     costoAnimalDia,
     moneda,
     createdAt,
@@ -4770,6 +4927,7 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
           other.fincaId == this.fincaId &&
           other.nombre == this.nombre &&
           other.descripcion == this.descripcion &&
+          other.costoAnimalSemana == this.costoAnimalSemana &&
           other.costoAnimalDia == this.costoAnimalDia &&
           other.moneda == this.moneda &&
           other.createdAt == this.createdAt &&
@@ -4783,6 +4941,7 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
   final Value<String> fincaId;
   final Value<String> nombre;
   final Value<String?> descripcion;
+  final Value<double> costoAnimalSemana;
   final Value<double> costoAnimalDia;
   final Value<String> moneda;
   final Value<DateTime> createdAt;
@@ -4795,6 +4954,7 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
     this.fincaId = const Value.absent(),
     this.nombre = const Value.absent(),
     this.descripcion = const Value.absent(),
+    this.costoAnimalSemana = const Value.absent(),
     this.costoAnimalDia = const Value.absent(),
     this.moneda = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -4808,6 +4968,7 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
     required String fincaId,
     required String nombre,
     this.descripcion = const Value.absent(),
+    this.costoAnimalSemana = const Value.absent(),
     required double costoAnimalDia,
     this.moneda = const Value.absent(),
     required DateTime createdAt,
@@ -4826,6 +4987,7 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
     Expression<String>? fincaId,
     Expression<String>? nombre,
     Expression<String>? descripcion,
+    Expression<double>? costoAnimalSemana,
     Expression<double>? costoAnimalDia,
     Expression<String>? moneda,
     Expression<DateTime>? createdAt,
@@ -4839,6 +5001,7 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
       if (fincaId != null) 'finca_id': fincaId,
       if (nombre != null) 'nombre': nombre,
       if (descripcion != null) 'descripcion': descripcion,
+      if (costoAnimalSemana != null) 'costo_animal_semana': costoAnimalSemana,
       if (costoAnimalDia != null) 'costo_animal_dia': costoAnimalDia,
       if (moneda != null) 'moneda': moneda,
       if (createdAt != null) 'created_at': createdAt,
@@ -4854,6 +5017,7 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
     Value<String>? fincaId,
     Value<String>? nombre,
     Value<String?>? descripcion,
+    Value<double>? costoAnimalSemana,
     Value<double>? costoAnimalDia,
     Value<String>? moneda,
     Value<DateTime>? createdAt,
@@ -4867,6 +5031,7 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
       fincaId: fincaId ?? this.fincaId,
       nombre: nombre ?? this.nombre,
       descripcion: descripcion ?? this.descripcion,
+      costoAnimalSemana: costoAnimalSemana ?? this.costoAnimalSemana,
       costoAnimalDia: costoAnimalDia ?? this.costoAnimalDia,
       moneda: moneda ?? this.moneda,
       createdAt: createdAt ?? this.createdAt,
@@ -4891,6 +5056,9 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
     }
     if (descripcion.present) {
       map['descripcion'] = Variable<String>(descripcion.value);
+    }
+    if (costoAnimalSemana.present) {
+      map['costo_animal_semana'] = Variable<double>(costoAnimalSemana.value);
     }
     if (costoAnimalDia.present) {
       map['costo_animal_dia'] = Variable<double>(costoAnimalDia.value);
@@ -4923,6 +5091,7 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
           ..write('fincaId: $fincaId, ')
           ..write('nombre: $nombre, ')
           ..write('descripcion: $descripcion, ')
+          ..write('costoAnimalSemana: $costoAnimalSemana, ')
           ..write('costoAnimalDia: $costoAnimalDia, ')
           ..write('moneda: $moneda, ')
           ..write('createdAt: $createdAt, ')
@@ -4979,7 +5148,8 @@ class $DietaIngredientesTable extends DietaIngredientes
     aliasedName,
     false,
     type: DriftSqlType.double,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -5081,8 +5251,6 @@ class $DietaIngredientesTable extends DietaIngredientes
           _costoAnimalDiaMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_costoAnimalDiaMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -5167,6 +5335,8 @@ class DietaIngredienteRow extends DataClass
   final String id;
   final String dietaId;
   final String nombre;
+
+  /// Deja de usarse; se graba 0 para no romper sync con Supabase.
   final double costoAnimalDia;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -5343,7 +5513,7 @@ class DietaIngredientesCompanion extends UpdateCompanion<DietaIngredienteRow> {
     required String id,
     required String dietaId,
     required String nombre,
-    required double costoAnimalDia,
+    this.costoAnimalDia = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -5352,7 +5522,6 @@ class DietaIngredientesCompanion extends UpdateCompanion<DietaIngredienteRow> {
   }) : id = Value(id),
        dietaId = Value(dietaId),
        nombre = Value(nombre),
-       costoAnimalDia = Value(costoAnimalDia),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
   static Insertable<DietaIngredienteRow> custom({
@@ -9051,6 +9220,17 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _precioKgMeta = const VerificationMeta(
+    'precioKg',
+  );
+  @override
+  late final GeneratedColumn<double> precioKg = GeneratedColumn<double>(
+    'precio_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _compradorMeta = const VerificationMeta(
     'comprador',
   );
@@ -9129,6 +9309,7 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
     fecha,
     precio,
     peso,
+    precioKg,
     comprador,
     observaciones,
     createdAt,
@@ -9190,6 +9371,12 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
       context.handle(
         _pesoMeta,
         peso.isAcceptableOrUnknown(data['peso']!, _pesoMeta),
+      );
+    }
+    if (data.containsKey('precio_kg')) {
+      context.handle(
+        _precioKgMeta,
+        precioKg.isAcceptableOrUnknown(data['precio_kg']!, _precioKgMeta),
       );
     }
     if (data.containsKey('comprador')) {
@@ -9268,6 +9455,10 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
         DriftSqlType.double,
         data['${effectivePrefix}peso'],
       ),
+      precioKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}precio_kg'],
+      ),
       comprador: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}comprador'],
@@ -9306,8 +9497,15 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
   final String animalId;
   final String? loteVentaId;
   final DateTime fecha;
+
+  /// Total derivado: peso × precioKg.
   final double precio;
+
+  /// Kilos de salida (obligatorio en ventas nuevas).
   final double? peso;
+
+  /// ₡ por kilo de venta.
+  final double? precioKg;
   final String? comprador;
   final String? observaciones;
   final DateTime createdAt;
@@ -9321,6 +9519,7 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     required this.fecha,
     required this.precio,
     this.peso,
+    this.precioKg,
     this.comprador,
     this.observaciones,
     required this.createdAt,
@@ -9340,6 +9539,9 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     map['precio'] = Variable<double>(precio);
     if (!nullToAbsent || peso != null) {
       map['peso'] = Variable<double>(peso);
+    }
+    if (!nullToAbsent || precioKg != null) {
+      map['precio_kg'] = Variable<double>(precioKg);
     }
     if (!nullToAbsent || comprador != null) {
       map['comprador'] = Variable<String>(comprador);
@@ -9366,6 +9568,9 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
       fecha: Value(fecha),
       precio: Value(precio),
       peso: peso == null && nullToAbsent ? const Value.absent() : Value(peso),
+      precioKg: precioKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(precioKg),
       comprador: comprador == null && nullToAbsent
           ? const Value.absent()
           : Value(comprador),
@@ -9393,6 +9598,7 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
       fecha: serializer.fromJson<DateTime>(json['fecha']),
       precio: serializer.fromJson<double>(json['precio']),
       peso: serializer.fromJson<double?>(json['peso']),
+      precioKg: serializer.fromJson<double?>(json['precioKg']),
       comprador: serializer.fromJson<String?>(json['comprador']),
       observaciones: serializer.fromJson<String?>(json['observaciones']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -9411,6 +9617,7 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
       'fecha': serializer.toJson<DateTime>(fecha),
       'precio': serializer.toJson<double>(precio),
       'peso': serializer.toJson<double?>(peso),
+      'precioKg': serializer.toJson<double?>(precioKg),
       'comprador': serializer.toJson<String?>(comprador),
       'observaciones': serializer.toJson<String?>(observaciones),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -9427,6 +9634,7 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     DateTime? fecha,
     double? precio,
     Value<double?> peso = const Value.absent(),
+    Value<double?> precioKg = const Value.absent(),
     Value<String?> comprador = const Value.absent(),
     Value<String?> observaciones = const Value.absent(),
     DateTime? createdAt,
@@ -9440,6 +9648,7 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     fecha: fecha ?? this.fecha,
     precio: precio ?? this.precio,
     peso: peso.present ? peso.value : this.peso,
+    precioKg: precioKg.present ? precioKg.value : this.precioKg,
     comprador: comprador.present ? comprador.value : this.comprador,
     observaciones: observaciones.present
         ? observaciones.value
@@ -9459,6 +9668,7 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
       fecha: data.fecha.present ? data.fecha.value : this.fecha,
       precio: data.precio.present ? data.precio.value : this.precio,
       peso: data.peso.present ? data.peso.value : this.peso,
+      precioKg: data.precioKg.present ? data.precioKg.value : this.precioKg,
       comprador: data.comprador.present ? data.comprador.value : this.comprador,
       observaciones: data.observaciones.present
           ? data.observaciones.value
@@ -9479,6 +9689,7 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
           ..write('fecha: $fecha, ')
           ..write('precio: $precio, ')
           ..write('peso: $peso, ')
+          ..write('precioKg: $precioKg, ')
           ..write('comprador: $comprador, ')
           ..write('observaciones: $observaciones, ')
           ..write('createdAt: $createdAt, ')
@@ -9497,6 +9708,7 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     fecha,
     precio,
     peso,
+    precioKg,
     comprador,
     observaciones,
     createdAt,
@@ -9514,6 +9726,7 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
           other.fecha == this.fecha &&
           other.precio == this.precio &&
           other.peso == this.peso &&
+          other.precioKg == this.precioKg &&
           other.comprador == this.comprador &&
           other.observaciones == this.observaciones &&
           other.createdAt == this.createdAt &&
@@ -9529,6 +9742,7 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
   final Value<DateTime> fecha;
   final Value<double> precio;
   final Value<double?> peso;
+  final Value<double?> precioKg;
   final Value<String?> comprador;
   final Value<String?> observaciones;
   final Value<DateTime> createdAt;
@@ -9543,6 +9757,7 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     this.fecha = const Value.absent(),
     this.precio = const Value.absent(),
     this.peso = const Value.absent(),
+    this.precioKg = const Value.absent(),
     this.comprador = const Value.absent(),
     this.observaciones = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -9558,6 +9773,7 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     required DateTime fecha,
     required double precio,
     this.peso = const Value.absent(),
+    this.precioKg = const Value.absent(),
     this.comprador = const Value.absent(),
     this.observaciones = const Value.absent(),
     required DateTime createdAt,
@@ -9578,6 +9794,7 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     Expression<DateTime>? fecha,
     Expression<double>? precio,
     Expression<double>? peso,
+    Expression<double>? precioKg,
     Expression<String>? comprador,
     Expression<String>? observaciones,
     Expression<DateTime>? createdAt,
@@ -9593,6 +9810,7 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
       if (fecha != null) 'fecha': fecha,
       if (precio != null) 'precio': precio,
       if (peso != null) 'peso': peso,
+      if (precioKg != null) 'precio_kg': precioKg,
       if (comprador != null) 'comprador': comprador,
       if (observaciones != null) 'observaciones': observaciones,
       if (createdAt != null) 'created_at': createdAt,
@@ -9610,6 +9828,7 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     Value<DateTime>? fecha,
     Value<double>? precio,
     Value<double?>? peso,
+    Value<double?>? precioKg,
     Value<String?>? comprador,
     Value<String?>? observaciones,
     Value<DateTime>? createdAt,
@@ -9625,6 +9844,7 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
       fecha: fecha ?? this.fecha,
       precio: precio ?? this.precio,
       peso: peso ?? this.peso,
+      precioKg: precioKg ?? this.precioKg,
       comprador: comprador ?? this.comprador,
       observaciones: observaciones ?? this.observaciones,
       createdAt: createdAt ?? this.createdAt,
@@ -9655,6 +9875,9 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     }
     if (peso.present) {
       map['peso'] = Variable<double>(peso.value);
+    }
+    if (precioKg.present) {
+      map['precio_kg'] = Variable<double>(precioKg.value);
     }
     if (comprador.present) {
       map['comprador'] = Variable<String>(comprador.value);
@@ -9689,6 +9912,7 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
           ..write('fecha: $fecha, ')
           ..write('precio: $precio, ')
           ..write('peso: $peso, ')
+          ..write('precioKg: $precioKg, ')
           ..write('comprador: $comprador, ')
           ..write('observaciones: $observaciones, ')
           ..write('createdAt: $createdAt, ')
@@ -13470,6 +13694,8 @@ typedef $$AnimalesTableCreateCompanionBuilder =
       required String identificador,
       Value<String> estado,
       Value<double?> precioCompra,
+      Value<double?> pesoCompra,
+      Value<double?> precioKgCompra,
       Value<DateTime?> fechaCompra,
       required DateTime createdAt,
       required DateTime updatedAt,
@@ -13485,6 +13711,8 @@ typedef $$AnimalesTableUpdateCompanionBuilder =
       Value<String> identificador,
       Value<String> estado,
       Value<double?> precioCompra,
+      Value<double?> pesoCompra,
+      Value<double?> precioKgCompra,
       Value<DateTime?> fechaCompra,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -13529,6 +13757,16 @@ class $$AnimalesTableFilterComposer
 
   ColumnFilters<double> get precioCompra => $composableBuilder(
     column: $table.precioCompra,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pesoCompra => $composableBuilder(
+    column: $table.pesoCompra,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get precioKgCompra => $composableBuilder(
+    column: $table.precioKgCompra,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13597,6 +13835,16 @@ class $$AnimalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get pesoCompra => $composableBuilder(
+    column: $table.pesoCompra,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get precioKgCompra => $composableBuilder(
+    column: $table.precioKgCompra,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get fechaCompra => $composableBuilder(
     column: $table.fechaCompra,
     builder: (column) => ColumnOrderings(column),
@@ -13654,6 +13902,16 @@ class $$AnimalesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get pesoCompra => $composableBuilder(
+    column: $table.pesoCompra,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get precioKgCompra => $composableBuilder(
+    column: $table.precioKgCompra,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get fechaCompra => $composableBuilder(
     column: $table.fechaCompra,
     builder: (column) => column,
@@ -13706,6 +13964,8 @@ class $$AnimalesTableTableManager
                 Value<String> identificador = const Value.absent(),
                 Value<String> estado = const Value.absent(),
                 Value<double?> precioCompra = const Value.absent(),
+                Value<double?> pesoCompra = const Value.absent(),
+                Value<double?> precioKgCompra = const Value.absent(),
                 Value<DateTime?> fechaCompra = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -13719,6 +13979,8 @@ class $$AnimalesTableTableManager
                 identificador: identificador,
                 estado: estado,
                 precioCompra: precioCompra,
+                pesoCompra: pesoCompra,
+                precioKgCompra: precioKgCompra,
                 fechaCompra: fechaCompra,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -13734,6 +13996,8 @@ class $$AnimalesTableTableManager
                 required String identificador,
                 Value<String> estado = const Value.absent(),
                 Value<double?> precioCompra = const Value.absent(),
+                Value<double?> pesoCompra = const Value.absent(),
+                Value<double?> precioKgCompra = const Value.absent(),
                 Value<DateTime?> fechaCompra = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
@@ -13747,6 +14011,8 @@ class $$AnimalesTableTableManager
                 identificador: identificador,
                 estado: estado,
                 precioCompra: precioCompra,
+                pesoCompra: pesoCompra,
+                precioKgCompra: precioKgCompra,
                 fechaCompra: fechaCompra,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -14054,6 +14320,7 @@ typedef $$DietasTableCreateCompanionBuilder =
       required String fincaId,
       required String nombre,
       Value<String?> descripcion,
+      Value<double> costoAnimalSemana,
       required double costoAnimalDia,
       Value<String> moneda,
       required DateTime createdAt,
@@ -14068,6 +14335,7 @@ typedef $$DietasTableUpdateCompanionBuilder =
       Value<String> fincaId,
       Value<String> nombre,
       Value<String?> descripcion,
+      Value<double> costoAnimalSemana,
       Value<double> costoAnimalDia,
       Value<String> moneda,
       Value<DateTime> createdAt,
@@ -14103,6 +14371,11 @@ class $$DietasTableFilterComposer
 
   ColumnFilters<String> get descripcion => $composableBuilder(
     column: $table.descripcion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get costoAnimalSemana => $composableBuilder(
+    column: $table.costoAnimalSemana,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14166,6 +14439,11 @@ class $$DietasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get costoAnimalSemana => $composableBuilder(
+    column: $table.costoAnimalSemana,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get costoAnimalDia => $composableBuilder(
     column: $table.costoAnimalDia,
     builder: (column) => ColumnOrderings(column),
@@ -14217,6 +14495,11 @@ class $$DietasTableAnnotationComposer
 
   GeneratedColumn<String> get descripcion => $composableBuilder(
     column: $table.descripcion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get costoAnimalSemana => $composableBuilder(
+    column: $table.costoAnimalSemana,
     builder: (column) => column,
   );
 
@@ -14273,6 +14556,7 @@ class $$DietasTableTableManager
                 Value<String> fincaId = const Value.absent(),
                 Value<String> nombre = const Value.absent(),
                 Value<String?> descripcion = const Value.absent(),
+                Value<double> costoAnimalSemana = const Value.absent(),
                 Value<double> costoAnimalDia = const Value.absent(),
                 Value<String> moneda = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -14285,6 +14569,7 @@ class $$DietasTableTableManager
                 fincaId: fincaId,
                 nombre: nombre,
                 descripcion: descripcion,
+                costoAnimalSemana: costoAnimalSemana,
                 costoAnimalDia: costoAnimalDia,
                 moneda: moneda,
                 createdAt: createdAt,
@@ -14299,6 +14584,7 @@ class $$DietasTableTableManager
                 required String fincaId,
                 required String nombre,
                 Value<String?> descripcion = const Value.absent(),
+                Value<double> costoAnimalSemana = const Value.absent(),
                 required double costoAnimalDia,
                 Value<String> moneda = const Value.absent(),
                 required DateTime createdAt,
@@ -14311,6 +14597,7 @@ class $$DietasTableTableManager
                 fincaId: fincaId,
                 nombre: nombre,
                 descripcion: descripcion,
+                costoAnimalSemana: costoAnimalSemana,
                 costoAnimalDia: costoAnimalDia,
                 moneda: moneda,
                 createdAt: createdAt,
@@ -14346,7 +14633,7 @@ typedef $$DietaIngredientesTableCreateCompanionBuilder =
       required String id,
       required String dietaId,
       required String nombre,
-      required double costoAnimalDia,
+      Value<double> costoAnimalDia,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
@@ -14567,7 +14854,7 @@ class $$DietaIngredientesTableTableManager
                 required String id,
                 required String dietaId,
                 required String nombre,
-                required double costoAnimalDia,
+                Value<double> costoAnimalDia = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -16299,6 +16586,7 @@ typedef $$VentasTableCreateCompanionBuilder =
       required DateTime fecha,
       required double precio,
       Value<double?> peso,
+      Value<double?> precioKg,
       Value<String?> comprador,
       Value<String?> observaciones,
       required DateTime createdAt,
@@ -16315,6 +16603,7 @@ typedef $$VentasTableUpdateCompanionBuilder =
       Value<DateTime> fecha,
       Value<double> precio,
       Value<double?> peso,
+      Value<double?> precioKg,
       Value<String?> comprador,
       Value<String?> observaciones,
       Value<DateTime> createdAt,
@@ -16360,6 +16649,11 @@ class $$VentasTableFilterComposer
 
   ColumnFilters<double> get peso => $composableBuilder(
     column: $table.peso,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get precioKg => $composableBuilder(
+    column: $table.precioKg,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16433,6 +16727,11 @@ class $$VentasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get precioKg => $composableBuilder(
+    column: $table.precioKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get comprador => $composableBuilder(
     column: $table.comprador,
     builder: (column) => ColumnOrderings(column),
@@ -16493,6 +16792,9 @@ class $$VentasTableAnnotationComposer
   GeneratedColumn<double> get peso =>
       $composableBuilder(column: $table.peso, builder: (column) => column);
 
+  GeneratedColumn<double> get precioKg =>
+      $composableBuilder(column: $table.precioKg, builder: (column) => column);
+
   GeneratedColumn<String> get comprador =>
       $composableBuilder(column: $table.comprador, builder: (column) => column);
 
@@ -16548,6 +16850,7 @@ class $$VentasTableTableManager
                 Value<DateTime> fecha = const Value.absent(),
                 Value<double> precio = const Value.absent(),
                 Value<double?> peso = const Value.absent(),
+                Value<double?> precioKg = const Value.absent(),
                 Value<String?> comprador = const Value.absent(),
                 Value<String?> observaciones = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -16562,6 +16865,7 @@ class $$VentasTableTableManager
                 fecha: fecha,
                 precio: precio,
                 peso: peso,
+                precioKg: precioKg,
                 comprador: comprador,
                 observaciones: observaciones,
                 createdAt: createdAt,
@@ -16578,6 +16882,7 @@ class $$VentasTableTableManager
                 required DateTime fecha,
                 required double precio,
                 Value<double?> peso = const Value.absent(),
+                Value<double?> precioKg = const Value.absent(),
                 Value<String?> comprador = const Value.absent(),
                 Value<String?> observaciones = const Value.absent(),
                 required DateTime createdAt,
@@ -16592,6 +16897,7 @@ class $$VentasTableTableManager
                 fecha: fecha,
                 precio: precio,
                 peso: peso,
+                precioKg: precioKg,
                 comprador: comprador,
                 observaciones: observaciones,
                 createdAt: createdAt,

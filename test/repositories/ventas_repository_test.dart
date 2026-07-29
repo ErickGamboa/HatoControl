@@ -79,25 +79,13 @@ void main() {
     );
     await ventasRepo.actualizarCompra(
       animalId: 'animal-1',
+      pesoCompra: 200,
+      precioKgCompra: 2600,
       precioCompra: 520000,
     );
 
     final r = await ventasRepo.resumenDe('animal-1');
     expect(r.precioCompra, 520000);
     expect(r.costoSanitario, 18000);
-  });
-
-  test('repetirUltimoEvento duplica ficha del último evento', () async {
-    await seedAnimal();
-    await sanidadRepo.registrarEvento(
-      animalId: 'animal-1',
-      tipo: TipoEventoSanitario.vacuna,
-      producto: 'Clostridial',
-      dosis: '5 ml',
-      costo: 3500,
-    );
-    final ok = await sanidadRepo.repetirUltimoEvento(animalId: 'animal-1');
-    expect(ok, isTrue);
-    expect(await db.select(db.eventosSanitarios).get(), hasLength(2));
   });
 }

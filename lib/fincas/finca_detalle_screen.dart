@@ -280,7 +280,7 @@ class _TrabajoHero extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Pesaje en la manga · tocar y listo',
+                      'Trabajo en manga',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white.withValues(alpha: 0.9),
                       ),

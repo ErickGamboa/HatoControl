@@ -81,8 +81,8 @@ class PeriodoLote {
 /// (jornada más antigua primero).
 ///
 /// Si un animal tiene más de un pesaje el mismo día, se usa el último. La
-/// ganancia de cada animal se calcula contra su propio pesaje anterior (en
-/// cualquier jornada previa, no necesariamente la inmediata).
+/// ganancia de cada período solo incluye animales pesados en **ambas**
+/// jornadas consecutivas del lote.
 List<PeriodoLote> resumenPorPeriodos(List<PesajeDeAnimal> pesajes) {
   if (pesajes.isEmpty) return const [];
 
@@ -107,6 +107,7 @@ List<PeriodoLote> resumenPorPeriodos(List<PesajeDeAnimal> pesajes) {
   final resultado = <PeriodoLote>[];
   for (var i = 0; i < jornadas.length; i++) {
     final dia = jornadas[i];
+    final diaPrevio = i == 0 ? null : jornadas[i - 1];
     final pesos = <double>[];
     final ganancias = <double>[];
     final gananciasDiarias = <double>[];
@@ -116,15 +117,9 @@ List<PeriodoLote> resumenPorPeriodos(List<PesajeDeAnimal> pesajes) {
       if (actual == null) continue;
       pesos.add(actual.peso);
 
-      // Pesaje previo del mismo animal (la jornada anterior más cercana).
-      DateTime? diaPrevio;
-      for (final d in dias.keys) {
-        if (d.isBefore(dia) && (diaPrevio == null || d.isAfter(diaPrevio))) {
-          diaPrevio = d;
-        }
-      }
       if (diaPrevio != null) {
-        final previo = dias[diaPrevio]!;
+        final previo = dias[diaPrevio];
+        if (previo == null) continue;
         final ganancia = actual.peso - previo.peso;
         final numDias = diasCalendario(diaPrevio, dia);
         ganancias.add(ganancia);
@@ -136,7 +131,7 @@ List<PeriodoLote> resumenPorPeriodos(List<PesajeDeAnimal> pesajes) {
 
     resultado.add(
       PeriodoLote(
-        desde: i == 0 ? null : jornadas[i - 1],
+        desde: diaPrevio,
         hasta: dia,
         animales: pesos.length,
         pesoPromedio: promedio(pesos),

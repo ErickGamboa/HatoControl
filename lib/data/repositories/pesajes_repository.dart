@@ -171,13 +171,17 @@ class PesajesRepository {
 
   /// Crea un animal nuevo en un lote y registra su primer pesaje (peso de
   /// entrada), todo en una transacción. Ambas filas quedan pendientes de subir.
-  /// [precioCompra] null = nació en la finca / sin precio de compra.
+  ///
+  /// Compra: [pesoCompra] × [precioKgCompra] = total en [precioCompra].
+  /// Nació en la finca: [precioKgCompra] = 0 → compra ₡0.
   Future<void> crearAnimalConPesaje({
     required String fincaId,
     required String loteId,
     required String identificador,
     required double peso,
     required String registradoPor,
+    double? pesoCompra,
+    double? precioKgCompra,
     double? precioCompra,
   }) async {
     final existente = await buscarAnimal(fincaId, identificador);
@@ -187,6 +191,13 @@ class PesajesRepository {
 
     final ahora = DateTime.now();
     final animalId = _uuid.v4();
+    final nacioEnFinca = precioKgCompra == 0;
+    final totalCompra = nacioEnFinca
+        ? 0.0
+        : precioCompra ??
+              ((pesoCompra != null && precioKgCompra != null)
+                  ? pesoCompra * precioKgCompra
+                  : null);
     await db.transaction(() async {
       await db
           .into(db.animales)
@@ -196,8 +207,12 @@ class PesajesRepository {
               fincaId: fincaId,
               loteId: loteId,
               identificador: identificador,
-              precioCompra: Value(precioCompra),
-              fechaCompra: Value(precioCompra == null ? null : ahora),
+              pesoCompra: Value(nacioEnFinca ? null : pesoCompra),
+              precioKgCompra: Value(precioKgCompra),
+              precioCompra: Value(totalCompra),
+              fechaCompra: Value(
+                nacioEnFinca || totalCompra == null ? null : ahora,
+              ),
               createdAt: ahora,
               updatedAt: ahora,
               pendiente: const Value(true),

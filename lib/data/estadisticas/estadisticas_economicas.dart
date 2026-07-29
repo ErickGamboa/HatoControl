@@ -25,17 +25,29 @@ class ResumenEconomicoAnimal {
     required this.utilidad,
     required this.margenPorcentaje,
     required this.rentabilidadPorcentaje,
+    this.pesoCompra,
+    this.precioKgCompra,
+    this.pesoVenta,
+    this.precioKgVenta,
+    this.compraConfiable = true,
   });
 
   final double? precioCompra;
+  final double? pesoCompra;
+  final double? precioKgCompra;
   final double costoAlimentacion;
   final double costoSanitario;
   final double costoOtros;
   final double? precioVenta;
+  final double? pesoVenta;
+  final double? precioKgVenta;
   final double costoTotal;
   final double? utilidad;
   final double? margenPorcentaje;
   final double? rentabilidadPorcentaje;
+
+  /// false si el animal parece comprado pero falta ₡/kg (utilidad no confiable).
+  final bool compraConfiable;
 }
 
 /// Días en un período de alimentación (inclusive start, exclusive end if set).

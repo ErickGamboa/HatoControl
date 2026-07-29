@@ -6,7 +6,7 @@ import '../data/repositories/dietas_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
 import '../services.dart';
 import 'animal_ficha_screen.dart';
-import 'animal_sanidad_tab.dart';
+
 /// Lista los animales de un lote (con su peso actual) y permite buscarlos.
 /// Al tocar un animal se abre su historial de pesajes.
 class LoteAnimalesScreen extends StatefulWidget {
@@ -62,20 +62,10 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
   String _fmt(double p) =>
       p == p.roundToDouble() ? p.toInt().toString() : p.toStringAsFixed(1);
 
-  /// Selector de dieta para este lote.
+  /// Selector de dieta para este lote (incluye opción Sin dieta).
   Future<void> _asignarDieta() async {
     final dietas = await dietasRepo.observarDietas(widget.lote.fincaId).first;
     if (!mounted) return;
-    if (dietas.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Primero creá dietas en la sección Dietas de la finca.',
-          ),
-        ),
-      );
-      return;
-    }
 
     final dietaId = await showModalBottomSheet<String>(
       context: context,
@@ -87,7 +77,7 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Text(
-                'Asignar dieta a "${widget.lote.nombre}"',
+                'Dieta de "${widget.lote.nombre}"',
                 style: Theme.of(ctx).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -97,15 +87,27 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
               child: ListView(
                 shrinkWrap: true,
                 children: [
-                  for (final d in dietas)
-                    ListTile(
-                      title: Text(d.nombre),
-                      subtitle: Text(
-                        '₡${d.costoAnimalDia == d.costoAnimalDia.roundToDouble() ? d.costoAnimalDia.toInt() : d.costoAnimalDia.toStringAsFixed(0)} / animal / día',
+                  ListTile(
+                    leading: const Icon(Icons.block_outlined),
+                    title: const Text('Sin dieta'),
+                    subtitle: const Text('Costo de dieta ₡0'),
+                    onTap: () => Navigator.pop(ctx, ''),
+                  ),
+                  if (dietas.isEmpty)
+                    const ListTile(
+                      title: Text('No hay dietas en el catálogo'),
+                      subtitle: Text('Creálas en la sección Dietas'),
+                    )
+                  else
+                    for (final d in dietas)
+                      ListTile(
+                        title: Text(d.nombre),
+                        subtitle: Text(
+                          '₡${(d.costoAnimalSemana > 0 ? d.costoAnimalSemana : d.costoAnimalDia * 7).toStringAsFixed(0)} / animal / semana',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.pop(ctx, d.id),
                       ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.pop(ctx, d.id),
-                    ),
                 ],
               ),
             ),
@@ -116,6 +118,10 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
     );
 
     if (dietaId == null) return;
+    if (dietaId.isEmpty) {
+      await _quitarDieta();
+      return;
+    }
     await dietasRepo.asignarDietaALote(
       loteId: widget.lote.id,
       dietaId: dietaId,
@@ -125,6 +131,16 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Dieta asignada al lote.')));
+    }
+  }
+
+  Future<void> _quitarDieta() async {
+    await dietasRepo.quitarDietaDeLote(widget.lote.id);
+    sincronizarSiSePuede();
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Dieta quitada del lote.')));
     }
   }
 
@@ -218,35 +234,14 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.lote.nombre),
-        actions: [
-          IconButton(
-            tooltip: 'Tratamiento al lote',
-            icon: const Icon(Icons.vaccines_outlined),
-            onPressed: () async {
-              final n = await aplicarSanidadAlLote(
-                context,
-                lote: widget.lote,
-                responsableId: widget.usuarioId,
-              );
-              if (n != null && n > 0 && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Tratamiento aplicado a $n animal(es).'),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(widget.lote.nombre)),
       body: Column(
         children: [
           _TarjetaDietaLote(
             dietaStream: _dietaStream,
             resumenStream: _resumenStream,
             onAsignar: _asignarDieta,
+            onQuitar: _quitarDieta,
           ),
           // Buscador (fuera del StreamBuilder: nunca pierde el foco)
           Padding(
@@ -441,17 +436,22 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
   }
 }
 
-/// Tarjeta con la dieta vigente del lote, costo y último kg/día promedio.
+/// Tarjeta con la dieta vigente del lote y ganancia promedio del último período.
 class _TarjetaDietaLote extends StatelessWidget {
   const _TarjetaDietaLote({
     required this.dietaStream,
     required this.resumenStream,
     required this.onAsignar,
+    required this.onQuitar,
   });
 
   final Stream<DietaVigenteLote?> dietaStream;
   final Stream<List<PeriodoLote>> resumenStream;
   final VoidCallback onAsignar;
+  final VoidCallback onQuitar;
+
+  String _fecha(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
@@ -463,87 +463,114 @@ class _TarjetaDietaLote extends StatelessWidget {
         return StreamBuilder<List<PeriodoLote>>(
           stream: resumenStream,
           builder: (context, resumenSnap) {
-            double? kgDia;
             final periodos = resumenSnap.data ?? const [];
+            PeriodoLote? ultimoConGanancia;
             for (var i = periodos.length - 1; i >= 0; i--) {
-              if (periodos[i].gananciaDiariaPromedio != null) {
-                kgDia = periodos[i].gananciaDiariaPromedio;
+              if (periodos[i].gananciaPromedio != null) {
+                ultimoConGanancia = periodos[i];
                 break;
               }
             }
+            final soloUnaJornada =
+                periodos.length == 1 ||
+                (periodos.isNotEmpty &&
+                    periodos.every((p) => p.gananciaPromedio == null));
 
             return Material(
               color: theme.colorScheme.secondaryContainer,
-              child: InkWell(
-                onTap: onAsignar,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.restaurant_menu,
-                        color: theme.colorScheme.onSecondaryContainer,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              vigente == null
-                                  ? 'Sin dieta asignada'
-                                  : vigente.dieta.nombre,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSecondaryContainer,
-                              ),
-                            ),
-                            if (vigente != null)
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.restaurant_menu,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                '₡${vigente.asignacion.costoAnimalDiaSnapshot == vigente.asignacion.costoAnimalDiaSnapshot.roundToDouble() ? vigente.asignacion.costoAnimalDiaSnapshot.toInt() : vigente.asignacion.costoAnimalDiaSnapshot.toStringAsFixed(0)} / animal / día',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSecondaryContainer,
-                                ),
-                              )
-                            else
-                              Text(
-                                'Tocá para asignar una dieta',
-                                style: theme.textTheme.bodySmall?.copyWith(
+                                vigente == null
+                                    ? 'Sin dieta'
+                                    : vigente.dieta.nombre,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
                                   color: theme.colorScheme.onSecondaryContainer,
                                 ),
                               ),
-                          ],
+                              if (vigente != null)
+                                Text(
+                                  '₡${(vigente.asignacion.costoAnimalDiaSnapshot * 7).toStringAsFixed(0)} / animal / semana',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color:
+                                        theme.colorScheme.onSecondaryContainer,
+                                  ),
+                                )
+                              else
+                                Text(
+                                  'Tocá para asignar una dieta',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color:
+                                        theme.colorScheme.onSecondaryContainer,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: vigente == null
+                              ? 'Asignar dieta'
+                              : 'Cambiar dieta',
+                          icon: const Icon(Icons.edit),
+                          onPressed: onAsignar,
+                        ),
+                        if (vigente != null)
+                          IconButton(
+                            tooltip: 'Quitar dieta',
+                            icon: const Icon(Icons.link_off),
+                            onPressed: onQuitar,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (ultimoConGanancia != null) ...[
+                      Text(
+                        'Ganancia promedio lote: '
+                        '${ultimoConGanancia.gananciaPromedio! >= 0 ? '+' : ''}'
+                        '${ultimoConGanancia.gananciaPromedio!.toStringAsFixed(1)} kg'
+                        ' · GMD ${ultimoConGanancia.gananciaDiariaPromedio!.toStringAsFixed(2)} kg/día',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSecondaryContainer,
                         ),
                       ),
-                      if (kgDia != null)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${kgDia >= 0 ? '+' : ''}${kgDia.toStringAsFixed(2)}',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF2E7D32),
-                              ),
-                            ),
-                            Text(
-                              'kg/día lote',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSecondaryContainer,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        '${ultimoConGanancia.animalesConGanancia} animales · '
+                        '${_fecha(ultimoConGanancia.desde!)} → ${_fecha(ultimoConGanancia.hasta)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSecondaryContainer,
                         ),
-                      IconButton(
-                        tooltip: 'Cambiar dieta',
-                        icon: const Icon(Icons.edit),
-                        onPressed: onAsignar,
                       ),
-                    ],
-                  ),
+                    ] else if (soloUnaJornada && periodos.isNotEmpty)
+                      Text(
+                        'Hace falta un segundo pesaje del lote para ver la ganancia promedio.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                      )
+                    else if (periodos.isEmpty)
+                      Text(
+                        'Sin pesajes aún en este lote.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             );

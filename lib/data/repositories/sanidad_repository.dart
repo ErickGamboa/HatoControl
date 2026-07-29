@@ -221,35 +221,6 @@ class SanidadRepository {
         .getSingleOrNull();
   }
 
-  Future<bool> repetirUltimoEvento({
-    required String animalId,
-    String? responsableId,
-    double? pesoKg,
-  }) async {
-    final ultimo = await ultimoEvento(animalId);
-    if (ultimo == null) return false;
-    if (ultimo.medicamentoId != null && pesoKg != null) {
-      await aplicarMedicamento(
-        animalId: animalId,
-        medicamentoId: ultimo.medicamentoId!,
-        pesoKg: pesoKg,
-        responsableId: responsableId,
-      );
-      return true;
-    }
-    await registrarEvento(
-      animalId: animalId,
-      tipo: ultimo.tipo,
-      producto: ultimo.producto,
-      dosis: ultimo.dosis,
-      observaciones: ultimo.observaciones,
-      costo: ultimo.costo,
-      diasRetiro: ultimo.diasRetiro,
-      responsableId: responsableId,
-    );
-    return true;
-  }
-
   Future<void> eliminarEvento(String eventoId) async {
     await (db.update(
       db.eventosSanitarios,

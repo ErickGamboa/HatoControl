@@ -135,11 +135,13 @@ class _PesajeScreenState extends State<PesajeScreen> {
         peso: peso,
       );
       sincronizarSiSePuede();
-      _exito(
-        animal,
-        peso,
+      // Corregir no reabre el flujo de sanidad (pesaje ya cerrado).
+      _mostrar(
         'Pesaje corregido: ${animal.identificador} — ${_pesoFmt(peso)} kg',
       );
+      _identCtrl.clear();
+      _pesoCtrl.clear();
+      _identFocus.requestFocus();
       return;
     }
 
@@ -198,7 +200,11 @@ class _PesajeScreenState extends State<PesajeScreen> {
       identificador: ident,
       peso: alta.pesoCompra,
       registradoPor: widget.usuarioId,
-      precioCompra: alta.nacioEnFinca ? null : alta.precioCompra,
+      pesoCompra: alta.nacioEnFinca ? null : alta.pesoCompra,
+      precioKgCompra: alta.nacioEnFinca ? 0 : alta.precioKgCompra,
+      precioCompra: alta.nacioEnFinca
+          ? 0
+          : alta.pesoCompra * (alta.precioKgCompra ?? 0),
     );
     sincronizarSiSePuede();
 
@@ -360,13 +366,13 @@ class _AltaAnimal {
     required this.loteId,
     required this.pesoCompra,
     required this.nacioEnFinca,
-    this.precioCompra,
+    this.precioKgCompra,
   });
 
   final String loteId;
   final double pesoCompra;
   final bool nacioEnFinca;
-  final double? precioCompra;
+  final double? precioKgCompra;
 }
 
 class _AltaAnimalSheet extends StatefulWidget {
@@ -390,14 +396,21 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
         ? widget.pesoInicial.toInt().toString()
         : widget.pesoInicial.toString(),
   );
-  final _precioCtrl = TextEditingController();
+  final _precioKgCtrl = TextEditingController();
   bool _nacioEnFinca = false;
   String? _loteId;
 
   @override
+  void initState() {
+    super.initState();
+    _pesoCtrl.addListener(() => setState(() {}));
+    _precioKgCtrl.addListener(() => setState(() {}));
+  }
+
+  @override
   void dispose() {
     _pesoCtrl.dispose();
-    _precioCtrl.dispose();
+    _precioKgCtrl.dispose();
     super.dispose();
   }
 
@@ -405,6 +418,16 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
     final v = double.tryParse(c.text.trim().replaceAll(',', '.'));
     if (v == null || v < 0) return null;
     return v;
+  }
+
+  double? get _peso => _parse(_pesoCtrl);
+  double? get _precioKg => _parse(_precioKgCtrl);
+  double? get _totalCompra {
+    if (_nacioEnFinca) return 0;
+    final p = _peso;
+    final kg = _precioKg;
+    if (p == null || kg == null) return null;
+    return p * kg;
   }
 
   void _continuar() {
@@ -415,19 +438,19 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
       ).showSnackBar(const SnackBar(content: Text('Elegí el lote')));
       return;
     }
-    final peso = _parse(_pesoCtrl);
+    final peso = _nacioEnFinca ? widget.pesoInicial : _peso;
     if (peso == null || peso <= 0) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Peso de compra inválido')));
       return;
     }
-    double? precio;
+    double? precioKg;
     if (!_nacioEnFinca) {
-      precio = _parse(_precioCtrl);
-      if (precio == null) {
+      precioKg = _precioKg;
+      if (precioKg == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Precio de compra o marcá “nació”')),
+          const SnackBar(content: Text('Precio por kilo o marcá “nació”')),
         );
         return;
       }
@@ -438,7 +461,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
         loteId: loteId,
         pesoCompra: peso,
         nacioEnFinca: _nacioEnFinca,
-        precioCompra: precio,
+        precioKgCompra: precioKg,
       ),
     );
   }
@@ -447,6 +470,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final total = _totalCompra;
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
@@ -492,25 +516,36 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
                 ],
               ),
               const SizedBox(height: HatoSpacing.lg),
-              QuickNumberField(
-                controller: _pesoCtrl,
-                labelText: 'Peso de compra',
-                suffixText: 'kg',
-              ),
-              const SizedBox(height: HatoSpacing.md),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Nació en la finca'),
-                subtitle: const Text('Sin precio de compra'),
+                subtitle: const Text('Compra ₡0'),
                 value: _nacioEnFinca,
                 onChanged: (v) => setState(() => _nacioEnFinca = v),
               ),
               if (!_nacioEnFinca) ...[
                 const SizedBox(height: HatoSpacing.sm),
                 QuickNumberField(
-                  controller: _precioCtrl,
-                  labelText: 'Precio de compra',
-                  suffixText: '₡',
+                  controller: _pesoCtrl,
+                  labelText: 'Peso de compra',
+                  suffixText: 'kg',
+                ),
+                const SizedBox(height: HatoSpacing.md),
+                QuickNumberField(
+                  controller: _precioKgCtrl,
+                  labelText: 'Precio por kilo',
+                  suffixText: '₡/kg',
+                ),
+              ],
+              if (total != null) ...[
+                const SizedBox(height: HatoSpacing.md),
+                Text(
+                  'Costo del animal: ₡${total == total.roundToDouble() ? total.toInt() : total.toStringAsFixed(0)}',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ],
               const SizedBox(height: HatoSpacing.xl),

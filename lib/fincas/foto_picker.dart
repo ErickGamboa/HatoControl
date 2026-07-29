@@ -5,40 +5,16 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
-/// Deja elegir una foto (cámara o galería), la guarda en una copia local
-/// permanente de la app y devuelve la ruta del archivo. Devuelve null si el
-/// usuario cancela.
+/// Abre la galería, guarda una copia local permanente y devuelve la ruta.
+/// Devuelve null si el usuario cancela.
 Future<String?> elegirFotoFinca(BuildContext context) async {
-  final fuente = await showModalBottomSheet<ImageSource>(
-    context: context,
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.photo_camera),
-            title: const Text('Tomar foto'),
-            onTap: () => Navigator.pop(ctx, ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library),
-            title: const Text('Elegir de la galería'),
-            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-          ),
-        ],
-      ),
-    ),
-  );
-  if (fuente == null) return null;
-
   final XFile? imagen = await ImagePicker().pickImage(
-    source: fuente,
+    source: ImageSource.gallery,
     maxWidth: 1280,
-    imageQuality: 70, // comprime para no subir archivos enormes
+    imageQuality: 70,
   );
   if (imagen == null) return null;
 
-  // Copiar a una carpeta permanente de la app (la ruta temporal se borra).
   final dir = await getApplicationDocumentsDirectory();
   final fotosDir = Directory('${dir.path}/fincas_fotos');
   if (!await fotosDir.exists()) {

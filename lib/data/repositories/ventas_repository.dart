@@ -127,14 +127,27 @@ class VentasRepository {
 
   Future<void> actualizarCompra({
     required String animalId,
+    double? pesoCompra,
+    double? precioKgCompra,
     double? precioCompra,
     DateTime? fechaCompra,
   }) async {
     final ahora = DateTime.now();
+    final nacio = precioKgCompra == 0;
+    final total = nacio
+        ? 0.0
+        : precioCompra ??
+              ((pesoCompra != null && precioKgCompra != null)
+                  ? pesoCompra * precioKgCompra
+                  : precioCompra);
     await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
       AnimalesCompanion(
-        precioCompra: Value(precioCompra),
-        fechaCompra: Value(fechaCompra),
+        pesoCompra: Value(nacio ? null : pesoCompra),
+        precioKgCompra: Value(precioKgCompra),
+        precioCompra: Value(total),
+        fechaCompra: Value(
+          fechaCompra ?? (nacio || total == null ? null : ahora),
+        ),
         updatedAt: Value(ahora),
         pendiente: const Value(true),
       ),
@@ -142,9 +155,10 @@ class VentasRepository {
   }
 
   /// Confirma un lote de venta (varios animales). Bloquea si alguno está en retiro.
+  /// [items] llevan peso y ₡/kg; el total se calcula como peso × precioKg.
   Future<String> confirmarLoteVenta({
     required String fincaId,
-    required List<({String animalId, double precio, double peso})> items,
+    required List<({String animalId, double peso, double precioKg})> items,
     DateTime? fecha,
   }) async {
     if (items.isEmpty) {
@@ -173,6 +187,7 @@ class VentasRepository {
             ),
           );
       for (final item in items) {
+        final total = item.peso * item.precioKg;
         await db
             .into(db.ventas)
             .insert(
@@ -181,8 +196,9 @@ class VentasRepository {
                 animalId: item.animalId,
                 loteVentaId: Value(loteId),
                 fecha: ahora,
-                precio: item.precio,
+                precio: total,
                 peso: Value(item.peso),
+                precioKg: Value(item.precioKg),
                 createdAt: ahora,
                 updatedAt: ahora,
                 pendiente: const Value(true),
@@ -220,6 +236,7 @@ class VentasRepository {
     required String animalId,
     required double precio,
     double? peso,
+    double? precioKg,
     DateTime? fecha,
     String? comprador,
     String? observaciones,
@@ -230,6 +247,7 @@ class VentasRepository {
       throw AnimalEnRetiroException(retiro);
     }
     final ahora = fecha ?? DateTime.now();
+    final total = (peso != null && precioKg != null) ? peso * precioKg : precio;
     await db.transaction(() async {
       await db
           .into(db.ventas)
@@ -239,8 +257,9 @@ class VentasRepository {
               animalId: animalId,
               loteVentaId: Value(loteVentaId),
               fecha: ahora,
-              precio: precio,
+              precio: total,
               peso: Value(peso),
+              precioKg: Value(precioKg),
               comprador: Value(comprador),
               observaciones: Value(observaciones),
               createdAt: ahora,
@@ -307,8 +326,9 @@ class VentasRepository {
               ..limit(1))
             .getSingleOrNull();
 
-    // Oro: utilidad = venta − (compra + dietas + sanidad). Sin “otros”.
-    final alimentacion = costoAlimentacionDesdePeriodos(periodos);
+    // Dieta se corta en la fecha de venta (o muerte); no sigue corriendo.
+    final corte = venta?.fecha;
+    final alimentacion = costoAlimentacionDesdePeriodos(periodos, hasta: corte);
     final sanitario = costoSanitarioDesdeEventos(
       eventos.map((e) => e.costo).toList(),
     );
@@ -320,16 +340,26 @@ class VentasRepository {
     );
     final total = (animal.precioCompra ?? 0) + alimentacion + sanitario;
 
+    // Compra confiable si hay ₡/kg explícito (0 = nació) o no hay rastro de compra.
+    final compraConfiable =
+        animal.precioKgCompra != null ||
+        (animal.precioCompra == null && animal.fechaCompra == null);
+
     return ResumenEconomicoAnimal(
       precioCompra: animal.precioCompra,
+      pesoCompra: animal.pesoCompra,
+      precioKgCompra: animal.precioKgCompra,
       costoAlimentacion: alimentacion,
       costoSanitario: sanitario,
       costoOtros: 0,
       precioVenta: venta?.precio,
+      pesoVenta: venta?.peso,
+      precioKgVenta: venta?.precioKg,
       costoTotal: total,
       utilidad: utilidad,
       margenPorcentaje: null,
       rentabilidadPorcentaje: null,
+      compraConfiable: compraConfiable,
     );
   }
 }

@@ -128,26 +128,22 @@ void main() {
       );
     });
 
-    test('animal que se saltó una jornada se compara contra su propio pesaje '
-        'anterior', () {
+    test('solo animales con peso en ambas jornadas consecutivas del lote', () {
       final periodos = resumenPorPeriodos([
         (animalId: 'D', fecha: DateTime(2026, 1, 10), peso: 100.0),
         (animalId: 'E', fecha: DateTime(2026, 1, 10), peso: 150.0),
         (animalId: 'E', fecha: DateTime(2026, 2, 15), peso: 160.0),
-        // D falta el 15 Feb y reaparece el 20 Mar.
+        // D falta el 15 Feb y reaparece el 20 Mar: no entra al promedio Feb→Mar.
         (animalId: 'D', fecha: DateTime(2026, 3, 20), peso: 130.0),
         (animalId: 'E', fecha: DateTime(2026, 3, 20), peso: 175.0),
       ]);
 
       final marzo = periodos.last;
       expect(marzo.animales, 2);
-      expect(marzo.animalesConGanancia, 2);
-      // D: +30 en 69 días (10 Ene → 20 Mar); E: +15 en 33 días.
-      expect(marzo.gananciaPromedio, closeTo((30 + 15) / 2, 0.0001));
-      expect(
-        marzo.gananciaDiariaPromedio,
-        closeTo((30 / 69 + 15 / 33) / 2, 0.0001),
-      );
+      expect(marzo.animalesConGanancia, 1);
+      // Solo E (+15 en 33 días) estuvo en ambas fechas del período.
+      expect(marzo.gananciaPromedio, closeTo(15, 0.0001));
+      expect(marzo.gananciaDiariaPromedio, closeTo(15 / 33, 0.0001));
     });
 
     test('dos pesajes del mismo animal el mismo día: se usa el último', () {

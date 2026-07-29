@@ -58,7 +58,8 @@ dart run build_runner build --delete-conflicting-outputs
 - Sync logic: tests with a fake Supabase boundary or extracted remote gateway.
 - Screens: widget tests with injected fake repositories, not real Supabase.
 - Important flows: integration tests for login, create finca, create lote, create animal + pesaje, offline write then sync.
-- Offline login changes must keep the evaluator set documented in `docs/QA_AUTOMATION.md` passing, especially `test/auth/login_screen_offline_action_test.dart` and `test/integration/offline_login_cached_session_test.dart`.
+- Offline login changes must keep the evaluator set documented in `test/QA_CORRECCIONES_R1.md` passing, especially `test/auth/login_screen_offline_action_test.dart` and `test/integration/offline_login_cached_session_test.dart`.
+- Round-1 money/sync changes: run `./scripts/verify_ronda1.sh` before handing work back.
 
 ## Guardrails for agents
 - Do not add network calls in widgets unless they are auth-only or explicitly approved.

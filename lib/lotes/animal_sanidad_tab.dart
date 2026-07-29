@@ -1,8 +1,10 @@
+import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 
 import '../data/local/database.dart';
+import '../data/repositories/pesajes_repository.dart';
 import '../data/repositories/sanidad_repository.dart';
-import '../sanidad/sanidad_form_dialog.dart';
+import '../sanidad/sanidad_aplicar_sheet.dart';
 import '../services.dart';
 
 /// Pestaña de historial sanitario de un animal.
@@ -13,53 +15,52 @@ class AnimalSanidadTab extends StatelessWidget {
     required this.fincaId,
     required this.responsableId,
     SanidadRepository? repo,
-  }) : repo = repo ?? sanidadRepo;
+    PesajesRepository? pesajesRepository,
+  }) : repo = repo ?? sanidadRepo,
+       pesajesRepository = pesajesRepository ?? pesajesRepo;
 
   final AnimalRow animal;
   final String fincaId;
   final String? responsableId;
   final SanidadRepository repo;
+  final PesajesRepository pesajesRepository;
 
   String _fecha(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
-  Future<void> _registrar(BuildContext context) async {
-    final sugerencias = await repo.sugerenciasProducto(fincaId);
+  Future<void> _abrirMedicamentos(BuildContext context) async {
+    final historial = await pesajesRepository
+        .observarHistorial(animal.id)
+        .first;
     if (!context.mounted) return;
-    final datos = await mostrarFormularioSanidad(
-      context,
-      titulo: 'Registrar sanidad · ${animal.identificador}',
-      sugerenciasProducto: sugerencias,
-    );
-    if (datos == null) return;
-    await repo.registrarEvento(
-      animalId: animal.id,
-      tipo: datos.tipo,
-      producto: datos.producto,
-      dosis: datos.dosis,
-      observaciones: datos.observaciones,
-      costo: datos.costo,
-      responsableId: responsableId,
-    );
-    sincronizarSiSePuede();
-  }
-
-  Future<void> _repetirUltimo(BuildContext context) async {
-    final ok = await repo.repetirUltimoEvento(
-      animalId: animal.id,
-      responsableId: responsableId,
-    );
-    if (!context.mounted) return;
-    if (!ok) {
+    if (historial.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay tratamientos previos.')),
+        const SnackBar(
+          content: Text('Pesá el animal primero para calcular la dosis.'),
+        ),
       );
       return;
     }
-    sincronizarSiSePuede();
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Tratamiento repetido.')));
+    final pesoKg = historial.last.peso;
+    final finca =
+        await (db.select(db.fincas)
+              ..where((t) => t.id.equals(fincaId) & t.deletedAt.isNull()))
+            .getSingleOrNull();
+    if (!context.mounted) return;
+    if (finca == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No se encontró la finca.')));
+      return;
+    }
+    await mostrarSanidadAplicarSheet(
+      context: context,
+      finca: finca,
+      animal: animal,
+      pesoKg: pesoKg,
+      usuarioId: responsableId ?? '',
+      sanidadRepository: repo,
+    );
   }
 
   @override
@@ -79,7 +80,7 @@ class AnimalSanidadTab extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(32),
                   child: Text(
-                    'Sin registros sanitarios.\nUsá + para agregar uno.',
+                    'Sin registros sanitarios.\nUsá + para aplicar medicamentos.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: theme.colorScheme.outline,
@@ -122,19 +123,9 @@ class AnimalSanidadTab extends StatelessWidget {
         ),
         Positioned(
           right: 16,
-          bottom: 80,
-          child: FloatingActionButton.small(
-            heroTag: 'repeat_sanidad',
-            onPressed: () => _repetirUltimo(context),
-            tooltip: 'Repetir último tratamiento',
-            child: const Icon(Icons.replay),
-          ),
-        ),
-        Positioned(
-          right: 16,
           bottom: 16,
           child: FloatingActionButton(
-            onPressed: () => _registrar(context),
+            onPressed: () => _abrirMedicamentos(context),
             child: const Icon(Icons.add),
           ),
         ),
@@ -148,33 +139,4 @@ class AnimalSanidadTab extends StatelessWidget {
     TipoEventoSanitario.medicamento => Icons.medication_outlined,
     _ => Icons.medical_services_outlined,
   };
-}
-
-/// Aplica un evento sanitario a todos los animales del lote.
-Future<int?> aplicarSanidadAlLote(
-  BuildContext context, {
-  required LoteRow lote,
-  required String? responsableId,
-  SanidadRepository? repo,
-}) async {
-  final r = repo ?? sanidadRepo;
-  final sugerencias = await r.sugerenciasProducto(lote.fincaId);
-  if (!context.mounted) return null;
-  final datos = await mostrarFormularioSanidad(
-    context,
-    titulo: 'Tratamiento al lote · ${lote.nombre}',
-    sugerenciasProducto: sugerencias,
-  );
-  if (datos == null) return null;
-  final count = await r.registrarEventoEnLote(
-    loteId: lote.id,
-    tipo: datos.tipo,
-    producto: datos.producto,
-    dosis: datos.dosis,
-    observaciones: datos.observaciones,
-    costo: datos.costo,
-    responsableId: responsableId,
-  );
-  sincronizarSiSePuede();
-  return count;
 }

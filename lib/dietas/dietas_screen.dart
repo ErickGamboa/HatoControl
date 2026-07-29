@@ -5,7 +5,7 @@ import '../data/local/database.dart';
 import '../data/repositories/dietas_repository.dart';
 import '../services.dart';
 
-/// Catálogo de dietas de una finca: crear, editar y ver costo por animal/día.
+/// Catálogo de dietas de una finca: crear, editar y ver costo semanal.
 class DietasScreen extends StatelessWidget {
   DietasScreen({super.key, required this.finca, DietasRepository? repo})
     : repo = repo ?? dietasRepo;
@@ -18,10 +18,20 @@ class DietasScreen extends StatelessWidget {
     final nombreCtrl = TextEditingController(text: dieta?.nombre ?? '');
     final descCtrl = TextEditingController(text: dieta?.descripcion ?? '');
     final costoCtrl = TextEditingController(
-      text: dieta != null ? dieta.costoAnimalDia.toString() : '',
+      text: dieta != null
+          ? (dieta.costoAnimalSemana > 0
+                ? dieta.costoAnimalSemana.toString()
+                : (dieta.costoAnimalDia * 7).toString())
+          : '',
     );
-    final ingredientesCtrl = TextEditingController();
+    var ingredientesTexto = '';
+    if (dieta != null) {
+      final ings = await repo.listarIngredientes(dieta.id);
+      ingredientesTexto = ings.map((i) => i.nombre).join('\n');
+    }
+    final ingredientesCtrl = TextEditingController(text: ingredientesTexto);
 
+    if (!context.mounted) return;
     final guardar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -29,6 +39,7 @@ class DietasScreen extends StatelessWidget {
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextField(
                 controller: nombreCtrl,
@@ -36,6 +47,7 @@ class DietasScreen extends StatelessWidget {
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Nombre',
+                  hintText: 'Nombre de la dieta',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -59,24 +71,45 @@ class DietasScreen extends StatelessWidget {
                   FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
                 ],
                 decoration: const InputDecoration(
-                  labelText:
-                      'Costo total/animal/día (₡) si no hay ingredientes',
+                  hintText: 'Costo semanal por animal',
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                'O ingredientes (nombre · ₡/animal/día), uno por línea:\n'
-                'Pasto, 50\nConcentrado, 120',
-                style: Theme.of(ctx).textTheme.bodySmall,
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: costoCtrl,
+                builder: (context, value, _) {
+                  final semanal = double.tryParse(
+                    value.text.trim().replaceAll(',', '.'),
+                  );
+                  if (semanal == null || semanal < 0) {
+                    return const SizedBox.shrink();
+                  }
+                  final diario = semanal / 7;
+                  final fmt = diario == diario.roundToDouble()
+                      ? diario.toInt().toString()
+                      : diario.toStringAsFixed(0);
+                  final fmtSem = semanal == semanal.roundToDouble()
+                      ? semanal.toInt().toString()
+                      : semanal.toStringAsFixed(0);
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '₡$fmtSem / semana = ₡$fmt / día',
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(ctx).colorScheme.outline,
+                      ),
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: ingredientesCtrl,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  labelText: 'Ingredientes (opcional)',
+                  hintText: 'Ingredientes',
                   border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
                 ),
               ),
             ],
@@ -99,42 +132,30 @@ class DietasScreen extends StatelessWidget {
     final nombre = nombreCtrl.text.trim();
     if (nombre.isEmpty) return;
 
-    final ings = <({String nombre, double costoAnimalDia})>[];
-    for (final line in ingredientesCtrl.text.split('\n')) {
-      final parts = line.split(',');
-      if (parts.length < 2) continue;
-      final n = parts.first.trim();
-      final c = double.tryParse(
-        parts.sublist(1).join(',').trim().replaceAll(',', '.'),
-      );
-      if (n.isEmpty || c == null || c < 0) continue;
-      ings.add((nombre: n, costoAnimalDia: c));
-    }
+    final ings = <String>[
+      for (final line in ingredientesCtrl.text.split('\n'))
+        if (line.trim().isNotEmpty) line.trim(),
+    ];
 
-    final costo = ings.isNotEmpty
-        ? ings.fold<double>(0, (s, i) => s + i.costoAnimalDia)
-        : double.tryParse(costoCtrl.text.replaceAll(',', '.'));
-    if (costo == null || costo < 0) return;
+    final costoSemanal = double.tryParse(
+      costoCtrl.text.trim().replaceAll(',', '.'),
+    );
+    if (costoSemanal == null || costoSemanal < 0) return;
 
     if (esEdicion) {
       await repo.editarDieta(
         dietaId: dieta.id,
         nombre: nombre,
         descripcion: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
-        costoAnimalDia: costo,
+        costoAnimalSemana: costoSemanal,
       );
-      if (ings.isNotEmpty) {
-        await repo.reemplazarIngredientes(
-          dietaId: dieta.id,
-          ingredientes: ings,
-        );
-      }
+      await repo.reemplazarIngredientes(dietaId: dieta.id, ingredientes: ings);
     } else {
       await repo.crearDieta(
         fincaId: finca.id,
         nombre: nombre,
         descripcion: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
-        costoAnimalDia: costo,
+        costoAnimalSemana: costoSemanal,
         ingredientes: ings,
       );
     }
@@ -181,6 +202,9 @@ class DietasScreen extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, i) {
               final d = dietas[i];
+              final semanal = d.costoAnimalSemana > 0
+                  ? d.costoAnimalSemana
+                  : d.costoAnimalDia * 7;
               return Card(
                 margin: EdgeInsets.zero,
                 child: ListTile(
@@ -196,10 +220,16 @@ class DietasScreen extends StatelessWidget {
                       if (d.descripcion != null && d.descripcion!.isNotEmpty)
                         Text(d.descripcion!),
                       Text(
-                        '₡${_fmtCosto(d.costoAnimalDia)} / animal / día',
+                        '₡${_fmtCosto(semanal)} / animal / semana',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      Text(
+                        '₡${_fmtCosto(d.costoAnimalDia)} / día',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
                         ),
                       ),
                       if (d.pendiente)

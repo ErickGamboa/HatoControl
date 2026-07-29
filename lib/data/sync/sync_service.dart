@@ -618,6 +618,7 @@ class SyncService {
                 'nombre': d.nombre,
                 'descripcion': d.descripcion,
                 'costo_animal_dia': d.costoAnimalDia,
+                'costo_animal_semana': d.costoAnimalSemana,
                 'moneda': d.moneda,
                 'created_at': d.createdAt.toIso8601String(),
                 'deleted_at': d.deletedAt?.toIso8601String(),
@@ -645,6 +646,9 @@ class SyncService {
               fincaId: r['finca_id'] as String,
               nombre: r['nombre'] as String,
               descripcion: r['descripcion'] as String?,
+              costoAnimalSemana: r['costo_animal_semana'] != null
+                  ? (r['costo_animal_semana'] as num).toDouble()
+                  : (r['costo_animal_dia'] as num).toDouble() * 7,
               costoAnimalDia: (r['costo_animal_dia'] as num).toDouble(),
               moneda: r['moneda'] as String? ?? 'CRC',
               createdAt: DateTime.parse(r['created_at'] as String),
@@ -788,6 +792,8 @@ class SyncService {
                 'identificador': a.identificador,
                 'estado': a.estado,
                 'precio_compra': a.precioCompra,
+                'peso_compra': a.pesoCompra,
+                'precio_kg_compra': a.precioKgCompra,
                 'fecha_compra': a.fechaCompra?.toIso8601String(),
                 'created_at': a.createdAt.toIso8601String(),
                 'deleted_at': a.deletedAt?.toIso8601String(),
@@ -818,6 +824,12 @@ class SyncService {
               estado: r['estado'] as String? ?? 'activo',
               precioCompra: r['precio_compra'] != null
                   ? (r['precio_compra'] as num).toDouble()
+                  : null,
+              pesoCompra: r['peso_compra'] != null
+                  ? (r['peso_compra'] as num).toDouble()
+                  : null,
+              precioKgCompra: r['precio_kg_compra'] != null
+                  ? (r['precio_kg_compra'] as num).toDouble()
                   : null,
               fechaCompra: r['fecha_compra'] != null
                   ? DateTime.parse(r['fecha_compra'] as String)
@@ -1106,6 +1118,7 @@ class SyncService {
                 'fecha': v.fecha.toIso8601String(),
                 'precio': v.precio,
                 'peso': v.peso,
+                'precio_kg': v.precioKg,
                 'comprador': v.comprador,
                 'observaciones': v.observaciones,
                 'created_at': v.createdAt.toIso8601String(),
@@ -1136,6 +1149,9 @@ class SyncService {
               fecha: DateTime.parse(r['fecha'] as String),
               precio: (r['precio'] as num).toDouble(),
               peso: r['peso'] != null ? (r['peso'] as num).toDouble() : null,
+              precioKg: r['precio_kg'] != null
+                  ? (r['precio_kg'] as num).toDouble()
+                  : null,
               comprador: r['comprador'] as String?,
               observaciones: r['observaciones'] as String?,
               createdAt: DateTime.parse(r['created_at'] as String),
