@@ -10,7 +10,11 @@ import 'helpers/supabase_assert.dart';
 /// E2E visible ronda 1: utilidad ₡/kg, dieta semanal, sync a Supabase.
 ///
 /// ```bash
-/// flutter test -d macos integration_test/ronda1_utilidad_e2e_test.dart \
+/// # Optional: watch simulator screenshots while it runs
+/// ./scripts/watch_e2e_sim.sh /tmp/hato_e2e_watch 4
+///
+/// flutter test -d 0583D3FF-F9D0-4D5F-9484-82BDC0817124 \
+///   integration_test/ronda1_utilidad_e2e_test.dart \
 ///   --dart-define=HATO_E2E_EMAIL=... \
 ///   --dart-define=HATO_E2E_PASSWORD=... \
 ///   --dart-define=HATO_E2E_SLOW_MS=400
@@ -23,7 +27,8 @@ const _fallbackFinca = String.fromEnvironment(
 );
 
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  e2eAttachBinding(binding);
 
   testWidgets(
     'ronda1 e2e: dieta semanal, animal ₡/kg, venta ₡/kg y sync en nube',
@@ -42,6 +47,7 @@ void main() {
       final dietaName = 'R1 Dieta $stamp';
       final animalId = 'R1${stamp % 100000000}';
 
+      await e2eStep('bootstrap + signOut');
       await app.main();
       await tester.pumpAndSettle(const Duration(seconds: 1));
       await pauseIntegration(tester);
@@ -49,17 +55,33 @@ void main() {
       await Supabase.instance.client.auth.signOut();
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
-      await waitFor(tester, find.byKey(const ValueKey('login.email')));
+      await e2eStep('login');
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('login.email')),
+        label: 'login.email',
+      );
       await tester.enterText(find.byKey(const ValueKey('login.email')), _email);
       await tester.enterText(
         find.byKey(const ValueKey('login.password')),
         _password,
       );
       await tester.tap(find.byKey(const ValueKey('login.submit')));
-      await waitFor(tester, find.text('Mis fincas'), timeoutSeconds: 35);
-      await waitFor(tester, find.textContaining('Plan'), timeoutSeconds: 35);
+      await waitFor(
+        tester,
+        find.text('Mis fincas'),
+        timeoutSeconds: 35,
+        label: 'Mis fincas',
+      );
+      await waitFor(
+        tester,
+        find.textContaining('Plan'),
+        timeoutSeconds: 35,
+        label: 'Plan',
+      );
       await pauseIntegration(tester);
 
+      await e2eStep('crear/abrir finca');
       final pudoCrearFinca = await tryTapAndWaitFor(
         tester,
         tapTarget: find.byKey(const ValueKey('fincas.create')),
@@ -72,23 +94,40 @@ void main() {
           fincaName,
         );
         await tester.tap(find.byKey(const ValueKey('fincas.save')));
-        await waitFor(tester, find.text(fincaName), timeoutSeconds: 20);
+        await waitFor(
+          tester,
+          find.text(fincaName),
+          timeoutSeconds: 20,
+          label: fincaName,
+        );
       } else {
-        await waitFor(tester, find.text(fincaParaAbrir), timeoutSeconds: 8);
+        e2eLog('create finca blocked — fallback $fincaParaAbrir');
+        await waitFor(
+          tester,
+          find.text(fincaParaAbrir),
+          timeoutSeconds: 8,
+          label: fincaParaAbrir,
+        );
       }
-      await tester.tap(find.text(fincaParaAbrir));
-      await waitFor(tester, find.byKey(const ValueKey('fincaDetail.lotes')));
+      await tapText(tester, fincaParaAbrir);
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('fincaDetail.lotes')),
+        label: 'fincaDetail.lotes',
+      );
       await pauseIntegration(tester);
 
       // Lote
+      await e2eStep('crear lote $loteName');
       await tester.tap(find.byKey(const ValueKey('fincaDetail.lotes')));
-      await waitFor(tester, find.text('Lotes'));
+      await waitFor(tester, find.text('Lotes'), label: 'Lotes');
       final abrioLote = await tryTapAndWaitFor(
         tester,
         tapTarget: find.byKey(const ValueKey('lotes.create')),
         waitFor: find.byKey(const ValueKey('lotes.name')),
       );
       if (!abrioLote) {
+        await e2eDump(tester, reason: 'lote_dialog_missing');
         fail('No abrió diálogo de lote. ${visibleTextOnScreen(tester)}');
       }
       await tester.enterText(
@@ -96,16 +135,34 @@ void main() {
         loteName,
       );
       await tester.enterText(find.byKey(const ValueKey('lotes.number')), '91');
-      await tester.tap(find.byKey(const ValueKey('lotes.save')));
-      await waitFor(tester, find.text(loteName), timeoutSeconds: 20);
+      await invokeButton(tester, find.byKey(const ValueKey('lotes.save')));
+      await waitFor(
+        tester,
+        find.text(loteName),
+        timeoutSeconds: 20,
+        label: loteName,
+      );
 
       // Dieta semanal + ingredientes
-      await tester.pageBack();
-      await waitFor(tester, find.byKey(const ValueKey('fincaDetail.dietas')));
+      await e2eStep('crear dieta semanal $dietaName');
+      await tapBack(tester);
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('fincaDetail.dietas')),
+        label: 'fincaDetail.dietas',
+      );
       await tester.tap(find.byKey(const ValueKey('fincaDetail.dietas')));
-      await waitFor(tester, find.byKey(const ValueKey('dietas.crear')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('dietas.crear')),
+        label: 'dietas.crear',
+      );
       await tester.tap(find.byKey(const ValueKey('dietas.crear')));
-      await waitFor(tester, find.byKey(const ValueKey('dietas.nombre')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('dietas.nombre')),
+        label: 'dietas.nombre',
+      );
       await tester.enterText(
         find.byKey(const ValueKey('dietas.nombre')),
         dietaName,
@@ -114,39 +171,77 @@ void main() {
         find.byKey(const ValueKey('dietas.costoSemanal')),
         '7000',
       );
-      await tester.pumpAndSettle();
+      await pumpSettleShort(tester);
       await waitFor(
         tester,
         find.byKey(const ValueKey('dietas.equivalenteDia')),
+        label: 'dietas.equivalenteDia',
       );
       expect(find.textContaining('₡1000 / día'), findsWidgets);
       await tester.enterText(
         find.byKey(const ValueKey('dietas.ingredientes')),
         'Pasto\nConcentrado\nMelaza',
       );
-      await tester.tap(find.byKey(const ValueKey('dietas.guardar')));
-      await waitFor(tester, find.text(dietaName), timeoutSeconds: 20);
+      await invokeButton(tester, find.byKey(const ValueKey('dietas.guardar')));
+      await waitFor(
+        tester,
+        find.text(dietaName),
+        timeoutSeconds: 20,
+        label: dietaName,
+      );
       await pauseIntegration(tester);
 
       // Asignar dieta
-      await tester.pageBack();
-      await waitFor(tester, find.byKey(const ValueKey('fincaDetail.lotes')));
+      await e2eStep('asignar dieta al lote');
+      await tapBack(tester);
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('fincaDetail.lotes')),
+        label: 'fincaDetail.lotes',
+      );
       await tester.tap(find.byKey(const ValueKey('fincaDetail.lotes')));
-      await waitFor(tester, find.text(loteName));
+      await waitFor(tester, find.text(loteName), label: loteName);
       await tester.tap(find.text(loteName));
-      await waitFor(tester, find.byKey(const ValueKey('lote.asignarDieta')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('lote.asignarDieta')),
+        label: 'lote.asignarDieta',
+      );
       await tester.tap(find.byKey(const ValueKey('lote.asignarDieta')));
-      await waitFor(tester, find.text(dietaName), timeoutSeconds: 10);
+      await waitFor(
+        tester,
+        find.text(dietaName),
+        timeoutSeconds: 10,
+        label: dietaName,
+      );
       await tester.tap(find.text(dietaName));
-      await waitFor(tester, find.textContaining(dietaName), timeoutSeconds: 15);
-      await tester.pageBack();
-      await waitFor(tester, find.text('Lotes'));
-      await tester.pageBack();
+      await waitFor(
+        tester,
+        find.textContaining(dietaName),
+        timeoutSeconds: 15,
+        label: 'dieta asignada',
+      );
+      await tapBack(tester);
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('lotes.create')),
+        label: 'lotes.create',
+      );
+      await tapBack(tester);
 
       // Trabajo: alta 100 kg × ₡1000
-      await waitFor(tester, find.byKey(const ValueKey('fincaDetail.pesaje')));
+      await e2eStep('alta animal $animalId (₡/kg)');
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('fincaDetail.pesaje')),
+        label: 'fincaDetail.pesaje',
+      );
       await tester.tap(find.byKey(const ValueKey('fincaDetail.pesaje')));
-      await waitFor(tester, find.byKey(const ValueKey('pesaje.animalId')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('pesaje.animalId')),
+        label: 'pesaje.animalId',
+      );
       await tester.enterText(
         find.byKey(const ValueKey('pesaje.animalId')),
         animalId,
@@ -155,15 +250,17 @@ void main() {
         find.byKey(const ValueKey('pesaje.weight')),
         '100',
       );
-      await tester.tap(find.byKey(const ValueKey('pesaje.submit')));
+      await invokeButton(tester, find.byKey(const ValueKey('pesaje.submit')));
       await waitFor(
         tester,
         find.textContaining('Animal nuevo'),
         timeoutSeconds: 15,
+        label: 'Animal nuevo sheet',
       );
       await waitFor(
         tester,
         find.byKey(ValueKey('pesaje.loteNombre.$loteName')),
+        label: 'lote chip',
       );
       await tester.tap(find.byKey(ValueKey('pesaje.loteNombre.$loteName')));
       await tester.enterText(
@@ -174,26 +271,51 @@ void main() {
         find.byKey(const ValueKey('pesaje.alta.precioKg')),
         '1000',
       );
-      await tester.pumpAndSettle();
+      await pumpSettleShort(tester);
       expect(find.textContaining('Costo del animal: ₡100000'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('pesaje.alta.guardar')));
-      await waitFor(tester, find.text(animalId), timeoutSeconds: 20);
+      // Soft keyboard steals taps on iOS — invoke onPressed directly.
+      await invokeButton(
+        tester,
+        find.byKey(const ValueKey('pesaje.alta.guardar')),
+      );
+      await waitFor(
+        tester,
+        find.text(animalId),
+        timeoutSeconds: 20,
+        label: 'animal en pesaje hoy',
+      );
       await pauseIntegration(tester);
 
       // Hoja de vida → Venta (antes de vender): desglose de compra
-      await tester.pageBack();
-      await waitFor(tester, find.byKey(const ValueKey('fincaDetail.lotes')));
+      await e2eStep('verificar economía pre-venta');
+      await tapBack(tester);
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('fincaDetail.lotes')),
+        label: 'fincaDetail.lotes',
+      );
       await tester.tap(find.byKey(const ValueKey('fincaDetail.lotes')));
-      await waitFor(tester, find.text(loteName));
+      await waitFor(tester, find.text(loteName), label: loteName);
       await tester.tap(find.text(loteName));
-      await waitFor(tester, find.text(animalId), timeoutSeconds: 15);
+      await waitFor(
+        tester,
+        find.text(animalId),
+        timeoutSeconds: 15,
+        label: animalId,
+      );
       await tester.tap(find.text(animalId));
-      await waitFor(tester, find.text('Venta'), timeoutSeconds: 15);
-      await tester.tap(find.text('Venta'));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('ficha.tab.venta')),
+        timeoutSeconds: 15,
+        label: 'ficha.tab.venta',
+      );
+      await selectTabIndex(tester, 4); // Venta
       await waitFor(
         tester,
         find.byKey(const ValueKey('economia.titulo')),
         timeoutSeconds: 15,
+        label: 'economia.titulo',
       );
       expect(find.textContaining('100 kg × ₡1000/kg'), findsWidgets);
       expect(find.textContaining('₡100000'), findsWidgets);
@@ -208,13 +330,26 @@ void main() {
       await pauseIntegration(tester);
 
       // Venta 400 kg × ₡1500
-      await tester.pageBack(); // ficha
-      await tester.pageBack(); // lote
-      await waitFor(tester, find.text('Lotes'));
-      await tester.pageBack();
-      await waitFor(tester, find.byKey(const ValueKey('fincaDetail.venta')));
+      await e2eStep('venta 400kg × ₡1500');
+      await tapBack(tester); // ficha
+      await tapBack(tester); // lote
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('lotes.create')),
+        label: 'lotes.create',
+      );
+      await tapBack(tester);
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('fincaDetail.venta')),
+        label: 'fincaDetail.venta',
+      );
       await tester.tap(find.byKey(const ValueKey('fincaDetail.venta')));
-      await waitFor(tester, find.byKey(const ValueKey('venta.precioLote')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('venta.precioLote')),
+        label: 'venta.precioLote',
+      );
       await tester.enterText(
         find.byKey(const ValueKey('venta.precioLote')),
         '1500',
@@ -224,23 +359,53 @@ void main() {
         animalId,
       );
       await tester.enterText(find.byKey(const ValueKey('venta.peso')), '400');
-      await tester.tap(find.byKey(const ValueKey('venta.agregar')));
-      await waitFor(tester, find.textContaining('₡600000'), timeoutSeconds: 15);
-      await tester.tap(find.byKey(const ValueKey('venta.confirmar')));
+      await invokeButton(tester, find.byKey(const ValueKey('venta.agregar')));
+      await waitFor(
+        tester,
+        find.textContaining('₡600000'),
+        timeoutSeconds: 15,
+        label: 'total venta',
+      );
+      await invokeButton(tester, find.byKey(const ValueKey('venta.confirmar')));
       await waitFor(
         tester,
         find.widgetWithText(FilledButton, 'Confirmar'),
         timeoutSeconds: 8,
+        label: 'dialog Confirmar',
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Confirmar').last);
-      await waitFor(tester, find.text('Historial'), timeoutSeconds: 25);
+      await invokeButton(
+        tester,
+        find.widgetWithText(FilledButton, 'Confirmar').last,
+      );
+      await waitFor(
+        tester,
+        find.text('Historial'),
+        timeoutSeconds: 25,
+        label: 'Historial',
+      );
       await tester.tap(find.text('Historial'));
-      await waitFor(tester, find.text(animalId), timeoutSeconds: 20);
+      await waitFor(
+        tester,
+        find.textContaining('utilidad ₡'),
+        timeoutSeconds: 20,
+        label: 'lote venta en historial',
+      );
+      // Animal id lives inside a collapsed ExpansionTile.
+      await tester.tap(find.textContaining('Lote ·').first);
+      await pumpSettleShort(tester);
+      await waitFor(
+        tester,
+        find.text(animalId),
+        timeoutSeconds: 20,
+        label: 'venta historial animal',
+      );
       expect(find.textContaining('400'), findsWidgets);
       expect(find.textContaining('1500'), findsWidgets);
+      expect(find.textContaining('₡500000'), findsWidgets);
       await pauseIntegration(tester, multiplier: 2);
 
       // Sync real a Supabase (#11)
+      await e2eStep('assert sync Supabase');
       final animalCloud = await waitForSupabaseRow(
         table: 'animales',
         column: 'identificador',

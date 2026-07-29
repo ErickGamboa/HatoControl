@@ -49,10 +49,20 @@ flutter test -d macos integration_test/supabase_e2e_test.dart \
 Round-1 utilidad e2e (UI + cloud assert of new columns):
 
 ```bash
-flutter test -d macos integration_test/ronda1_utilidad_e2e_test.dart \
+# Optional: capture simulator PNGs every 4s while it runs (stuck screens)
+./scripts/watch_e2e_sim.sh /tmp/hato_e2e_watch 4
+
+flutter test -d <iphone-sim-id> integration_test/ronda1_utilidad_e2e_test.dart \
   --dart-define=HATO_E2E_EMAIL=... \
-  --dart-define=HATO_E2E_PASSWORD=...
+  --dart-define=HATO_E2E_PASSWORD=... \
+  --dart-define=HATO_E2E_SLOW_MS=400
 ```
+
+Diagnostics built into the e2e helpers:
+
+- Console `E2E[...] step N: ...` + heartbeats while waiting
+- On timeout: dump of visible texts/keys/focus + `takeScreenshot`
+- Primary buttons use `invokeButton` (calls `onPressed`) so the iOS soft keyboard cannot steal the tap
 
 `./scripts/verify_ronda1.sh` runs this automatically when `HATO_E2E_EMAIL` / `HATO_E2E_PASSWORD` are set.
 

@@ -293,30 +293,32 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset(
-                            'assets/iconos/lotes.png',
-                            width: 72,
-                            height: 72,
-                            color: theme.colorScheme.outline,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Este lote no tiene animales',
-                            style: theme.textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Los animales se agregan al registrar un pesaje '
-                            'en la sección Pesaje.',
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/iconos/lotes.png',
+                              width: 72,
+                              height: 72,
                               color: theme.colorScheme.outline,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 16),
+                            Text(
+                              'Este lote no tiene animales',
+                              style: theme.textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Los animales se agregan al registrar un pesaje '
+                              'en la sección Pesaje.',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );

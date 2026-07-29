@@ -44,11 +44,11 @@ class AnimalFichaScreen extends StatelessWidget {
           bottom: const TabBar(
             isScrollable: true,
             tabs: [
-              Tab(text: 'General'),
-              Tab(text: 'Pesajes'),
-              Tab(text: 'Sanidad'),
-              Tab(text: 'Dietas'),
-              Tab(text: 'Venta'),
+              Tab(key: ValueKey('ficha.tab.general'), text: 'General'),
+              Tab(key: ValueKey('ficha.tab.pesajes'), text: 'Pesajes'),
+              Tab(key: ValueKey('ficha.tab.sanidad'), text: 'Sanidad'),
+              Tab(key: ValueKey('ficha.tab.dietas'), text: 'Dietas'),
+              Tab(key: ValueKey('ficha.tab.venta'), text: 'Venta'),
             ],
           ),
         ),

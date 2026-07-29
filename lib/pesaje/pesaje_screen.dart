@@ -431,6 +431,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
   }
 
   void _continuar() {
+    FocusScope.of(context).unfocus();
     final loteId = _loteId;
     if (loteId == null) {
       ScaffoldMessenger.of(
