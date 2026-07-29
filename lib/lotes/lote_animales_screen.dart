@@ -523,6 +523,7 @@ class _TarjetaDietaLote extends StatelessWidget {
                           ),
                         ),
                         IconButton(
+                          key: const ValueKey('lote.asignarDieta'),
                           tooltip: vigente == null
                               ? 'Asignar dieta'
                               : 'Cambiar dieta',
@@ -531,6 +532,7 @@ class _TarjetaDietaLote extends StatelessWidget {
                         ),
                         if (vigente != null)
                           IconButton(
+                            key: const ValueKey('lote.quitarDieta'),
                             tooltip: 'Quitar dieta',
                             icon: const Icon(Icons.link_off),
                             onPressed: onQuitar,

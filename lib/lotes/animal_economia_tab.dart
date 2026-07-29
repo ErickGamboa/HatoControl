@@ -212,7 +212,11 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Utilidad', style: theme.textTheme.titleLarge),
+        Text(
+          key: const ValueKey('economia.titulo'),
+          'Utilidad',
+          style: theme.textTheme.titleLarge,
+        ),
         const SizedBox(height: 4),
         Text(
           'Venta − (compra + dietas + sanidad)',
@@ -238,16 +242,38 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
           ),
         ],
         const SizedBox(height: 12),
-        fila('Compra', _fmt(r.precioCompra), detalle: _detalleCompra(r)),
-        fila('Dietas', _fmt(r.costoAlimentacion)),
-        fila('Sanidad', _fmt(r.costoSanitario)),
+        KeyedSubtree(
+          key: const ValueKey('economia.compra'),
+          child: fila(
+            'Compra',
+            _fmt(r.precioCompra),
+            detalle: _detalleCompra(r),
+          ),
+        ),
+        KeyedSubtree(
+          key: const ValueKey('economia.dietas'),
+          child: fila('Dietas', _fmt(r.costoAlimentacion)),
+        ),
+        KeyedSubtree(
+          key: const ValueKey('economia.sanidad'),
+          child: fila('Sanidad', _fmt(r.costoSanitario)),
+        ),
         const Divider(height: 24),
-        fila('Costo total', _fmt(r.costoTotal)),
-        fila('Venta', _fmt(r.precioVenta), detalle: _detalleVenta(r)),
-        fila(
-          'Utilidad',
-          r.precioVenta == null ? '—' : _fmt(r.utilidad),
-          style: r.precioVenta == null ? null : utilidadStyle,
+        KeyedSubtree(
+          key: const ValueKey('economia.costoTotal'),
+          child: fila('Costo total', _fmt(r.costoTotal)),
+        ),
+        KeyedSubtree(
+          key: const ValueKey('economia.venta'),
+          child: fila('Venta', _fmt(r.precioVenta), detalle: _detalleVenta(r)),
+        ),
+        KeyedSubtree(
+          key: const ValueKey('economia.utilidad'),
+          child: fila(
+            'Utilidad',
+            r.precioVenta == null ? '—' : _fmt(r.utilidad),
+            style: r.precioVenta == null ? null : utilidadStyle,
+          ),
         ),
         const SizedBox(height: 20),
         Text(

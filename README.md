@@ -79,6 +79,20 @@ flutter test -d macos integration_test/supabase_e2e_test.dart \
   --dart-define=HATO_E2E_PASSWORD=...
 ```
 
+Round-1 utilidad e2e (dieta semanal, ₡/kg, venta, **assert filas en Supabase**):
+
+```bash
+flutter test -d macos integration_test/ronda1_utilidad_e2e_test.dart \
+  --dart-define=HATO_E2E_EMAIL=... \
+  --dart-define=HATO_E2E_PASSWORD=...
+```
+
+Or run the evaluator with cloud e2e when env vars are set:
+
+```bash
+HATO_E2E_EMAIL=... HATO_E2E_PASSWORD=... ./scripts/verify_ronda1.sh
+```
+
 Demo mode (mock finca with all modules, offline):
 
 ```bash

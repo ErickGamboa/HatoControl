@@ -42,6 +42,7 @@ class DietasScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextField(
+                key: const ValueKey('dietas.nombre'),
                 controller: nombreCtrl,
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
@@ -53,6 +54,7 @@ class DietasScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               TextField(
+                key: const ValueKey('dietas.descripcion'),
                 controller: descCtrl,
                 textCapitalization: TextCapitalization.sentences,
                 maxLines: 2,
@@ -63,6 +65,7 @@ class DietasScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               TextField(
+                key: const ValueKey('dietas.costoSemanal'),
                 controller: costoCtrl,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -94,6 +97,7 @@ class DietasScreen extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
+                      key: const ValueKey('dietas.equivalenteDia'),
                       '₡$fmtSem / semana = ₡$fmt / día',
                       style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                         color: Theme.of(ctx).colorScheme.outline,
@@ -104,6 +108,7 @@ class DietasScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               TextField(
+                key: const ValueKey('dietas.ingredientes'),
                 controller: ingredientesCtrl,
                 maxLines: 4,
                 decoration: const InputDecoration(
@@ -121,6 +126,7 @@ class DietasScreen extends StatelessWidget {
             child: const Text('Cancelar'),
           ),
           FilledButton(
+            key: const ValueKey('dietas.guardar'),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(esEdicion ? 'Guardar' : 'Crear'),
           ),
@@ -171,6 +177,7 @@ class DietasScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Dietas')),
       floatingActionButton: FloatingActionButton.extended(
+        key: const ValueKey('dietas.crear'),
         onPressed: () => _dietaDialog(context),
         icon: const Icon(Icons.add),
         label: const Text('Dieta'),

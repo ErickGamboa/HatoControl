@@ -504,7 +504,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
                 children: [
                   for (final l in widget.lotes)
                     ChoiceChip(
-                      key: ValueKey('pesaje.lote.${l.id}'),
+                      key: ValueKey('pesaje.loteNombre.${l.nombre}'),
                       selected: _loteId == l.id,
                       label: Text(
                         l.numero == null
@@ -517,6 +517,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
               ),
               const SizedBox(height: HatoSpacing.lg),
               SwitchListTile(
+                key: const ValueKey('pesaje.alta.nacio'),
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Nació en la finca'),
                 subtitle: const Text('Compra ₡0'),
@@ -526,12 +527,14 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
               if (!_nacioEnFinca) ...[
                 const SizedBox(height: HatoSpacing.sm),
                 QuickNumberField(
+                  key: const ValueKey('pesaje.alta.pesoCompra'),
                   controller: _pesoCtrl,
                   labelText: 'Peso de compra',
                   suffixText: 'kg',
                 ),
                 const SizedBox(height: HatoSpacing.md),
                 QuickNumberField(
+                  key: const ValueKey('pesaje.alta.precioKg'),
                   controller: _precioKgCtrl,
                   labelText: 'Precio por kilo',
                   suffixText: '₡/kg',
@@ -540,6 +543,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
               if (total != null) ...[
                 const SizedBox(height: HatoSpacing.md),
                 Text(
+                  key: const ValueKey('pesaje.alta.costoTotal'),
                   'Costo del animal: ₡${total == total.roundToDouble() ? total.toInt() : total.toStringAsFixed(0)}',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.titleMedium?.copyWith(
@@ -550,6 +554,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
               ],
               const SizedBox(height: HatoSpacing.xl),
               FilledButton(
+                key: const ValueKey('pesaje.alta.guardar'),
                 onPressed: _continuar,
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
