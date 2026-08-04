@@ -165,10 +165,16 @@ class Dietas extends Table {
   TextColumn get nombre => text()();
   TextColumn get descripcion => text().nullable()();
 
-  /// Costo semanal por animal (como lo digita el ganadero).
+  /// Costo del alimento por kilo (como lo digita el ganadero).
+  RealColumn get costoKg => real().withDefault(const Constant(0))();
+
+  /// Kilos que recibe cada animal por día (como lo digita el ganadero).
+  RealColumn get kgAnimalDia => real().withDefault(const Constant(0))();
+
+  /// Derivado: costoKg × kgAnimalDia × 7 (solo para mostrar el semanal).
   RealColumn get costoAnimalSemana => real().withDefault(const Constant(0))();
 
-  /// Derivado: costoAnimalSemana ÷ 7 (para períodos y snapshots).
+  /// Derivado: costoKg × kgAnimalDia (para períodos y snapshots).
   RealColumn get costoAnimalDia => real()();
   TextColumn get moneda => text().withDefault(const Constant('CRC'))();
   DateTimeColumn get createdAt => dateTime()();
@@ -183,6 +189,8 @@ class Dietas extends Table {
   List<String> get customConstraints => [
     'CHECK (costo_animal_dia >= 0)',
     'CHECK (costo_animal_semana >= 0)',
+    'CHECK (costo_kg >= 0)',
+    'CHECK (kg_animal_dia >= 0)',
   ];
 }
 
@@ -574,7 +582,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -709,6 +717,18 @@ class AppDatabase extends _$AppDatabase {
         await _crearTablaSiFalta(m, gastosFijos);
         await _crearTablaSiFalta(m, gastoFijoCargos);
         await _crearIndicesUnicosLocales();
+      }
+      if (from < 15) {
+        // v15: la dieta se digita como ₡/kg × kg por animal al día. Los
+        // costos por animal (día y semana) pasan a ser derivados.
+        await _agregarColumnaSiFalta(m, dietas, dietas.costoKg);
+        await _agregarColumnaSiFalta(m, dietas, dietas.kgAnimalDia);
+        // Dietas viejas se digitaron por animal: 1 kg al precio del día deja
+        // costo_animal_dia idéntico, así el historial de utilidad no cambia.
+        await customStatement(
+          'UPDATE dietas SET costo_kg = costo_animal_dia, kg_animal_dia = 1 '
+          'WHERE costo_kg = 0 AND costo_animal_dia > 0',
+        );
       }
     },
   );

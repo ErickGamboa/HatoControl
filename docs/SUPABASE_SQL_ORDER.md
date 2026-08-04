@@ -120,3 +120,14 @@ la finca: peón, luz, agua; mensual o único, con vigencia `desde`/`hasta`) y
 `animales`. Índice único `(gasto_fijo_id, animal_id, mes)` entre filas no
 borradas, espejo del índice local de Drift (schema v14). **Pendiente de
 `supabase db push`.**
+
+## Dieta por kilo (2026-08-03)
+
+`20260803130000_dieta_costo_por_kilo.sql` — `dietas.costo_kg` (₡ por kilo de
+alimento) y `dietas.kg_animal_dia` (kilos por animal al día). Es lo que digita
+el ganadero; `costo_animal_dia` y `costo_animal_semana` quedan como derivados
+(`costo_kg × kg_animal_dia` y eso × 7). Espejo del schema local de Drift v15.
+Las dietas anteriores se rellenan como `costo_kg = costo_animal_dia,
+kg_animal_dia = 1`, lo que deja `costo_animal_dia` idéntico y no mueve los
+snapshots de `lote_dietas` ni el historial de utilidad. **Pendiente de
+`supabase db push`.**

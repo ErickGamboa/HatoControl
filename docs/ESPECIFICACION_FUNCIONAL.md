@@ -104,12 +104,25 @@ La dosificación calcula sola cuánto aplicar y cuánto cuesta según el peso en
 
 Debe ser **sencillo**.
 
-- **Crear dieta:** nombre, **ingredientes**, y **costo por animal por día** de cada ingrediente (así se reparte con exactitud en la utilidad).
+- **Crear dieta:** nombre, **costo por kilo** del alimento, **kilos por animal
+  al día**, e **ingredientes** (solo nombres, informativos).
+- El costo por animal es **derivado**, no se digita:
+
+```text
+costo por animal / día    = costo por kilo × kilos por animal al día
+costo por animal / semana = costo por animal / día × 7
+```
+
+- La pantalla muestra el resultado en vivo mientras se digita, para que el
+  ganadero confirme el número antes de guardar.
 - Las dietas se **asignan a lotes** → y por tanto a la hoja de vida de cada animal del lote.
+- Al asignar se **congela** el costo/día en la asignación (`lote_dietas`), así
+  cambiar después el precio del alimento no altera el historial.
 - **Rangos de fecha** si el animal cambia a un lote con otra dieta:
   - *Del [fecha] al [fecha]: Dieta A*
   - *Del [fecha] al [fecha]: Dieta B*
-- **Costo total de alimentación** = Σ (costo/día de la dieta × días en ella).
+- **Costo total de alimentación** = Σ (costo/día de la dieta × días en ella)
+  = Σ (₡/kg × kg por animal al día × días en esa dieta).
 
 ---
 
@@ -155,7 +168,7 @@ Utilidad = Precio de venta − (Precio de compra + Costo de dietas + Costo de sa
 | Componente | Origen |
 |---|---|
 | Precio de compra | Al ingresar el animal |
-| Costo de dietas | Σ (costo/día × días en cada dieta) |
+| Costo de dietas | Σ (₡/kg × kg por animal al día × días en cada dieta) |
 | Costo de sanidad | Σ costo por uso de medicamentos aplicados |
 | Gastos fijos | Parte prorrateada por días-animal (Módulo 7) |
 | Precio de venta | Digitado al vender |
@@ -224,6 +237,7 @@ todo el mes absorbe ₡28.882 y el que entró tarde ₡11.180. La suma de todas 
 | Costo uso (líquido) | costo envase ÷ ml envase × ml aplicados |
 | Costo uso (spray) | costo envase ÷ aplicaciones que rinde |
 | Fin de retiro | fecha aplicación + días de retiro |
+| Costo dieta / animal / día | costo por kilo × kilos por animal al día |
 | Costo dieta / animal | Σ (costo/día × días en esa dieta) |
 | Costo sanidad / animal | Σ costo por uso de cada aplicación |
 | Gasto fijo / animal-día | monto del mes ÷ Σ días-animal del mes |

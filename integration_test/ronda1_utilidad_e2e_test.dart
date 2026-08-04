@@ -143,8 +143,8 @@ void main() {
         label: loteName,
       );
 
-      // Dieta semanal + ingredientes
-      await e2eStep('crear dieta semanal $dietaName');
+      // Dieta ₡/kg × kg por animal + ingredientes
+      await e2eStep('crear dieta por kilo $dietaName');
       await tapBack(tester);
       await waitFor(
         tester,
@@ -168,8 +168,12 @@ void main() {
         dietaName,
       );
       await tester.enterText(
-        find.byKey(const ValueKey('dietas.costoSemanal')),
-        '7000',
+        find.byKey(const ValueKey('dietas.costoKg')),
+        '500',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('dietas.kgAnimalDia')),
+        '2',
       );
       await pumpSettleShort(tester);
       await waitFor(
@@ -177,7 +181,7 @@ void main() {
         find.byKey(const ValueKey('dietas.equivalenteDia')),
         label: 'dietas.equivalenteDia',
       );
-      expect(find.textContaining('₡1000 / día'), findsWidgets);
+      expect(find.textContaining('₡1000 / animal / día'), findsWidgets);
       await tester.enterText(
         find.byKey(const ValueKey('dietas.ingredientes')),
         'Pasto\nConcentrado\nMelaza',

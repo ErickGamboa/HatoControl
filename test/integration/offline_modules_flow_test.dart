@@ -49,7 +49,8 @@ void main() {
       await dietasRepo.crearDieta(
         fincaId: finca.id,
         nombre: 'Concentrado',
-        costoAnimalSemana: 150,
+        costoKg: 300,
+        kgAnimalDia: 1.5,
       );
       final dieta = (await db.select(db.dietas).get()).single;
       await dietasRepo.asignarDietaALote(loteId: lote.id, dietaId: dieta.id);
@@ -103,7 +104,7 @@ void main() {
       expect(asignacion?.dieta.nombre, 'Concentrado');
       expect(
         asignacion?.asignacion.costoAnimalDiaSnapshot,
-        closeTo(150 / 7, 0.0001),
+        closeTo(450, 0.0001),
       );
     },
   );

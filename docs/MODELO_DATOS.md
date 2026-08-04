@@ -146,7 +146,10 @@ Cálculos derivados (no se guardan, se calculan; ver
 | finca_id | uuid → fincas.id | |
 | nombre | text | |
 | descripcion | text | opcional |
-| costo_animal_dia | numeric | ₡ por animal por día (D-02) |
+| costo_kg | numeric | ₡ por kilo de alimento — **lo digita el ganadero** |
+| kg_animal_dia | numeric | kilos por animal al día — **lo digita el ganadero** |
+| costo_animal_dia | numeric | derivado: `costo_kg × kg_animal_dia` (D-02) |
+| costo_animal_semana | numeric | derivado: `costo_animal_dia × 7`, solo para mostrar |
 | moneda | text | default `CRC` (D-07) |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |

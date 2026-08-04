@@ -42,18 +42,22 @@ class DietasRepository {
         .watch();
   }
 
-  /// [costoAnimalSemana] es lo que digita el ganadero; el diario = semanal ÷ 7.
+  /// El ganadero digita [costoKg] (₡ por kilo de alimento) y [kgAnimalDia]
+  /// (kilos que recibe cada animal por día). De ahí sale el costo por animal:
+  /// día = ₡/kg × kg/día, semana = día × 7.
   /// [ingredientes] son solo nombres informativos (costo de ingrediente = 0).
   Future<void> crearDieta({
     required String fincaId,
     required String nombre,
     String? descripcion,
-    required double costoAnimalSemana,
+    required double costoKg,
+    required double kgAnimalDia,
     String moneda = 'CRC',
     List<String> ingredientes = const [],
   }) async {
     final ahora = DateTime.now();
-    final costoDia = costoAnimalSemana / 7;
+    final costoDia = costoKg * kgAnimalDia;
+    final costoSemana = costoDia * 7;
     final dietaId = _uuid.v4();
     await db.transaction(() async {
       await db
@@ -64,7 +68,9 @@ class DietasRepository {
               fincaId: fincaId,
               nombre: nombre,
               descripcion: Value(descripcion),
-              costoAnimalSemana: Value(costoAnimalSemana),
+              costoKg: Value(costoKg),
+              kgAnimalDia: Value(kgAnimalDia),
+              costoAnimalSemana: Value(costoSemana),
               costoAnimalDia: costoDia,
               moneda: Value(moneda),
               createdAt: ahora,
@@ -151,15 +157,19 @@ class DietasRepository {
     required String dietaId,
     required String nombre,
     String? descripcion,
-    required double costoAnimalSemana,
+    required double costoKg,
+    required double kgAnimalDia,
     String moneda = 'CRC',
   }) async {
+    final costoDia = costoKg * kgAnimalDia;
     await (db.update(db.dietas)..where((t) => t.id.equals(dietaId))).write(
       DietasCompanion(
         nombre: Value(nombre),
         descripcion: Value(descripcion),
-        costoAnimalSemana: Value(costoAnimalSemana),
-        costoAnimalDia: Value(costoAnimalSemana / 7),
+        costoKg: Value(costoKg),
+        kgAnimalDia: Value(kgAnimalDia),
+        costoAnimalSemana: Value(costoDia * 7),
+        costoAnimalDia: Value(costoDia),
         moneda: Value(moneda),
         updatedAt: Value(DateTime.now()),
         pendiente: const Value(true),

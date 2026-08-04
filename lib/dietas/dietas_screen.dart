@@ -5,7 +5,23 @@ import '../data/local/database.dart';
 import '../data/repositories/dietas_repository.dart';
 import '../services.dart';
 
-/// Catálogo de dietas de una finca: crear, editar y ver costo semanal.
+/// Lee un número digitado por el ganadero (acepta coma decimal). Null si el
+/// campo está vacío o no es un número válido ≥ 0.
+double? _leerNumero(String texto) {
+  final n = double.tryParse(texto.trim().replaceAll(',', '.'));
+  if (n == null || n < 0) return null;
+  return n;
+}
+
+/// Muestra un número en un campo de texto sin `.0` colgando.
+String _fmtCampo(double n) =>
+    n == n.roundToDouble() ? n.toInt().toString() : n.toString();
+
+/// Redondea a colones enteros para mostrar montos.
+String _fmtColones(double n) =>
+    n == n.roundToDouble() ? n.toInt().toString() : n.toStringAsFixed(0);
+
+/// Catálogo de dietas de una finca: crear, editar y ver el costo por animal.
 class DietasScreen extends StatelessWidget {
   DietasScreen({super.key, required this.finca, DietasRepository? repo})
     : repo = repo ?? dietasRepo;
@@ -17,12 +33,11 @@ class DietasScreen extends StatelessWidget {
     final esEdicion = dieta != null;
     final nombreCtrl = TextEditingController(text: dieta?.nombre ?? '');
     final descCtrl = TextEditingController(text: dieta?.descripcion ?? '');
-    final costoCtrl = TextEditingController(
-      text: dieta != null
-          ? (dieta.costoAnimalSemana > 0
-                ? dieta.costoAnimalSemana.toString()
-                : (dieta.costoAnimalDia * 7).toString())
-          : '',
+    final costoKgCtrl = TextEditingController(
+      text: dieta != null ? _fmtCampo(dieta.costoKg) : '',
+    );
+    final kgCtrl = TextEditingController(
+      text: dieta != null ? _fmtCampo(dieta.kgAnimalDia) : '',
     );
     var ingredientesTexto = '';
     if (dieta != null) {
@@ -65,8 +80,8 @@ class DietasScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               TextField(
-                key: const ValueKey('dietas.costoSemanal'),
-                controller: costoCtrl,
+                key: const ValueKey('dietas.costoKg'),
+                controller: costoKgCtrl,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -74,38 +89,28 @@ class DietasScreen extends StatelessWidget {
                   FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
                 ],
                 decoration: const InputDecoration(
-                  hintText: 'Costo semanal por animal',
+                  labelText: 'Costo por kilo',
+                  hintText: '₡ por kilo de alimento',
                   border: OutlineInputBorder(),
                 ),
               ),
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: costoCtrl,
-                builder: (context, value, _) {
-                  final semanal = double.tryParse(
-                    value.text.trim().replaceAll(',', '.'),
-                  );
-                  if (semanal == null || semanal < 0) {
-                    return const SizedBox.shrink();
-                  }
-                  final diario = semanal / 7;
-                  final fmt = diario == diario.roundToDouble()
-                      ? diario.toInt().toString()
-                      : diario.toStringAsFixed(0);
-                  final fmtSem = semanal == semanal.roundToDouble()
-                      ? semanal.toInt().toString()
-                      : semanal.toStringAsFixed(0);
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      key: const ValueKey('dietas.equivalenteDia'),
-                      '₡$fmtSem / semana = ₡$fmt / día',
-                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(ctx).colorScheme.outline,
-                      ),
-                    ),
-                  );
-                },
+              const SizedBox(height: 12),
+              TextField(
+                key: const ValueKey('dietas.kgAnimalDia'),
+                controller: kgCtrl,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Kilos por animal al día',
+                  hintText: 'Kilos que recibe cada animal por día',
+                  border: OutlineInputBorder(),
+                ),
               ),
+              _EquivalenteDieta(costoKgCtrl: costoKgCtrl, kgCtrl: kgCtrl),
               const SizedBox(height: 12),
               TextField(
                 key: const ValueKey('dietas.ingredientes'),
@@ -143,17 +148,31 @@ class DietasScreen extends StatelessWidget {
         if (line.trim().isNotEmpty) line.trim(),
     ];
 
-    final costoSemanal = double.tryParse(
-      costoCtrl.text.trim().replaceAll(',', '.'),
-    );
-    if (costoSemanal == null || costoSemanal < 0) return;
+    final costoKg = _leerNumero(costoKgCtrl.text);
+    final kgAnimalDia = _leerNumero(kgCtrl.text);
+    if (costoKg == null || kgAnimalDia == null) {
+      // Con dos campos numéricos es fácil dejar uno vacío: avisar en vez de
+      // no hacer nada, que se lee como que la app se quedó pegada.
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Faltan datos: digitá el costo por kilo y los kilos por animal '
+              'al día.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
 
     if (esEdicion) {
       await repo.editarDieta(
         dietaId: dieta.id,
         nombre: nombre,
         descripcion: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
-        costoAnimalSemana: costoSemanal,
+        costoKg: costoKg,
+        kgAnimalDia: kgAnimalDia,
       );
       await repo.reemplazarIngredientes(dietaId: dieta.id, ingredientes: ings);
     } else {
@@ -161,7 +180,8 @@ class DietasScreen extends StatelessWidget {
         fincaId: finca.id,
         nombre: nombre,
         descripcion: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
-        costoAnimalSemana: costoSemanal,
+        costoKg: costoKg,
+        kgAnimalDia: kgAnimalDia,
         ingredientes: ings,
       );
     }
@@ -209,9 +229,6 @@ class DietasScreen extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, i) {
               final d = dietas[i];
-              final semanal = d.costoAnimalSemana > 0
-                  ? d.costoAnimalSemana
-                  : d.costoAnimalDia * 7;
               return Card(
                 margin: EdgeInsets.zero,
                 child: ListTile(
@@ -227,14 +244,21 @@ class DietasScreen extends StatelessWidget {
                       if (d.descripcion != null && d.descripcion!.isNotEmpty)
                         Text(d.descripcion!),
                       Text(
-                        '₡${_fmtCosto(semanal)} / animal / semana',
+                        '₡${_fmtCosto(d.costoAnimalDia)} / animal / día',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: theme.colorScheme.primary,
                         ),
                       ),
                       Text(
-                        '₡${_fmtCosto(d.costoAnimalDia)} / día',
+                        '₡${_fmtCosto(d.costoKg)} / kg × '
+                        '${_fmtCampo(d.kgAnimalDia)} kg por animal al día',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                      Text(
+                        '₡${_fmtCosto(d.costoAnimalSemana)} / animal / semana',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.outline,
                         ),
@@ -257,6 +281,44 @@ class DietasScreen extends StatelessWidget {
                 ),
               );
             },
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Muestra en vivo el cálculo ₡/kg × kg = ₡ por animal al día, para que el
+/// ganadero vea el resultado antes de guardar.
+class _EquivalenteDieta extends StatelessWidget {
+  const _EquivalenteDieta({required this.costoKgCtrl, required this.kgCtrl});
+
+  final TextEditingController costoKgCtrl;
+  final TextEditingController kgCtrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: costoKgCtrl,
+      builder: (context, _, _) => ValueListenableBuilder<TextEditingValue>(
+        valueListenable: kgCtrl,
+        builder: (context, _, _) {
+          final costoKg = _leerNumero(costoKgCtrl.text);
+          final kg = _leerNumero(kgCtrl.text);
+          if (costoKg == null || kg == null) return const SizedBox.shrink();
+          final dia = costoKg * kg;
+          return Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              key: const ValueKey('dietas.equivalenteDia'),
+              '₡${_fmtCampo(costoKg)} / kg × ${_fmtCampo(kg)} kg = '
+              '₡${_fmtColones(dia)} / animal / día\n'
+              '₡${_fmtColones(dia * 7)} / animal / semana',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
           );
         },
       ),

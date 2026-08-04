@@ -89,7 +89,8 @@ void main() {
     await dietas.crearDieta(
       fincaId: 'f1',
       nombre: 'Engorde',
-      costoAnimalSemana: 7000,
+      costoKg: 500,
+      kgAnimalDia: 2,
       ingredientes: ['Pasto', 'Concentrado', 'Melaza'],
     );
     final dieta = (await db.select(db.dietas).get()).single;
@@ -164,7 +165,8 @@ void main() {
     await dietas.crearDieta(
       fincaId: 'f1',
       nombre: 'Semanal',
-      costoAnimalSemana: 7000,
+      costoKg: 500,
+      kgAnimalDia: 2,
     );
     final dieta = (await db.select(db.dietas).get()).single;
     await dietas.asignarDietaALote(loteId: 'l1', dietaId: dieta.id);
@@ -204,7 +206,8 @@ void main() {
     await dietas.crearDieta(
       fincaId: 'f1',
       nombre: 'Temp',
-      costoAnimalSemana: 7000,
+      costoKg: 500,
+      kgAnimalDia: 2,
     );
     final dieta = (await db.select(db.dietas).get()).single;
     await dietas.asignarDietaALote(loteId: 'l1', dietaId: dieta.id);

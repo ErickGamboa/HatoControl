@@ -166,6 +166,38 @@ void main() {
       );
       expect(
         () => db
+            .into(db.dietas)
+            .insert(
+              DietasCompanion.insert(
+                id: 'd-2',
+                fincaId: 'finca-1',
+                nombre: 'Dieta ₡/kg negativo',
+                costoKg: const Value(-1),
+                costoAnimalDia: 0,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            ),
+        throwsA(anything),
+      );
+      expect(
+        () => db
+            .into(db.dietas)
+            .insert(
+              DietasCompanion.insert(
+                id: 'd-3',
+                fincaId: 'finca-1',
+                nombre: 'Dieta kg negativos',
+                kgAnimalDia: const Value(-2),
+                costoAnimalDia: 0,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            ),
+        throwsA(anything),
+      );
+      expect(
+        () => db
             .into(db.ventas)
             .insert(
               VentasCompanion.insert(

@@ -625,6 +625,8 @@ class SyncService {
                 'finca_id': d.fincaId,
                 'nombre': d.nombre,
                 'descripcion': d.descripcion,
+                'costo_kg': d.costoKg,
+                'kg_animal_dia': d.kgAnimalDia,
                 'costo_animal_dia': d.costoAnimalDia,
                 'costo_animal_semana': d.costoAnimalSemana,
                 'moneda': d.moneda,
@@ -654,6 +656,14 @@ class SyncService {
               fincaId: r['finca_id'] as String,
               nombre: r['nombre'] as String,
               descripcion: r['descripcion'] as String?,
+              // Dietas creadas antes del modelo ₡/kg no traen costo_kg: se
+              // interpretan como 1 kg al costo por animal/día ya guardado.
+              costoKg: r['costo_kg'] != null
+                  ? (r['costo_kg'] as num).toDouble()
+                  : (r['costo_animal_dia'] as num).toDouble(),
+              kgAnimalDia: r['kg_animal_dia'] != null
+                  ? (r['kg_animal_dia'] as num).toDouble()
+                  : 1,
               costoAnimalSemana: r['costo_animal_semana'] != null
                   ? (r['costo_animal_semana'] as num).toDouble()
                   : (r['costo_animal_dia'] as num).toDouble() * 7,

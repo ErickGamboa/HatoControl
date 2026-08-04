@@ -95,11 +95,14 @@ Pesaje and Hoja de Vida. Prior implementation note (archaeology): periods
 were calendar-date groups in `estadisticas_pesajes.dart`.
 
 ### D-02 — Dieta cost model: cost snapshot on assignment
-**Needed for: Module 2 (and 4). Status: Decidida (2026-07-02).**
+**Needed for: Module 2 (and 4). Status: Decidida (2026-07-02); entrada de datos
+enmendada por D-18 (2026-08-03).**
 Dieta has a single `costo_animal_dia` column. The historical record is the
 `lote_dietas` assignment row, which **snapshots** the diet's cost at
 assignment time (`costo_animal_dia_snapshot`), so later price edits don't
-rewrite past economics in module 4.
+rewrite past economics in module 4. **D-18** keeps the snapshot rule intact and
+only changes how `costo_animal_dia` is obtained (₡/kg × kg por animal al día
+instead of a typed weekly amount ÷ 7).
 
 ### D-03 — Dieta scope: per finca
 **Needed for: Module 2. Status: Decidida (2026-07-02).**
@@ -263,6 +266,34 @@ Consecuencias:
   lista de “fuera de alcance” excluía toda economía ajena a la fórmula
   anterior. La enmienda es explícita para que código y contrato no queden en
   contradicción (`AGENTS.md` §6).
+
+### D-18 — Dieta: se digita ₡ por kilo × kilos por animal al día
+**Status: Decidida (2026-08-03). Enmienda la entrada de datos de D-02 y el
+punto 5/14 de `CORRECCIONES.md` (que pedía un único campo semanal).**
+El ganadero no conoce el costo semanal por animal: conoce el **precio del
+alimento por kilo** (o por saco) y **cuántos kilos** le da a cada animal.
+Pedirle el semanal lo obligaba a hacer la multiplicación de cabeza, con riesgo
+de errar por 7×.
+
+La dieta ahora guarda dos campos digitados — `costo_kg` y `kg_animal_dia` — y
+los costos por animal pasan a ser **derivados**:
+
+```text
+costo_animal_dia    = costo_kg × kg_animal_dia
+costo_animal_semana = costo_animal_dia × 7
+```
+
+Consecuencias:
+- **Nada más cambia.** El snapshot al asignar (D-02), el prorrateo por días y
+  la fórmula de utilidad siguen leyendo `costo_animal_dia`.
+- `costo_animal_semana` se conserva como columna derivada, solo para mostrar;
+  ya no es la fuente de verdad.
+- Migración: local Drift v15 y
+  `supabase/migrations/20260803130000_dieta_costo_por_kilo.sql`. Las dietas
+  anteriores quedan como `costo_kg = costo_animal_dia, kg_animal_dia = 1`, lo
+  que deja `costo_animal_dia` idéntico y no reescribe utilidades ya cerradas.
+- Los **ingredientes siguen siendo solo nombres** sin costo (punto 6 de
+  `CORRECCIONES.md` sigue vigente).
 
 ---
 

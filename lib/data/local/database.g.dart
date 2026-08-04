@@ -4479,6 +4479,30 @@ class $DietasTable extends Dietas with TableInfo<$DietasTable, DietaRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _costoKgMeta = const VerificationMeta(
+    'costoKg',
+  );
+  @override
+  late final GeneratedColumn<double> costoKg = GeneratedColumn<double>(
+    'costo_kg',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _kgAnimalDiaMeta = const VerificationMeta(
+    'kgAnimalDia',
+  );
+  @override
+  late final GeneratedColumn<double> kgAnimalDia = GeneratedColumn<double>(
+    'kg_animal_dia',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _costoAnimalSemanaMeta = const VerificationMeta(
     'costoAnimalSemana',
   );
@@ -4567,6 +4591,8 @@ class $DietasTable extends Dietas with TableInfo<$DietasTable, DietaRow> {
     fincaId,
     nombre,
     descripcion,
+    costoKg,
+    kgAnimalDia,
     costoAnimalSemana,
     costoAnimalDia,
     moneda,
@@ -4614,6 +4640,21 @@ class $DietasTable extends Dietas with TableInfo<$DietasTable, DietaRow> {
         descripcion.isAcceptableOrUnknown(
           data['descripcion']!,
           _descripcionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('costo_kg')) {
+      context.handle(
+        _costoKgMeta,
+        costoKg.isAcceptableOrUnknown(data['costo_kg']!, _costoKgMeta),
+      );
+    }
+    if (data.containsKey('kg_animal_dia')) {
+      context.handle(
+        _kgAnimalDiaMeta,
+        kgAnimalDia.isAcceptableOrUnknown(
+          data['kg_animal_dia']!,
+          _kgAnimalDiaMeta,
         ),
       );
     }
@@ -4696,6 +4737,14 @@ class $DietasTable extends Dietas with TableInfo<$DietasTable, DietaRow> {
         DriftSqlType.string,
         data['${effectivePrefix}descripcion'],
       ),
+      costoKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}costo_kg'],
+      )!,
+      kgAnimalDia: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}kg_animal_dia'],
+      )!,
       costoAnimalSemana: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}costo_animal_semana'],
@@ -4739,10 +4788,16 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
   final String nombre;
   final String? descripcion;
 
-  /// Costo semanal por animal (como lo digita el ganadero).
+  /// Costo del alimento por kilo (como lo digita el ganadero).
+  final double costoKg;
+
+  /// Kilos que recibe cada animal por día (como lo digita el ganadero).
+  final double kgAnimalDia;
+
+  /// Derivado: costoKg × kgAnimalDia × 7 (solo para mostrar el semanal).
   final double costoAnimalSemana;
 
-  /// Derivado: costoAnimalSemana ÷ 7 (para períodos y snapshots).
+  /// Derivado: costoKg × kgAnimalDia (para períodos y snapshots).
   final double costoAnimalDia;
   final String moneda;
   final DateTime createdAt;
@@ -4754,6 +4809,8 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
     required this.fincaId,
     required this.nombre,
     this.descripcion,
+    required this.costoKg,
+    required this.kgAnimalDia,
     required this.costoAnimalSemana,
     required this.costoAnimalDia,
     required this.moneda,
@@ -4771,6 +4828,8 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
     if (!nullToAbsent || descripcion != null) {
       map['descripcion'] = Variable<String>(descripcion);
     }
+    map['costo_kg'] = Variable<double>(costoKg);
+    map['kg_animal_dia'] = Variable<double>(kgAnimalDia);
     map['costo_animal_semana'] = Variable<double>(costoAnimalSemana);
     map['costo_animal_dia'] = Variable<double>(costoAnimalDia);
     map['moneda'] = Variable<String>(moneda);
@@ -4791,6 +4850,8 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
       descripcion: descripcion == null && nullToAbsent
           ? const Value.absent()
           : Value(descripcion),
+      costoKg: Value(costoKg),
+      kgAnimalDia: Value(kgAnimalDia),
       costoAnimalSemana: Value(costoAnimalSemana),
       costoAnimalDia: Value(costoAnimalDia),
       moneda: Value(moneda),
@@ -4813,6 +4874,8 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
       fincaId: serializer.fromJson<String>(json['fincaId']),
       nombre: serializer.fromJson<String>(json['nombre']),
       descripcion: serializer.fromJson<String?>(json['descripcion']),
+      costoKg: serializer.fromJson<double>(json['costoKg']),
+      kgAnimalDia: serializer.fromJson<double>(json['kgAnimalDia']),
       costoAnimalSemana: serializer.fromJson<double>(json['costoAnimalSemana']),
       costoAnimalDia: serializer.fromJson<double>(json['costoAnimalDia']),
       moneda: serializer.fromJson<String>(json['moneda']),
@@ -4830,6 +4893,8 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
       'fincaId': serializer.toJson<String>(fincaId),
       'nombre': serializer.toJson<String>(nombre),
       'descripcion': serializer.toJson<String?>(descripcion),
+      'costoKg': serializer.toJson<double>(costoKg),
+      'kgAnimalDia': serializer.toJson<double>(kgAnimalDia),
       'costoAnimalSemana': serializer.toJson<double>(costoAnimalSemana),
       'costoAnimalDia': serializer.toJson<double>(costoAnimalDia),
       'moneda': serializer.toJson<String>(moneda),
@@ -4845,6 +4910,8 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
     String? fincaId,
     String? nombre,
     Value<String?> descripcion = const Value.absent(),
+    double? costoKg,
+    double? kgAnimalDia,
     double? costoAnimalSemana,
     double? costoAnimalDia,
     String? moneda,
@@ -4857,6 +4924,8 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
     fincaId: fincaId ?? this.fincaId,
     nombre: nombre ?? this.nombre,
     descripcion: descripcion.present ? descripcion.value : this.descripcion,
+    costoKg: costoKg ?? this.costoKg,
+    kgAnimalDia: kgAnimalDia ?? this.kgAnimalDia,
     costoAnimalSemana: costoAnimalSemana ?? this.costoAnimalSemana,
     costoAnimalDia: costoAnimalDia ?? this.costoAnimalDia,
     moneda: moneda ?? this.moneda,
@@ -4873,6 +4942,10 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
       descripcion: data.descripcion.present
           ? data.descripcion.value
           : this.descripcion,
+      costoKg: data.costoKg.present ? data.costoKg.value : this.costoKg,
+      kgAnimalDia: data.kgAnimalDia.present
+          ? data.kgAnimalDia.value
+          : this.kgAnimalDia,
       costoAnimalSemana: data.costoAnimalSemana.present
           ? data.costoAnimalSemana.value
           : this.costoAnimalSemana,
@@ -4894,6 +4967,8 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
           ..write('fincaId: $fincaId, ')
           ..write('nombre: $nombre, ')
           ..write('descripcion: $descripcion, ')
+          ..write('costoKg: $costoKg, ')
+          ..write('kgAnimalDia: $kgAnimalDia, ')
           ..write('costoAnimalSemana: $costoAnimalSemana, ')
           ..write('costoAnimalDia: $costoAnimalDia, ')
           ..write('moneda: $moneda, ')
@@ -4911,6 +4986,8 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
     fincaId,
     nombre,
     descripcion,
+    costoKg,
+    kgAnimalDia,
     costoAnimalSemana,
     costoAnimalDia,
     moneda,
@@ -4927,6 +5004,8 @@ class DietaRow extends DataClass implements Insertable<DietaRow> {
           other.fincaId == this.fincaId &&
           other.nombre == this.nombre &&
           other.descripcion == this.descripcion &&
+          other.costoKg == this.costoKg &&
+          other.kgAnimalDia == this.kgAnimalDia &&
           other.costoAnimalSemana == this.costoAnimalSemana &&
           other.costoAnimalDia == this.costoAnimalDia &&
           other.moneda == this.moneda &&
@@ -4941,6 +5020,8 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
   final Value<String> fincaId;
   final Value<String> nombre;
   final Value<String?> descripcion;
+  final Value<double> costoKg;
+  final Value<double> kgAnimalDia;
   final Value<double> costoAnimalSemana;
   final Value<double> costoAnimalDia;
   final Value<String> moneda;
@@ -4954,6 +5035,8 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
     this.fincaId = const Value.absent(),
     this.nombre = const Value.absent(),
     this.descripcion = const Value.absent(),
+    this.costoKg = const Value.absent(),
+    this.kgAnimalDia = const Value.absent(),
     this.costoAnimalSemana = const Value.absent(),
     this.costoAnimalDia = const Value.absent(),
     this.moneda = const Value.absent(),
@@ -4968,6 +5051,8 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
     required String fincaId,
     required String nombre,
     this.descripcion = const Value.absent(),
+    this.costoKg = const Value.absent(),
+    this.kgAnimalDia = const Value.absent(),
     this.costoAnimalSemana = const Value.absent(),
     required double costoAnimalDia,
     this.moneda = const Value.absent(),
@@ -4987,6 +5072,8 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
     Expression<String>? fincaId,
     Expression<String>? nombre,
     Expression<String>? descripcion,
+    Expression<double>? costoKg,
+    Expression<double>? kgAnimalDia,
     Expression<double>? costoAnimalSemana,
     Expression<double>? costoAnimalDia,
     Expression<String>? moneda,
@@ -5001,6 +5088,8 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
       if (fincaId != null) 'finca_id': fincaId,
       if (nombre != null) 'nombre': nombre,
       if (descripcion != null) 'descripcion': descripcion,
+      if (costoKg != null) 'costo_kg': costoKg,
+      if (kgAnimalDia != null) 'kg_animal_dia': kgAnimalDia,
       if (costoAnimalSemana != null) 'costo_animal_semana': costoAnimalSemana,
       if (costoAnimalDia != null) 'costo_animal_dia': costoAnimalDia,
       if (moneda != null) 'moneda': moneda,
@@ -5017,6 +5106,8 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
     Value<String>? fincaId,
     Value<String>? nombre,
     Value<String?>? descripcion,
+    Value<double>? costoKg,
+    Value<double>? kgAnimalDia,
     Value<double>? costoAnimalSemana,
     Value<double>? costoAnimalDia,
     Value<String>? moneda,
@@ -5031,6 +5122,8 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
       fincaId: fincaId ?? this.fincaId,
       nombre: nombre ?? this.nombre,
       descripcion: descripcion ?? this.descripcion,
+      costoKg: costoKg ?? this.costoKg,
+      kgAnimalDia: kgAnimalDia ?? this.kgAnimalDia,
       costoAnimalSemana: costoAnimalSemana ?? this.costoAnimalSemana,
       costoAnimalDia: costoAnimalDia ?? this.costoAnimalDia,
       moneda: moneda ?? this.moneda,
@@ -5056,6 +5149,12 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
     }
     if (descripcion.present) {
       map['descripcion'] = Variable<String>(descripcion.value);
+    }
+    if (costoKg.present) {
+      map['costo_kg'] = Variable<double>(costoKg.value);
+    }
+    if (kgAnimalDia.present) {
+      map['kg_animal_dia'] = Variable<double>(kgAnimalDia.value);
     }
     if (costoAnimalSemana.present) {
       map['costo_animal_semana'] = Variable<double>(costoAnimalSemana.value);
@@ -5091,6 +5190,8 @@ class DietasCompanion extends UpdateCompanion<DietaRow> {
           ..write('fincaId: $fincaId, ')
           ..write('nombre: $nombre, ')
           ..write('descripcion: $descripcion, ')
+          ..write('costoKg: $costoKg, ')
+          ..write('kgAnimalDia: $kgAnimalDia, ')
           ..write('costoAnimalSemana: $costoAnimalSemana, ')
           ..write('costoAnimalDia: $costoAnimalDia, ')
           ..write('moneda: $moneda, ')
@@ -15648,6 +15749,8 @@ typedef $$DietasTableCreateCompanionBuilder =
       required String fincaId,
       required String nombre,
       Value<String?> descripcion,
+      Value<double> costoKg,
+      Value<double> kgAnimalDia,
       Value<double> costoAnimalSemana,
       required double costoAnimalDia,
       Value<String> moneda,
@@ -15663,6 +15766,8 @@ typedef $$DietasTableUpdateCompanionBuilder =
       Value<String> fincaId,
       Value<String> nombre,
       Value<String?> descripcion,
+      Value<double> costoKg,
+      Value<double> kgAnimalDia,
       Value<double> costoAnimalSemana,
       Value<double> costoAnimalDia,
       Value<String> moneda,
@@ -15699,6 +15804,16 @@ class $$DietasTableFilterComposer
 
   ColumnFilters<String> get descripcion => $composableBuilder(
     column: $table.descripcion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get costoKg => $composableBuilder(
+    column: $table.costoKg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get kgAnimalDia => $composableBuilder(
+    column: $table.kgAnimalDia,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15767,6 +15882,16 @@ class $$DietasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get costoKg => $composableBuilder(
+    column: $table.costoKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get kgAnimalDia => $composableBuilder(
+    column: $table.kgAnimalDia,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get costoAnimalSemana => $composableBuilder(
     column: $table.costoAnimalSemana,
     builder: (column) => ColumnOrderings(column),
@@ -15823,6 +15948,14 @@ class $$DietasTableAnnotationComposer
 
   GeneratedColumn<String> get descripcion => $composableBuilder(
     column: $table.descripcion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get costoKg =>
+      $composableBuilder(column: $table.costoKg, builder: (column) => column);
+
+  GeneratedColumn<double> get kgAnimalDia => $composableBuilder(
+    column: $table.kgAnimalDia,
     builder: (column) => column,
   );
 
@@ -15884,6 +16017,8 @@ class $$DietasTableTableManager
                 Value<String> fincaId = const Value.absent(),
                 Value<String> nombre = const Value.absent(),
                 Value<String?> descripcion = const Value.absent(),
+                Value<double> costoKg = const Value.absent(),
+                Value<double> kgAnimalDia = const Value.absent(),
                 Value<double> costoAnimalSemana = const Value.absent(),
                 Value<double> costoAnimalDia = const Value.absent(),
                 Value<String> moneda = const Value.absent(),
@@ -15897,6 +16032,8 @@ class $$DietasTableTableManager
                 fincaId: fincaId,
                 nombre: nombre,
                 descripcion: descripcion,
+                costoKg: costoKg,
+                kgAnimalDia: kgAnimalDia,
                 costoAnimalSemana: costoAnimalSemana,
                 costoAnimalDia: costoAnimalDia,
                 moneda: moneda,
@@ -15912,6 +16049,8 @@ class $$DietasTableTableManager
                 required String fincaId,
                 required String nombre,
                 Value<String?> descripcion = const Value.absent(),
+                Value<double> costoKg = const Value.absent(),
+                Value<double> kgAnimalDia = const Value.absent(),
                 Value<double> costoAnimalSemana = const Value.absent(),
                 required double costoAnimalDia,
                 Value<String> moneda = const Value.absent(),
@@ -15925,6 +16064,8 @@ class $$DietasTableTableManager
                 fincaId: fincaId,
                 nombre: nombre,
                 descripcion: descripcion,
+                costoKg: costoKg,
+                kgAnimalDia: kgAnimalDia,
                 costoAnimalSemana: costoAnimalSemana,
                 costoAnimalDia: costoAnimalDia,
                 moneda: moneda,

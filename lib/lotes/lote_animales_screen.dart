@@ -103,7 +103,9 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                       ListTile(
                         title: Text(d.nombre),
                         subtitle: Text(
-                          '₡${(d.costoAnimalSemana > 0 ? d.costoAnimalSemana : d.costoAnimalDia * 7).toStringAsFixed(0)} / animal / semana',
+                          '₡${d.costoAnimalDia.toStringAsFixed(0)} / animal / día'
+                          '  ·  ₡${d.costoKg.toStringAsFixed(0)} / kg × '
+                          '${d.kgAnimalDia == d.kgAnimalDia.roundToDouble() ? d.kgAnimalDia.toInt() : d.kgAnimalDia} kg',
                         ),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => Navigator.pop(ctx, d.id),
@@ -507,7 +509,7 @@ class _TarjetaDietaLote extends StatelessWidget {
                               ),
                               if (vigente != null)
                                 Text(
-                                  '₡${(vigente.asignacion.costoAnimalDiaSnapshot * 7).toStringAsFixed(0)} / animal / semana',
+                                  '₡${vigente.asignacion.costoAnimalDiaSnapshot.toStringAsFixed(0)} / animal / día',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color:
                                         theme.colorScheme.onSecondaryContainer,

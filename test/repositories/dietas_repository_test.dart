@@ -47,21 +47,49 @@ void main() {
         );
   }
 
-  test('crearDieta inserta fila pendiente', () async {
+  test('crearDieta inserta fila pendiente con costo ₡/kg × kg', () async {
     await seedFincaYLote();
     await dietasRepo.crearDieta(
       fincaId: 'finca-1',
       nombre: 'Concentrado Premium',
-      costoAnimalSemana: 180,
+      costoKg: 320,
+      kgAnimalDia: 2.5,
     );
 
     final dietas = await db.select(db.dietas).get();
     expect(dietas, hasLength(1));
     expect(dietas.single.nombre, 'Concentrado Premium');
-    expect(dietas.single.costoAnimalSemana, 180);
-    expect(dietas.single.costoAnimalDia, closeTo(180 / 7, 0.0001));
+    expect(dietas.single.costoKg, 320);
+    expect(dietas.single.kgAnimalDia, 2.5);
+    expect(dietas.single.costoAnimalDia, closeTo(800, 0.0001));
+    expect(dietas.single.costoAnimalSemana, closeTo(5600, 0.0001));
     expect(dietas.single.moneda, 'CRC');
     expect(dietas.single.pendiente, isTrue);
+  });
+
+  test('editarDieta recalcula el costo por animal', () async {
+    await seedFincaYLote();
+    await dietasRepo.crearDieta(
+      fincaId: 'finca-1',
+      nombre: 'Ración',
+      costoKg: 300,
+      kgAnimalDia: 2,
+    );
+    final creada = (await db.select(db.dietas).get()).single;
+    expect(creada.costoAnimalDia, closeTo(600, 0.0001));
+
+    await dietasRepo.editarDieta(
+      dietaId: creada.id,
+      nombre: 'Ración',
+      costoKg: 350,
+      kgAnimalDia: 4,
+    );
+
+    final editada = (await db.select(db.dietas).get()).single;
+    expect(editada.costoKg, 350);
+    expect(editada.kgAnimalDia, 4);
+    expect(editada.costoAnimalDia, closeTo(1400, 0.0001));
+    expect(editada.costoAnimalSemana, closeTo(9800, 0.0001));
   });
 
   test(
@@ -71,12 +99,14 @@ void main() {
       await dietasRepo.crearDieta(
         fincaId: 'finca-1',
         nombre: 'Dieta A',
-        costoAnimalSemana: 100,
+        costoKg: 100,
+        kgAnimalDia: 1,
       );
       await dietasRepo.crearDieta(
         fincaId: 'finca-1',
         nombre: 'Dieta B',
-        costoAnimalSemana: 180,
+        costoKg: 90,
+        kgAnimalDia: 2,
       );
       final dietas = await db.select(db.dietas).get();
       final dietaA = dietas.firstWhere((d) => d.nombre == 'Dieta A');
@@ -86,7 +116,8 @@ void main() {
       await dietasRepo.editarDieta(
         dietaId: dietaA.id,
         nombre: 'Dieta A',
-        costoAnimalSemana: 999,
+        costoKg: 999,
+        kgAnimalDia: 1,
       );
       await dietasRepo.asignarDietaALote(loteId: 'lote-1', dietaId: dietaB.id);
 
@@ -95,9 +126,9 @@ void main() {
       final cerrada = asignaciones.firstWhere((a) => a.dietaId == dietaA.id);
       final vigente = asignaciones.firstWhere((a) => a.hasta == null);
       expect(cerrada.hasta, isNotNull);
-      expect(cerrada.costoAnimalDiaSnapshot, closeTo(100 / 7, 0.0001));
+      expect(cerrada.costoAnimalDiaSnapshot, closeTo(100, 0.0001));
       expect(vigente.dietaId, dietaB.id);
-      expect(vigente.costoAnimalDiaSnapshot, closeTo(180 / 7, 0.0001));
+      expect(vigente.costoAnimalDiaSnapshot, closeTo(180, 0.0001));
 
       final stream = await dietasRepo.observarDietaVigente('lote-1').first;
       expect(stream?.dieta.nombre, 'Dieta B');

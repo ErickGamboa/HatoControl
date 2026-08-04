@@ -106,16 +106,20 @@ class DemoSeed {
       (l) => l.nombre == DemoSeedIds.loteEngorde,
     );
 
+    // ₡150/kg × 3 kg = ₡450 por animal/día (₡3150 la semana).
     await _dietas.crearDieta(
       fincaId: finca.id,
       nombre: 'Concentrado engorde',
-      costoAnimalSemana: 3150,
+      costoKg: 150,
+      kgAnimalDia: 3,
       descripcion: 'Demo — ración alta energía',
     );
+    // ₡60/kg × 2 kg = ₡120 por animal/día (₡840 la semana).
     await _dietas.crearDieta(
       fincaId: finca.id,
       nombre: 'Pasto + mineral',
-      costoAnimalSemana: 840,
+      costoKg: 60,
+      kgAnimalDia: 2,
     );
     final dietas = await _db.select(_db.dietas).get();
     final dietaEngorde = dietas.firstWhere(
