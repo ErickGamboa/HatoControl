@@ -99,7 +99,7 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
               stream: _contarLotes(finca.id),
               builder: (context, snapshot) => _KpiTile(
                 key: const ValueKey('fincaDetail.kpiLotes'),
-                icono: Icons.grid_view_outlined,
+                assetIcono: 'assets/iconos/lotes.png',
                 etiqueta: 'Lotes',
                 valor: snapshot.data,
               ),
@@ -111,7 +111,7 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
               stream: _contarAnimalesActivos(finca.id),
               builder: (context, snapshot) => _KpiTile(
                 key: const ValueKey('fincaDetail.kpiAnimales'),
-                icono: Icons.pets_outlined,
+                assetIcono: 'assets/iconos/animales.png',
                 etiqueta: 'Animales activos',
                 valor: snapshot.data,
               ),
@@ -186,13 +186,13 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
                       children: [
                         _BotonOpcion(
                           key: const ValueKey('fincaDetail.sanidad'),
-                          icono: Icons.medical_services_outlined,
+                          assetIcono: 'assets/iconos/sanidad.png',
                           label: 'Sanidad',
                           onTap: () => _abrir(SanidadScreen(finca: finca)),
                         ),
                         _BotonOpcion(
                           key: const ValueKey('fincaDetail.lotes'),
-                          icono: Icons.grid_view_rounded,
+                          assetIcono: 'assets/iconos/lotes.png',
                           label: 'Lotes',
                           onTap: () => _abrir(
                             LotesScreen(
@@ -203,13 +203,13 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
                         ),
                         _BotonOpcion(
                           key: const ValueKey('fincaDetail.dietas'),
-                          icono: Icons.restaurant_menu,
+                          assetIcono: 'assets/iconos/dietas.png',
                           label: 'Dietas',
                           onTap: () => _abrir(DietasScreen(finca: finca)),
                         ),
                         _BotonOpcion(
                           key: const ValueKey('fincaDetail.venta'),
-                          icono: Icons.sell_outlined,
+                          assetIcono: 'assets/iconos/venta.png',
                           label: 'Venta',
                           onTap: () => _abrir(
                             VentaScreen(
@@ -260,9 +260,11 @@ class _TrabajoHero extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
-                  Icons.monitor_weight_outlined,
-                  size: 36,
+                padding: const EdgeInsets.all(10),
+                child: Image.asset(
+                  'assets/iconos/recoleccion.png',
+                  width: 44,
+                  height: 44,
                   color: Colors.white,
                 ),
               ),
@@ -272,8 +274,8 @@ class _TrabajoHero extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Trabajo',
-                      style: theme.textTheme.headlineSmall?.copyWith(
+                      'Recolección de datos',
+                      style: theme.textTheme.titleLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
                       ),
@@ -304,12 +306,20 @@ class _TrabajoHero extends StatelessWidget {
 class _KpiTile extends StatelessWidget {
   const _KpiTile({
     super.key,
-    required this.icono,
+    this.icono,
+    this.assetIcono,
     required this.etiqueta,
     required this.valor,
-  });
+  }) : assert(
+         icono != null || assetIcono != null,
+         'Indicá un icono de Material o un asset',
+       );
 
-  final IconData icono;
+  /// Icono de Material. Se ignora si [assetIcono] viene definido.
+  final IconData? icono;
+
+  /// Ruta de un PNG de trazo transparente en assets/iconos/, teñido al primario.
+  final String? assetIcono;
   final String etiqueta;
   final int? valor;
 
@@ -322,7 +332,15 @@ class _KpiTile extends StatelessWidget {
         padding: const EdgeInsets.all(HatoSpacing.md),
         child: Row(
           children: [
-            Icon(icono, color: theme.colorScheme.primary),
+            if (assetIcono != null)
+              Image.asset(
+                assetIcono!,
+                width: 26,
+                height: 26,
+                color: theme.colorScheme.primary,
+              )
+            else
+              Icon(icono, color: theme.colorScheme.primary),
             const SizedBox(width: HatoSpacing.sm),
             Expanded(
               child: Column(
@@ -355,12 +373,20 @@ class _KpiTile extends StatelessWidget {
 class _BotonOpcion extends StatelessWidget {
   const _BotonOpcion({
     super.key,
-    required this.icono,
+    this.icono,
+    this.assetIcono,
     required this.label,
     required this.onTap,
-  });
+  }) : assert(
+         icono != null || assetIcono != null,
+         'Indicá un icono de Material o un asset',
+       );
 
-  final IconData icono;
+  /// Icono de Material. Se ignora si [assetIcono] viene definido.
+  final IconData? icono;
+
+  /// Ruta de un PNG de trazo transparente en assets/iconos/, teñido al primario.
+  final String? assetIcono;
   final String label;
   final VoidCallback onTap;
 
@@ -375,7 +401,15 @@ class _BotonOpcion extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icono, size: 40, color: theme.colorScheme.primary),
+            if (assetIcono != null)
+              Image.asset(
+                assetIcono!,
+                width: 44,
+                height: 44,
+                color: theme.colorScheme.primary,
+              )
+            else
+              Icon(icono, size: 40, color: theme.colorScheme.primary),
             const SizedBox(height: HatoSpacing.sm),
             Text(
               label,
