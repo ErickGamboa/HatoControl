@@ -206,6 +206,12 @@ class SyncService {
     return guard(id);
   }
 
+  /// Nombres de las tablas registradas en el sync, en orden de dependencia.
+  /// Expuesto para que un test verifique el invariante de
+  /// `docs/CORRECCIONES.md`: ningún módulo queda afuera del sync.
+  @visibleForTesting
+  List<String> get tablasRegistradas => [for (final s in _specs) s.tabla];
+
   /// Estado de sync por tabla (D-13): para una pantalla de "sincronizando…"
   /// con detalle, o para soporte/debug.
   Future<List<SyncEstadoRow>> estadoPorTabla() =>
@@ -330,8 +336,8 @@ class SyncService {
   // (planes, cuentas, usuarios), luego el resto en el mismo orden que antes
   // tenían los métodos _subirX/_bajarX. El bucle de SUBIR filtra las que
   // tienen `subida` (así queda: fincas, miembros, lotes, dietas, lote_dietas,
-  // animales, movimientos_lote, eventos_sanitarios, ventas, costos_otros,
-  // pesajes — igual que antes).
+  // gastos_fijos, animales, movimientos_lote, eventos_sanitarios, ventas,
+  // costos_otros, gasto_fijo_cargos, pesajes).
 
   List<TableSyncSpec> get _specs => [
     _planesSpec,
@@ -343,6 +349,7 @@ class SyncService {
     _dietasSpec,
     _dietaIngredientesSpec,
     _loteDietasSpec,
+    _gastosFijosSpec,
     _animalesSpec,
     _movimientosLoteSpec,
     _medicamentosSpec,
@@ -350,6 +357,7 @@ class SyncService {
     _lotesVentaSpec,
     _ventasSpec,
     _costosOtrosSpec,
+    _gastoFijoCargosSpec,
     _pesajesSpec,
     _featureFlagsSpec,
   ];
@@ -1209,6 +1217,129 @@ class SyncService {
               concepto: r['concepto'] as String,
               monto: (r['monto'] as num).toDouble(),
               fecha: DateTime.parse(r['fecha'] as String),
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          ),
+    ),
+  );
+
+  /// Gastos fijos de la finca (Módulo 7, D-17). Depende de `fincas`.
+  TableSyncSpec get _gastosFijosSpec => TableSyncSpec(
+    tabla: 'gastos_fijos',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.gastosFijos,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final g in filas)
+            (
+              g.id,
+              {
+                'id': g.id,
+                'finca_id': g.fincaId,
+                'concepto': g.concepto,
+                'monto': g.monto,
+                'periodicidad': g.periodicidad,
+                'desde': g.desde.toIso8601String(),
+                'hasta': g.hasta?.toIso8601String(),
+                'moneda': g.moneda,
+                'created_at': g.createdAt.toIso8601String(),
+                'deleted_at': g.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.gastosFijos)..where((t) => t.id.equals(id))).write(
+            const GastosFijosCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.gastosFijos,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.gastosFijos)
+          .insertOnConflictUpdate(
+            GastoFijoRow(
+              id: r['id'] as String,
+              fincaId: r['finca_id'] as String,
+              concepto: r['concepto'] as String,
+              monto: (r['monto'] as num).toDouble(),
+              periodicidad: r['periodicidad'] as String,
+              desde: DateTime.parse(r['desde'] as String),
+              hasta: r['hasta'] != null
+                  ? DateTime.parse(r['hasta'] as String)
+                  : null,
+              moneda: (r['moneda'] as String?) ?? 'CRC',
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ),
+          ),
+    ),
+  );
+
+  /// Partes congeladas de gastos fijos al vender (Módulo 7, D-17).
+  /// Depende de `gastos_fijos` y `animales`.
+  TableSyncSpec get _gastoFijoCargosSpec => TableSyncSpec(
+    tabla: 'gasto_fijo_cargos',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.gastoFijoCargos,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final c in filas)
+            (
+              c.id,
+              {
+                'id': c.id,
+                'gasto_fijo_id': c.gastoFijoId,
+                'animal_id': c.animalId,
+                'mes': c.mes.toIso8601String(),
+                'dias': c.dias,
+                'monto': c.monto,
+                'created_at': c.createdAt.toIso8601String(),
+                'deleted_at': c.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.gastoFijoCargos)..where((t) => t.id.equals(id))).write(
+            const GastoFijoCargosCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.gastoFijoCargos,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.gastoFijoCargos)
+          .insertOnConflictUpdate(
+            GastoFijoCargoRow(
+              id: r['id'] as String,
+              gastoFijoId: r['gasto_fijo_id'] as String,
+              animalId: r['animal_id'] as String,
+              mes: DateTime.parse(r['mes'] as String),
+              dias: (r['dias'] as num).toInt(),
+              monto: (r['monto'] as num).toDouble(),
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null

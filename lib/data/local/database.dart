@@ -381,6 +381,71 @@ class CostosOtros extends Table {
   List<String> get customConstraints => ['CHECK (monto >= 0)'];
 }
 
+/// Gasto fijo de la finca (Módulo 7, D-17): salario del peón, luz, agua.
+/// No es de un animal en particular: se prorratea por días-animal.
+/// `monto` es mensual cuando `periodicidad = 'mensual'`; `hasta` null = vigente.
+@DataClassName('GastoFijoRow')
+class GastosFijos extends Table {
+  TextColumn get id => text()();
+  TextColumn get fincaId => text()();
+  TextColumn get concepto => text()();
+  RealColumn get monto => real()();
+
+  /// mensual | unico
+  TextColumn get periodicidad => text()();
+
+  /// mensual: primer día del mes en que empieza. unico: fecha del gasto.
+  DateTimeColumn get desde => dateTime()();
+
+  /// null = sigue vigente; se llena al dar de baja.
+  DateTimeColumn get hasta => dateTime().nullable()();
+  TextColumn get moneda => text().withDefault(const Constant('CRC'))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    "CHECK (periodicidad IN ('mensual','unico'))",
+    'CHECK (monto >= 0)',
+  ];
+}
+
+/// Parte de un gasto fijo congelada para un animal en un mes (Módulo 7, D-17).
+/// Se escribe **solo al vender**: mientras el animal está activo su parte se
+/// calcula en vivo. Congelarla evita que la utilidad de un animal ya vendido
+/// cambie cuando después se digita un gasto atrasado.
+@DataClassName('GastoFijoCargoRow')
+class GastoFijoCargos extends Table {
+  TextColumn get id => text()();
+  TextColumn get gastoFijoId => text()();
+  TextColumn get animalId => text()();
+
+  /// Primer día del mes al que corresponde el cargo.
+  DateTimeColumn get mes => dateTime()();
+
+  /// Días-animal que le tocaron en ese mes (para poder auditar el reparto).
+  IntColumn get dias => integer()();
+  RealColumn get monto => real()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    'CHECK (monto >= 0)',
+    'CHECK (dias >= 0)',
+  ];
+}
+
 /// Feature flags por scope (D-15): habilitan/deshabilitan módulos por
 /// finca/cuenta/global. Gestionadas solo por el CLI (`hatoctl`) vía
 /// `service_role`; la app únicamente las lee (RLS solo da SELECT). Por eso
@@ -493,6 +558,8 @@ class SesionesLocales extends Table {
     LotesVenta,
     Ventas,
     CostosOtros,
+    GastosFijos,
+    GastoFijoCargos,
     FeatureFlags,
     SyncCursores,
     SyncEstados,
@@ -507,7 +574,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -637,6 +704,12 @@ class AppDatabase extends _$AppDatabase {
           'WHERE costo_animal_semana = 0 OR costo_animal_semana IS NULL',
         );
       }
+      if (from < 14) {
+        // v14: Módulo 7 — gastos fijos de la finca y sus cargos congelados.
+        await _crearTablaSiFalta(m, gastosFijos);
+        await _crearTablaSiFalta(m, gastoFijoCargos);
+        await _crearIndicesUnicosLocales();
+      }
     },
   );
 
@@ -674,6 +747,13 @@ class AppDatabase extends _$AppDatabase {
       'CREATE UNIQUE INDEX IF NOT EXISTS '
       'idx_animales_finca_identificador_activos '
       'ON animales (finca_id, identificador) '
+      'WHERE deleted_at IS NULL',
+    );
+    // Un solo cargo congelado por gasto × animal × mes.
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS '
+      'idx_gasto_fijo_cargos_gasto_animal_mes_activos '
+      'ON gasto_fijo_cargos (gasto_fijo_id, animal_id, mes) '
       'WHERE deleted_at IS NULL',
     );
   }

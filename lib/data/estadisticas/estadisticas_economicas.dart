@@ -25,6 +25,7 @@ class ResumenEconomicoAnimal {
     required this.utilidad,
     required this.margenPorcentaje,
     required this.rentabilidadPorcentaje,
+    this.costoGastosFijos = 0,
     this.pesoCompra,
     this.precioKgCompra,
     this.pesoVenta,
@@ -38,6 +39,9 @@ class ResumenEconomicoAnimal {
   final double costoAlimentacion;
   final double costoSanitario;
   final double costoOtros;
+
+  /// Parte prorrateada de los gastos fijos de la finca (Módulo 7, D-17).
+  final double costoGastosFijos;
   final double? precioVenta;
   final double? pesoVenta;
   final double? precioKgVenta;

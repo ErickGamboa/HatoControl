@@ -46,7 +46,8 @@ String visibleTextOnScreen(WidgetTester tester) {
 
 String valueKeysOnScreen(WidgetTester tester) {
   final keys = <String>[];
-  for (final element in find.byWidgetPredicate((w) => w.key is ValueKey).evaluate()) {
+  for (final element
+      in find.byWidgetPredicate((w) => w.key is ValueKey).evaluate()) {
     final key = element.widget.key;
     if (key is ValueKey) keys.add(key.value.toString());
   }
@@ -63,10 +64,7 @@ String focusSummary() {
 }
 
 /// Prints UI snapshot and optionally captures an integration_test screenshot.
-Future<void> e2eDump(
-  WidgetTester tester, {
-  required String reason,
-}) async {
+Future<void> e2eDump(WidgetTester tester, {required String reason}) async {
   e2eLog('DUMP ($reason)');
   e2eLog('  focus=${focusSummary()}');
   e2eLog('  texts=${visibleTextOnScreen(tester)}');
@@ -76,8 +74,7 @@ Future<void> e2eDump(
     e2eLog('  screenshot skipped (no binding attached)');
     return;
   }
-  final name =
-      'dump_${reason.replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_')}';
+  final name = 'dump_${reason.replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_')}';
   try {
     await binding.takeScreenshot(name);
     e2eLog('  screenshot=$name');
@@ -154,7 +151,9 @@ Future<void> pumpSettleShort(
       timeout,
     );
   } catch (_) {
-    e2eLog('pumpSettleShort timed out after ${timeout.inMilliseconds}ms — continuing');
+    e2eLog(
+      'pumpSettleShort timed out after ${timeout.inMilliseconds}ms — continuing',
+    );
     await tester.pump(const Duration(milliseconds: 200));
   }
 }

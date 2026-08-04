@@ -10483,6 +10483,1328 @@ class CostosOtrosCompanion extends UpdateCompanion<CostoOtroRow> {
   }
 }
 
+class $GastosFijosTable extends GastosFijos
+    with TableInfo<$GastosFijosTable, GastoFijoRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GastosFijosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fincaIdMeta = const VerificationMeta(
+    'fincaId',
+  );
+  @override
+  late final GeneratedColumn<String> fincaId = GeneratedColumn<String>(
+    'finca_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _conceptoMeta = const VerificationMeta(
+    'concepto',
+  );
+  @override
+  late final GeneratedColumn<String> concepto = GeneratedColumn<String>(
+    'concepto',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montoMeta = const VerificationMeta('monto');
+  @override
+  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+    'monto',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _periodicidadMeta = const VerificationMeta(
+    'periodicidad',
+  );
+  @override
+  late final GeneratedColumn<String> periodicidad = GeneratedColumn<String>(
+    'periodicidad',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _desdeMeta = const VerificationMeta('desde');
+  @override
+  late final GeneratedColumn<DateTime> desde = GeneratedColumn<DateTime>(
+    'desde',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hastaMeta = const VerificationMeta('hasta');
+  @override
+  late final GeneratedColumn<DateTime> hasta = GeneratedColumn<DateTime>(
+    'hasta',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _monedaMeta = const VerificationMeta('moneda');
+  @override
+  late final GeneratedColumn<String> moneda = GeneratedColumn<String>(
+    'moneda',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('CRC'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    fincaId,
+    concepto,
+    monto,
+    periodicidad,
+    desde,
+    hasta,
+    moneda,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gastos_fijos';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GastoFijoRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('finca_id')) {
+      context.handle(
+        _fincaIdMeta,
+        fincaId.isAcceptableOrUnknown(data['finca_id']!, _fincaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fincaIdMeta);
+    }
+    if (data.containsKey('concepto')) {
+      context.handle(
+        _conceptoMeta,
+        concepto.isAcceptableOrUnknown(data['concepto']!, _conceptoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_conceptoMeta);
+    }
+    if (data.containsKey('monto')) {
+      context.handle(
+        _montoMeta,
+        monto.isAcceptableOrUnknown(data['monto']!, _montoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_montoMeta);
+    }
+    if (data.containsKey('periodicidad')) {
+      context.handle(
+        _periodicidadMeta,
+        periodicidad.isAcceptableOrUnknown(
+          data['periodicidad']!,
+          _periodicidadMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_periodicidadMeta);
+    }
+    if (data.containsKey('desde')) {
+      context.handle(
+        _desdeMeta,
+        desde.isAcceptableOrUnknown(data['desde']!, _desdeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_desdeMeta);
+    }
+    if (data.containsKey('hasta')) {
+      context.handle(
+        _hastaMeta,
+        hasta.isAcceptableOrUnknown(data['hasta']!, _hastaMeta),
+      );
+    }
+    if (data.containsKey('moneda')) {
+      context.handle(
+        _monedaMeta,
+        moneda.isAcceptableOrUnknown(data['moneda']!, _monedaMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GastoFijoRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GastoFijoRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      fincaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}finca_id'],
+      )!,
+      concepto: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}concepto'],
+      )!,
+      monto: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monto'],
+      )!,
+      periodicidad: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}periodicidad'],
+      )!,
+      desde: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}desde'],
+      )!,
+      hasta: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}hasta'],
+      ),
+      moneda: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}moneda'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $GastosFijosTable createAlias(String alias) {
+    return $GastosFijosTable(attachedDatabase, alias);
+  }
+}
+
+class GastoFijoRow extends DataClass implements Insertable<GastoFijoRow> {
+  final String id;
+  final String fincaId;
+  final String concepto;
+  final double monto;
+
+  /// mensual | unico
+  final String periodicidad;
+
+  /// mensual: primer día del mes en que empieza. unico: fecha del gasto.
+  final DateTime desde;
+
+  /// null = sigue vigente; se llena al dar de baja.
+  final DateTime? hasta;
+  final String moneda;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const GastoFijoRow({
+    required this.id,
+    required this.fincaId,
+    required this.concepto,
+    required this.monto,
+    required this.periodicidad,
+    required this.desde,
+    this.hasta,
+    required this.moneda,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['finca_id'] = Variable<String>(fincaId);
+    map['concepto'] = Variable<String>(concepto);
+    map['monto'] = Variable<double>(monto);
+    map['periodicidad'] = Variable<String>(periodicidad);
+    map['desde'] = Variable<DateTime>(desde);
+    if (!nullToAbsent || hasta != null) {
+      map['hasta'] = Variable<DateTime>(hasta);
+    }
+    map['moneda'] = Variable<String>(moneda);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  GastosFijosCompanion toCompanion(bool nullToAbsent) {
+    return GastosFijosCompanion(
+      id: Value(id),
+      fincaId: Value(fincaId),
+      concepto: Value(concepto),
+      monto: Value(monto),
+      periodicidad: Value(periodicidad),
+      desde: Value(desde),
+      hasta: hasta == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hasta),
+      moneda: Value(moneda),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory GastoFijoRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GastoFijoRow(
+      id: serializer.fromJson<String>(json['id']),
+      fincaId: serializer.fromJson<String>(json['fincaId']),
+      concepto: serializer.fromJson<String>(json['concepto']),
+      monto: serializer.fromJson<double>(json['monto']),
+      periodicidad: serializer.fromJson<String>(json['periodicidad']),
+      desde: serializer.fromJson<DateTime>(json['desde']),
+      hasta: serializer.fromJson<DateTime?>(json['hasta']),
+      moneda: serializer.fromJson<String>(json['moneda']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'fincaId': serializer.toJson<String>(fincaId),
+      'concepto': serializer.toJson<String>(concepto),
+      'monto': serializer.toJson<double>(monto),
+      'periodicidad': serializer.toJson<String>(periodicidad),
+      'desde': serializer.toJson<DateTime>(desde),
+      'hasta': serializer.toJson<DateTime?>(hasta),
+      'moneda': serializer.toJson<String>(moneda),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  GastoFijoRow copyWith({
+    String? id,
+    String? fincaId,
+    String? concepto,
+    double? monto,
+    String? periodicidad,
+    DateTime? desde,
+    Value<DateTime?> hasta = const Value.absent(),
+    String? moneda,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => GastoFijoRow(
+    id: id ?? this.id,
+    fincaId: fincaId ?? this.fincaId,
+    concepto: concepto ?? this.concepto,
+    monto: monto ?? this.monto,
+    periodicidad: periodicidad ?? this.periodicidad,
+    desde: desde ?? this.desde,
+    hasta: hasta.present ? hasta.value : this.hasta,
+    moneda: moneda ?? this.moneda,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  GastoFijoRow copyWithCompanion(GastosFijosCompanion data) {
+    return GastoFijoRow(
+      id: data.id.present ? data.id.value : this.id,
+      fincaId: data.fincaId.present ? data.fincaId.value : this.fincaId,
+      concepto: data.concepto.present ? data.concepto.value : this.concepto,
+      monto: data.monto.present ? data.monto.value : this.monto,
+      periodicidad: data.periodicidad.present
+          ? data.periodicidad.value
+          : this.periodicidad,
+      desde: data.desde.present ? data.desde.value : this.desde,
+      hasta: data.hasta.present ? data.hasta.value : this.hasta,
+      moneda: data.moneda.present ? data.moneda.value : this.moneda,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GastoFijoRow(')
+          ..write('id: $id, ')
+          ..write('fincaId: $fincaId, ')
+          ..write('concepto: $concepto, ')
+          ..write('monto: $monto, ')
+          ..write('periodicidad: $periodicidad, ')
+          ..write('desde: $desde, ')
+          ..write('hasta: $hasta, ')
+          ..write('moneda: $moneda, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    fincaId,
+    concepto,
+    monto,
+    periodicidad,
+    desde,
+    hasta,
+    moneda,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GastoFijoRow &&
+          other.id == this.id &&
+          other.fincaId == this.fincaId &&
+          other.concepto == this.concepto &&
+          other.monto == this.monto &&
+          other.periodicidad == this.periodicidad &&
+          other.desde == this.desde &&
+          other.hasta == this.hasta &&
+          other.moneda == this.moneda &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class GastosFijosCompanion extends UpdateCompanion<GastoFijoRow> {
+  final Value<String> id;
+  final Value<String> fincaId;
+  final Value<String> concepto;
+  final Value<double> monto;
+  final Value<String> periodicidad;
+  final Value<DateTime> desde;
+  final Value<DateTime?> hasta;
+  final Value<String> moneda;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const GastosFijosCompanion({
+    this.id = const Value.absent(),
+    this.fincaId = const Value.absent(),
+    this.concepto = const Value.absent(),
+    this.monto = const Value.absent(),
+    this.periodicidad = const Value.absent(),
+    this.desde = const Value.absent(),
+    this.hasta = const Value.absent(),
+    this.moneda = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GastosFijosCompanion.insert({
+    required String id,
+    required String fincaId,
+    required String concepto,
+    required double monto,
+    required String periodicidad,
+    required DateTime desde,
+    this.hasta = const Value.absent(),
+    this.moneda = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       fincaId = Value(fincaId),
+       concepto = Value(concepto),
+       monto = Value(monto),
+       periodicidad = Value(periodicidad),
+       desde = Value(desde),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<GastoFijoRow> custom({
+    Expression<String>? id,
+    Expression<String>? fincaId,
+    Expression<String>? concepto,
+    Expression<double>? monto,
+    Expression<String>? periodicidad,
+    Expression<DateTime>? desde,
+    Expression<DateTime>? hasta,
+    Expression<String>? moneda,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fincaId != null) 'finca_id': fincaId,
+      if (concepto != null) 'concepto': concepto,
+      if (monto != null) 'monto': monto,
+      if (periodicidad != null) 'periodicidad': periodicidad,
+      if (desde != null) 'desde': desde,
+      if (hasta != null) 'hasta': hasta,
+      if (moneda != null) 'moneda': moneda,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GastosFijosCompanion copyWith({
+    Value<String>? id,
+    Value<String>? fincaId,
+    Value<String>? concepto,
+    Value<double>? monto,
+    Value<String>? periodicidad,
+    Value<DateTime>? desde,
+    Value<DateTime?>? hasta,
+    Value<String>? moneda,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return GastosFijosCompanion(
+      id: id ?? this.id,
+      fincaId: fincaId ?? this.fincaId,
+      concepto: concepto ?? this.concepto,
+      monto: monto ?? this.monto,
+      periodicidad: periodicidad ?? this.periodicidad,
+      desde: desde ?? this.desde,
+      hasta: hasta ?? this.hasta,
+      moneda: moneda ?? this.moneda,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (fincaId.present) {
+      map['finca_id'] = Variable<String>(fincaId.value);
+    }
+    if (concepto.present) {
+      map['concepto'] = Variable<String>(concepto.value);
+    }
+    if (monto.present) {
+      map['monto'] = Variable<double>(monto.value);
+    }
+    if (periodicidad.present) {
+      map['periodicidad'] = Variable<String>(periodicidad.value);
+    }
+    if (desde.present) {
+      map['desde'] = Variable<DateTime>(desde.value);
+    }
+    if (hasta.present) {
+      map['hasta'] = Variable<DateTime>(hasta.value);
+    }
+    if (moneda.present) {
+      map['moneda'] = Variable<String>(moneda.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GastosFijosCompanion(')
+          ..write('id: $id, ')
+          ..write('fincaId: $fincaId, ')
+          ..write('concepto: $concepto, ')
+          ..write('monto: $monto, ')
+          ..write('periodicidad: $periodicidad, ')
+          ..write('desde: $desde, ')
+          ..write('hasta: $hasta, ')
+          ..write('moneda: $moneda, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GastoFijoCargosTable extends GastoFijoCargos
+    with TableInfo<$GastoFijoCargosTable, GastoFijoCargoRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GastoFijoCargosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _gastoFijoIdMeta = const VerificationMeta(
+    'gastoFijoId',
+  );
+  @override
+  late final GeneratedColumn<String> gastoFijoId = GeneratedColumn<String>(
+    'gasto_fijo_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _animalIdMeta = const VerificationMeta(
+    'animalId',
+  );
+  @override
+  late final GeneratedColumn<String> animalId = GeneratedColumn<String>(
+    'animal_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mesMeta = const VerificationMeta('mes');
+  @override
+  late final GeneratedColumn<DateTime> mes = GeneratedColumn<DateTime>(
+    'mes',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _diasMeta = const VerificationMeta('dias');
+  @override
+  late final GeneratedColumn<int> dias = GeneratedColumn<int>(
+    'dias',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montoMeta = const VerificationMeta('monto');
+  @override
+  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+    'monto',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    gastoFijoId,
+    animalId,
+    mes,
+    dias,
+    monto,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gasto_fijo_cargos';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GastoFijoCargoRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('gasto_fijo_id')) {
+      context.handle(
+        _gastoFijoIdMeta,
+        gastoFijoId.isAcceptableOrUnknown(
+          data['gasto_fijo_id']!,
+          _gastoFijoIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_gastoFijoIdMeta);
+    }
+    if (data.containsKey('animal_id')) {
+      context.handle(
+        _animalIdMeta,
+        animalId.isAcceptableOrUnknown(data['animal_id']!, _animalIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_animalIdMeta);
+    }
+    if (data.containsKey('mes')) {
+      context.handle(
+        _mesMeta,
+        mes.isAcceptableOrUnknown(data['mes']!, _mesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mesMeta);
+    }
+    if (data.containsKey('dias')) {
+      context.handle(
+        _diasMeta,
+        dias.isAcceptableOrUnknown(data['dias']!, _diasMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_diasMeta);
+    }
+    if (data.containsKey('monto')) {
+      context.handle(
+        _montoMeta,
+        monto.isAcceptableOrUnknown(data['monto']!, _montoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_montoMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GastoFijoCargoRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GastoFijoCargoRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      gastoFijoId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gasto_fijo_id'],
+      )!,
+      animalId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}animal_id'],
+      )!,
+      mes: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}mes'],
+      )!,
+      dias: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dias'],
+      )!,
+      monto: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monto'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $GastoFijoCargosTable createAlias(String alias) {
+    return $GastoFijoCargosTable(attachedDatabase, alias);
+  }
+}
+
+class GastoFijoCargoRow extends DataClass
+    implements Insertable<GastoFijoCargoRow> {
+  final String id;
+  final String gastoFijoId;
+  final String animalId;
+
+  /// Primer día del mes al que corresponde el cargo.
+  final DateTime mes;
+
+  /// Días-animal que le tocaron en ese mes (para poder auditar el reparto).
+  final int dias;
+  final double monto;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const GastoFijoCargoRow({
+    required this.id,
+    required this.gastoFijoId,
+    required this.animalId,
+    required this.mes,
+    required this.dias,
+    required this.monto,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['gasto_fijo_id'] = Variable<String>(gastoFijoId);
+    map['animal_id'] = Variable<String>(animalId);
+    map['mes'] = Variable<DateTime>(mes);
+    map['dias'] = Variable<int>(dias);
+    map['monto'] = Variable<double>(monto);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  GastoFijoCargosCompanion toCompanion(bool nullToAbsent) {
+    return GastoFijoCargosCompanion(
+      id: Value(id),
+      gastoFijoId: Value(gastoFijoId),
+      animalId: Value(animalId),
+      mes: Value(mes),
+      dias: Value(dias),
+      monto: Value(monto),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory GastoFijoCargoRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GastoFijoCargoRow(
+      id: serializer.fromJson<String>(json['id']),
+      gastoFijoId: serializer.fromJson<String>(json['gastoFijoId']),
+      animalId: serializer.fromJson<String>(json['animalId']),
+      mes: serializer.fromJson<DateTime>(json['mes']),
+      dias: serializer.fromJson<int>(json['dias']),
+      monto: serializer.fromJson<double>(json['monto']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'gastoFijoId': serializer.toJson<String>(gastoFijoId),
+      'animalId': serializer.toJson<String>(animalId),
+      'mes': serializer.toJson<DateTime>(mes),
+      'dias': serializer.toJson<int>(dias),
+      'monto': serializer.toJson<double>(monto),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  GastoFijoCargoRow copyWith({
+    String? id,
+    String? gastoFijoId,
+    String? animalId,
+    DateTime? mes,
+    int? dias,
+    double? monto,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => GastoFijoCargoRow(
+    id: id ?? this.id,
+    gastoFijoId: gastoFijoId ?? this.gastoFijoId,
+    animalId: animalId ?? this.animalId,
+    mes: mes ?? this.mes,
+    dias: dias ?? this.dias,
+    monto: monto ?? this.monto,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  GastoFijoCargoRow copyWithCompanion(GastoFijoCargosCompanion data) {
+    return GastoFijoCargoRow(
+      id: data.id.present ? data.id.value : this.id,
+      gastoFijoId: data.gastoFijoId.present
+          ? data.gastoFijoId.value
+          : this.gastoFijoId,
+      animalId: data.animalId.present ? data.animalId.value : this.animalId,
+      mes: data.mes.present ? data.mes.value : this.mes,
+      dias: data.dias.present ? data.dias.value : this.dias,
+      monto: data.monto.present ? data.monto.value : this.monto,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GastoFijoCargoRow(')
+          ..write('id: $id, ')
+          ..write('gastoFijoId: $gastoFijoId, ')
+          ..write('animalId: $animalId, ')
+          ..write('mes: $mes, ')
+          ..write('dias: $dias, ')
+          ..write('monto: $monto, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    gastoFijoId,
+    animalId,
+    mes,
+    dias,
+    monto,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GastoFijoCargoRow &&
+          other.id == this.id &&
+          other.gastoFijoId == this.gastoFijoId &&
+          other.animalId == this.animalId &&
+          other.mes == this.mes &&
+          other.dias == this.dias &&
+          other.monto == this.monto &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class GastoFijoCargosCompanion extends UpdateCompanion<GastoFijoCargoRow> {
+  final Value<String> id;
+  final Value<String> gastoFijoId;
+  final Value<String> animalId;
+  final Value<DateTime> mes;
+  final Value<int> dias;
+  final Value<double> monto;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const GastoFijoCargosCompanion({
+    this.id = const Value.absent(),
+    this.gastoFijoId = const Value.absent(),
+    this.animalId = const Value.absent(),
+    this.mes = const Value.absent(),
+    this.dias = const Value.absent(),
+    this.monto = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GastoFijoCargosCompanion.insert({
+    required String id,
+    required String gastoFijoId,
+    required String animalId,
+    required DateTime mes,
+    required int dias,
+    required double monto,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       gastoFijoId = Value(gastoFijoId),
+       animalId = Value(animalId),
+       mes = Value(mes),
+       dias = Value(dias),
+       monto = Value(monto),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<GastoFijoCargoRow> custom({
+    Expression<String>? id,
+    Expression<String>? gastoFijoId,
+    Expression<String>? animalId,
+    Expression<DateTime>? mes,
+    Expression<int>? dias,
+    Expression<double>? monto,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (gastoFijoId != null) 'gasto_fijo_id': gastoFijoId,
+      if (animalId != null) 'animal_id': animalId,
+      if (mes != null) 'mes': mes,
+      if (dias != null) 'dias': dias,
+      if (monto != null) 'monto': monto,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GastoFijoCargosCompanion copyWith({
+    Value<String>? id,
+    Value<String>? gastoFijoId,
+    Value<String>? animalId,
+    Value<DateTime>? mes,
+    Value<int>? dias,
+    Value<double>? monto,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return GastoFijoCargosCompanion(
+      id: id ?? this.id,
+      gastoFijoId: gastoFijoId ?? this.gastoFijoId,
+      animalId: animalId ?? this.animalId,
+      mes: mes ?? this.mes,
+      dias: dias ?? this.dias,
+      monto: monto ?? this.monto,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (gastoFijoId.present) {
+      map['gasto_fijo_id'] = Variable<String>(gastoFijoId.value);
+    }
+    if (animalId.present) {
+      map['animal_id'] = Variable<String>(animalId.value);
+    }
+    if (mes.present) {
+      map['mes'] = Variable<DateTime>(mes.value);
+    }
+    if (dias.present) {
+      map['dias'] = Variable<int>(dias.value);
+    }
+    if (monto.present) {
+      map['monto'] = Variable<double>(monto.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GastoFijoCargosCompanion(')
+          ..write('id: $id, ')
+          ..write('gastoFijoId: $gastoFijoId, ')
+          ..write('animalId: $animalId, ')
+          ..write('mes: $mes, ')
+          ..write('dias: $dias, ')
+          ..write('monto: $monto, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $FeatureFlagsTable extends FeatureFlags
     with TableInfo<$FeatureFlagsTable, FeatureFlagRow> {
   @override
@@ -12126,6 +13448,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LotesVentaTable lotesVenta = $LotesVentaTable(this);
   late final $VentasTable ventas = $VentasTable(this);
   late final $CostosOtrosTable costosOtros = $CostosOtrosTable(this);
+  late final $GastosFijosTable gastosFijos = $GastosFijosTable(this);
+  late final $GastoFijoCargosTable gastoFijoCargos = $GastoFijoCargosTable(
+    this,
+  );
   late final $FeatureFlagsTable featureFlags = $FeatureFlagsTable(this);
   late final $SyncCursoresTable syncCursores = $SyncCursoresTable(this);
   late final $SyncEstadosTable syncEstados = $SyncEstadosTable(this);
@@ -12154,6 +13480,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     lotesVenta,
     ventas,
     costosOtros,
+    gastosFijos,
+    gastoFijoCargos,
     featureFlags,
     syncCursores,
     syncEstados,
@@ -17204,6 +18532,644 @@ typedef $$CostosOtrosTableProcessedTableManager =
       CostoOtroRow,
       PrefetchHooks Function()
     >;
+typedef $$GastosFijosTableCreateCompanionBuilder =
+    GastosFijosCompanion Function({
+      required String id,
+      required String fincaId,
+      required String concepto,
+      required double monto,
+      required String periodicidad,
+      required DateTime desde,
+      Value<DateTime?> hasta,
+      Value<String> moneda,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$GastosFijosTableUpdateCompanionBuilder =
+    GastosFijosCompanion Function({
+      Value<String> id,
+      Value<String> fincaId,
+      Value<String> concepto,
+      Value<double> monto,
+      Value<String> periodicidad,
+      Value<DateTime> desde,
+      Value<DateTime?> hasta,
+      Value<String> moneda,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$GastosFijosTableFilterComposer
+    extends Composer<_$AppDatabase, $GastosFijosTable> {
+  $$GastosFijosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fincaId => $composableBuilder(
+    column: $table.fincaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get concepto => $composableBuilder(
+    column: $table.concepto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get periodicidad => $composableBuilder(
+    column: $table.periodicidad,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get desde => $composableBuilder(
+    column: $table.desde,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get hasta => $composableBuilder(
+    column: $table.hasta,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get moneda => $composableBuilder(
+    column: $table.moneda,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GastosFijosTableOrderingComposer
+    extends Composer<_$AppDatabase, $GastosFijosTable> {
+  $$GastosFijosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fincaId => $composableBuilder(
+    column: $table.fincaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get concepto => $composableBuilder(
+    column: $table.concepto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get periodicidad => $composableBuilder(
+    column: $table.periodicidad,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get desde => $composableBuilder(
+    column: $table.desde,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get hasta => $composableBuilder(
+    column: $table.hasta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get moneda => $composableBuilder(
+    column: $table.moneda,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GastosFijosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GastosFijosTable> {
+  $$GastosFijosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fincaId =>
+      $composableBuilder(column: $table.fincaId, builder: (column) => column);
+
+  GeneratedColumn<String> get concepto =>
+      $composableBuilder(column: $table.concepto, builder: (column) => column);
+
+  GeneratedColumn<double> get monto =>
+      $composableBuilder(column: $table.monto, builder: (column) => column);
+
+  GeneratedColumn<String> get periodicidad => $composableBuilder(
+    column: $table.periodicidad,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get desde =>
+      $composableBuilder(column: $table.desde, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get hasta =>
+      $composableBuilder(column: $table.hasta, builder: (column) => column);
+
+  GeneratedColumn<String> get moneda =>
+      $composableBuilder(column: $table.moneda, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$GastosFijosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GastosFijosTable,
+          GastoFijoRow,
+          $$GastosFijosTableFilterComposer,
+          $$GastosFijosTableOrderingComposer,
+          $$GastosFijosTableAnnotationComposer,
+          $$GastosFijosTableCreateCompanionBuilder,
+          $$GastosFijosTableUpdateCompanionBuilder,
+          (
+            GastoFijoRow,
+            BaseReferences<_$AppDatabase, $GastosFijosTable, GastoFijoRow>,
+          ),
+          GastoFijoRow,
+          PrefetchHooks Function()
+        > {
+  $$GastosFijosTableTableManager(_$AppDatabase db, $GastosFijosTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GastosFijosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GastosFijosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GastosFijosTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> fincaId = const Value.absent(),
+                Value<String> concepto = const Value.absent(),
+                Value<double> monto = const Value.absent(),
+                Value<String> periodicidad = const Value.absent(),
+                Value<DateTime> desde = const Value.absent(),
+                Value<DateTime?> hasta = const Value.absent(),
+                Value<String> moneda = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GastosFijosCompanion(
+                id: id,
+                fincaId: fincaId,
+                concepto: concepto,
+                monto: monto,
+                periodicidad: periodicidad,
+                desde: desde,
+                hasta: hasta,
+                moneda: moneda,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String fincaId,
+                required String concepto,
+                required double monto,
+                required String periodicidad,
+                required DateTime desde,
+                Value<DateTime?> hasta = const Value.absent(),
+                Value<String> moneda = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GastosFijosCompanion.insert(
+                id: id,
+                fincaId: fincaId,
+                concepto: concepto,
+                monto: monto,
+                periodicidad: periodicidad,
+                desde: desde,
+                hasta: hasta,
+                moneda: moneda,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GastosFijosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GastosFijosTable,
+      GastoFijoRow,
+      $$GastosFijosTableFilterComposer,
+      $$GastosFijosTableOrderingComposer,
+      $$GastosFijosTableAnnotationComposer,
+      $$GastosFijosTableCreateCompanionBuilder,
+      $$GastosFijosTableUpdateCompanionBuilder,
+      (
+        GastoFijoRow,
+        BaseReferences<_$AppDatabase, $GastosFijosTable, GastoFijoRow>,
+      ),
+      GastoFijoRow,
+      PrefetchHooks Function()
+    >;
+typedef $$GastoFijoCargosTableCreateCompanionBuilder =
+    GastoFijoCargosCompanion Function({
+      required String id,
+      required String gastoFijoId,
+      required String animalId,
+      required DateTime mes,
+      required int dias,
+      required double monto,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$GastoFijoCargosTableUpdateCompanionBuilder =
+    GastoFijoCargosCompanion Function({
+      Value<String> id,
+      Value<String> gastoFijoId,
+      Value<String> animalId,
+      Value<DateTime> mes,
+      Value<int> dias,
+      Value<double> monto,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$GastoFijoCargosTableFilterComposer
+    extends Composer<_$AppDatabase, $GastoFijoCargosTable> {
+  $$GastoFijoCargosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get gastoFijoId => $composableBuilder(
+    column: $table.gastoFijoId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get animalId => $composableBuilder(
+    column: $table.animalId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get mes => $composableBuilder(
+    column: $table.mes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dias => $composableBuilder(
+    column: $table.dias,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GastoFijoCargosTableOrderingComposer
+    extends Composer<_$AppDatabase, $GastoFijoCargosTable> {
+  $$GastoFijoCargosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get gastoFijoId => $composableBuilder(
+    column: $table.gastoFijoId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get animalId => $composableBuilder(
+    column: $table.animalId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get mes => $composableBuilder(
+    column: $table.mes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dias => $composableBuilder(
+    column: $table.dias,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GastoFijoCargosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GastoFijoCargosTable> {
+  $$GastoFijoCargosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get gastoFijoId => $composableBuilder(
+    column: $table.gastoFijoId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get animalId =>
+      $composableBuilder(column: $table.animalId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get mes =>
+      $composableBuilder(column: $table.mes, builder: (column) => column);
+
+  GeneratedColumn<int> get dias =>
+      $composableBuilder(column: $table.dias, builder: (column) => column);
+
+  GeneratedColumn<double> get monto =>
+      $composableBuilder(column: $table.monto, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$GastoFijoCargosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GastoFijoCargosTable,
+          GastoFijoCargoRow,
+          $$GastoFijoCargosTableFilterComposer,
+          $$GastoFijoCargosTableOrderingComposer,
+          $$GastoFijoCargosTableAnnotationComposer,
+          $$GastoFijoCargosTableCreateCompanionBuilder,
+          $$GastoFijoCargosTableUpdateCompanionBuilder,
+          (
+            GastoFijoCargoRow,
+            BaseReferences<
+              _$AppDatabase,
+              $GastoFijoCargosTable,
+              GastoFijoCargoRow
+            >,
+          ),
+          GastoFijoCargoRow,
+          PrefetchHooks Function()
+        > {
+  $$GastoFijoCargosTableTableManager(
+    _$AppDatabase db,
+    $GastoFijoCargosTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GastoFijoCargosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GastoFijoCargosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GastoFijoCargosTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> gastoFijoId = const Value.absent(),
+                Value<String> animalId = const Value.absent(),
+                Value<DateTime> mes = const Value.absent(),
+                Value<int> dias = const Value.absent(),
+                Value<double> monto = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GastoFijoCargosCompanion(
+                id: id,
+                gastoFijoId: gastoFijoId,
+                animalId: animalId,
+                mes: mes,
+                dias: dias,
+                monto: monto,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String gastoFijoId,
+                required String animalId,
+                required DateTime mes,
+                required int dias,
+                required double monto,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GastoFijoCargosCompanion.insert(
+                id: id,
+                gastoFijoId: gastoFijoId,
+                animalId: animalId,
+                mes: mes,
+                dias: dias,
+                monto: monto,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GastoFijoCargosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GastoFijoCargosTable,
+      GastoFijoCargoRow,
+      $$GastoFijoCargosTableFilterComposer,
+      $$GastoFijoCargosTableOrderingComposer,
+      $$GastoFijoCargosTableAnnotationComposer,
+      $$GastoFijoCargosTableCreateCompanionBuilder,
+      $$GastoFijoCargosTableUpdateCompanionBuilder,
+      (
+        GastoFijoCargoRow,
+        BaseReferences<_$AppDatabase, $GastoFijoCargosTable, GastoFijoCargoRow>,
+      ),
+      GastoFijoCargoRow,
+      PrefetchHooks Function()
+    >;
 typedef $$FeatureFlagsTableCreateCompanionBuilder =
     FeatureFlagsCompanion Function({
       required String id,
@@ -18102,6 +20068,10 @@ class $AppDatabaseManager {
       $$VentasTableTableManager(_db, _db.ventas);
   $$CostosOtrosTableTableManager get costosOtros =>
       $$CostosOtrosTableTableManager(_db, _db.costosOtros);
+  $$GastosFijosTableTableManager get gastosFijos =>
+      $$GastosFijosTableTableManager(_db, _db.gastosFijos);
+  $$GastoFijoCargosTableTableManager get gastoFijoCargos =>
+      $$GastoFijoCargosTableTableManager(_db, _db.gastoFijoCargos);
   $$FeatureFlagsTableTableManager get featureFlags =>
       $$FeatureFlagsTableTableManager(_db, _db.featureFlags);
   $$SyncCursoresTableTableManager get syncCursores =>

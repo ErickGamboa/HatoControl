@@ -118,11 +118,15 @@ void main() {
 
     expect(find.byKey(const ValueKey('fincaDetail.corral')), findsNothing);
     expect(find.byKey(const ValueKey('fincaDetail.pesaje')), findsOneWidget);
-    expect(find.text('Trabajo'), findsOneWidget);
+    expect(find.text('Recolección de datos'), findsOneWidget);
     expect(find.byKey(const ValueKey('fincaDetail.sanidad')), findsOneWidget);
     expect(find.byKey(const ValueKey('fincaDetail.lotes')), findsOneWidget);
     expect(find.byKey(const ValueKey('fincaDetail.dietas')), findsOneWidget);
     expect(find.byKey(const ValueKey('fincaDetail.venta')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('fincaDetail.gastosFijos')),
+      findsOneWidget,
+    );
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));

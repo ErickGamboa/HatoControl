@@ -137,13 +137,19 @@ DosisMedicamentoCalculada calcularDosisMedicamento({
   }
 }
 
-/// Utilidad oro: venta − (compra + dietas + sanidad). Sin “otros”.
+/// Utilidad oro: venta − (compra + dietas + sanidad + gastos fijos).
+/// Sin “otros costos” por animal (`costos_otros` sigue fuera de la fórmula).
+///
+/// [costoGastosFijos] es la parte prorrateada por días-animal del Módulo 7
+/// (D-17); vale 0 cuando la finca no tiene gastos fijos registrados.
 double? utilidadOro({
   required double? precioVenta,
   double? precioCompra,
   required double costoDietas,
   required double costoSanidad,
+  double costoGastosFijos = 0,
 }) {
   if (precioVenta == null) return null;
-  return precioVenta - ((precioCompra ?? 0) + costoDietas + costoSanidad);
+  return precioVenta -
+      ((precioCompra ?? 0) + costoDietas + costoSanidad + costoGastosFijos);
 }

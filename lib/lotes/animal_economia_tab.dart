@@ -219,7 +219,7 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Venta − (compra + dietas + sanidad)',
+          'Venta − (compra + dietas + sanidad + gastos fijos)',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.outline,
           ),
@@ -257,6 +257,14 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
         KeyedSubtree(
           key: const ValueKey('economia.sanidad'),
           child: fila('Sanidad', _fmt(r.costoSanitario)),
+        ),
+        KeyedSubtree(
+          key: const ValueKey('economia.gastosFijos'),
+          child: fila(
+            'Gastos fijos',
+            _fmt(r.costoGastosFijos),
+            detalle: 'parte del peón, luz, agua… por sus días en la finca',
+          ),
         ),
         const Divider(height: 24),
         KeyedSubtree(

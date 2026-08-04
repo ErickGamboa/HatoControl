@@ -5,6 +5,7 @@ import '../estadisticas/estadisticas_economicas.dart';
 import '../estadisticas/estadisticas_sanidad.dart';
 import '../local/database.dart';
 import 'dietas_repository.dart';
+import 'gastos_fijos_repository.dart';
 import 'sanidad_repository.dart';
 
 /// Estados del animal en inventario activo (D-08).
@@ -40,18 +41,23 @@ class VentaConAnimal {
   final double? utilidad;
 }
 
-/// Ventas y utilidad oro (sin “otros costos” en la fórmula de producto).
+/// Ventas y utilidad oro: venta − (compra + dietas + sanidad + gastos fijos).
+/// Los “otros costos” por animal (`costos_otros`) siguen fuera de la fórmula.
 class VentasRepository {
   VentasRepository(
     this.db, {
     DietasRepository? dietasRepository,
     SanidadRepository? sanidadRepository,
+    GastosFijosRepository? gastosFijosRepository,
   }) : _dietasRepository = dietasRepository ?? DietasRepository(db),
-       _sanidadRepository = sanidadRepository ?? SanidadRepository(db);
+       _sanidadRepository = sanidadRepository ?? SanidadRepository(db),
+       _gastosFijosRepository =
+           gastosFijosRepository ?? GastosFijosRepository(db);
 
   final AppDatabase db;
   final DietasRepository _dietasRepository;
   final SanidadRepository _sanidadRepository;
+  final GastosFijosRepository _gastosFijosRepository;
   final _uuid = const Uuid();
 
   Stream<VentaRow?> observarVenta(String animalId) {
@@ -186,6 +192,14 @@ class VentasRepository {
               pendiente: const Value(true),
             ),
           );
+      // Antes de marcarlos vendidos: los que salen juntos se reparten entre sí
+      // el gasto fijo y su parte queda congelada (Módulo 7, D-17).
+      await _gastosFijosRepository.congelarGastosFijos(
+        fincaId: fincaId,
+        animalIds: [for (final item in items) item.animalId],
+        fecha: ahora,
+        hoy: ahora,
+      );
       for (final item in items) {
         final total = item.peso * item.precioKg;
         await db
@@ -248,7 +262,17 @@ class VentasRepository {
     }
     final ahora = fecha ?? DateTime.now();
     final total = (peso != null && precioKg != null) ? peso * precioKg : precio;
+    final animal = await (db.select(
+      db.animales,
+    )..where((t) => t.id.equals(animalId))).getSingle();
     await db.transaction(() async {
+      // Congelar el gasto fijo antes de marcarlo vendido (Módulo 7, D-17).
+      await _gastosFijosRepository.congelarGastosFijos(
+        fincaId: animal.fincaId,
+        animalIds: [animalId],
+        fecha: ahora,
+        hoy: ahora,
+      );
       await db
           .into(db.ventas)
           .insert(
@@ -332,13 +356,17 @@ class VentasRepository {
     final sanitario = costoSanitarioDesdeEventos(
       eventos.map((e) => e.costo).toList(),
     );
+    // Gasto fijo prorrateado: congelado si ya salió, en vivo si está activo.
+    final gastosFijos = await _gastosFijosRepository.gastoFijoDeAnimal(animal);
     final utilidad = utilidadOro(
       precioVenta: venta?.precio,
       precioCompra: animal.precioCompra,
       costoDietas: alimentacion,
       costoSanidad: sanitario,
+      costoGastosFijos: gastosFijos,
     );
-    final total = (animal.precioCompra ?? 0) + alimentacion + sanitario;
+    final total =
+        (animal.precioCompra ?? 0) + alimentacion + sanitario + gastosFijos;
 
     // Compra confiable si hay ₡/kg explícito (0 = nació) o no hay rastro de compra.
     final compraConfiable =
@@ -352,6 +380,7 @@ class VentasRepository {
       costoAlimentacion: alimentacion,
       costoSanitario: sanitario,
       costoOtros: 0,
+      costoGastosFijos: gastosFijos,
       precioVenta: venta?.precio,
       pesoVenta: venta?.peso,
       precioKgVenta: venta?.precioKg,
