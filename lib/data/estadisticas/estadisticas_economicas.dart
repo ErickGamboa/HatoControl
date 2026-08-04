@@ -30,6 +30,9 @@ class ResumenEconomicoAnimal {
     this.precioKgCompra,
     this.pesoVenta,
     this.precioKgVenta,
+    this.pesoPie,
+    this.pesoCanal,
+    this.rendimiento,
     this.compraConfiable = true,
   });
 
@@ -45,6 +48,11 @@ class ResumenEconomicoAnimal {
   final double? precioVenta;
   final double? pesoVenta;
   final double? precioKgVenta;
+
+  /// Datos de planta (D-19). `rendimiento` es derivado de los dos pesos.
+  final double? pesoPie;
+  final double? pesoCanal;
+  final double? rendimiento;
   final double costoTotal;
   final double? utilidad;
   final double? margenPorcentaje;
@@ -114,6 +122,15 @@ double? utilidadAnimal({
 double? margenPorcentaje({required double? utilidad, required double? venta}) {
   if (utilidad == null || venta == null || venta == 0) return null;
   return (utilidad / venta) * 100;
+}
+
+/// Rendimiento en canal = peso canal ÷ peso en pie × 100 (D-19).
+/// Null si falta un peso o si el resultado no es creíble (canal > pie).
+double? rendimientoCanal({double? pesoPie, double? pesoCanal}) {
+  if (pesoPie == null || pesoCanal == null) return null;
+  if (pesoPie <= 0 || pesoCanal <= 0) return null;
+  if (pesoCanal > pesoPie) return null;
+  return (pesoCanal / pesoPie) * 100;
 }
 
 /// Rentabilidad = utilidad / costo total × 100.

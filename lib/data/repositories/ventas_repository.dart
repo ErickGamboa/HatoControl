@@ -17,16 +17,45 @@ abstract final class EstadoAnimal {
   static const activosInventario = [activo];
 }
 
+/// Análisis de un grupo de venta: totales y promedios sobre los animales que
+/// ya tienen datos de planta registrados (D-19).
 class ResumenLoteVenta {
   const ResumenLoteVenta({
     required this.lote,
     required this.ventas,
     required this.utilidadTotal,
+    required this.dineroRecibidoTotal,
+    required this.pesoFincaTotal,
+    required this.pesoPieTotal,
+    required this.pesoCanalTotal,
+    required this.rendimientoPromedio,
+    required this.conDatosPlanta,
   });
 
   final LoteVentaRow lote;
   final List<VentaConAnimal> ventas;
+
+  /// Σ utilidad de los animales con dinero recibido registrado.
   final double utilidadTotal;
+  final double dineroRecibidoTotal;
+  final double pesoFincaTotal;
+  final double pesoPieTotal;
+  final double pesoCanalTotal;
+
+  /// Promedio simple del rendimiento de los animales que lo tienen; null si
+  /// ninguno tiene los dos pesos todavía.
+  final double? rendimientoPromedio;
+
+  /// Cuántos animales del grupo ya tienen dinero recibido registrado.
+  final int conDatosPlanta;
+
+  int get total => ventas.length;
+  int get pendientesDeDatos => total - conDatosPlanta;
+  bool get completo => total > 0 && pendientesDeDatos == 0;
+
+  /// ₡ por kilo de canal del grupo, derivado. Null si falta información.
+  double? get precioKgCanal =>
+      pesoCanalTotal > 0 ? dineroRecibidoTotal / pesoCanalTotal : null;
 }
 
 class VentaConAnimal {
@@ -39,6 +68,9 @@ class VentaConAnimal {
   final VentaRow venta;
   final AnimalRow animal;
   final double? utilidad;
+
+  /// Los datos de planta ya se registraron (el dinero es lo que manda).
+  bool get tieneDatosPlanta => venta.dineroRecibido != null;
 }
 
 /// Ventas y utilidad oro: venta − (compra + dietas + sanidad + gastos fijos).
@@ -89,46 +121,76 @@ class VentasRepository {
   }
 
   Stream<List<ResumenLoteVenta>> observarLotesVenta(String fincaId) {
-    return (db.select(db.lotesVenta)
-          ..where((t) => t.fincaId.equals(fincaId) & t.deletedAt.isNull())
-          ..orderBy([(t) => OrderingTerm.desc(t.fecha)]))
+    // El análisis del grupo depende de `ventas` (los datos de planta se
+    // registran ahí después de crear el grupo), así que hay que re-emitir
+    // cuando cambie cualquiera de las tablas, no solo `lotes_venta`.
+    return db
+        .customSelect(
+          'SELECT 1',
+          readsFrom: {db.lotesVenta, db.ventas, db.animales},
+        )
         .watch()
-        .asyncMap((lotes) async {
-          final out = <ResumenLoteVenta>[];
-          for (final lote in lotes) {
-            final ventas =
-                await (db.select(db.ventas)..where(
-                      (t) =>
-                          t.loteVentaId.equals(lote.id) & t.deletedAt.isNull(),
-                    ))
-                    .get();
-            final items = <VentaConAnimal>[];
-            var utilidadTotal = 0.0;
-            for (final v in ventas) {
-              final animal = await (db.select(
-                db.animales,
-              )..where((t) => t.id.equals(v.animalId))).getSingle();
-              final resumen = await _resumenDesdeAnimal(animal);
-              final u = resumen.utilidad ?? 0;
-              utilidadTotal += u;
-              items.add(
-                VentaConAnimal(
-                  venta: v,
-                  animal: animal,
-                  utilidad: resumen.utilidad,
-                ),
-              );
-            }
-            out.add(
-              ResumenLoteVenta(
-                lote: lote,
-                ventas: items,
-                utilidadTotal: utilidadTotal,
-              ),
-            );
-          }
-          return out;
-        });
+        .asyncMap((_) => _lotesVentaDe(fincaId));
+  }
+
+  Future<List<ResumenLoteVenta>> _lotesVentaDe(String fincaId) async {
+    final lotes =
+        await (db.select(db.lotesVenta)
+              ..where((t) => t.fincaId.equals(fincaId) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.desc(t.fecha)]))
+            .get();
+    final out = <ResumenLoteVenta>[];
+    for (final lote in lotes) {
+      final ventas =
+          await (db.select(db.ventas)..where(
+                (t) => t.loteVentaId.equals(lote.id) & t.deletedAt.isNull(),
+              ))
+              .get();
+      final items = <VentaConAnimal>[];
+      var utilidadTotal = 0.0;
+      var dineroTotal = 0.0;
+      var pesoFincaTotal = 0.0;
+      var pesoPieTotal = 0.0;
+      var pesoCanalTotal = 0.0;
+      var sumaRendimiento = 0.0;
+      var conRendimiento = 0;
+      var conDatosPlanta = 0;
+      for (final v in ventas) {
+        final animal = await (db.select(
+          db.animales,
+        )..where((t) => t.id.equals(v.animalId))).getSingle();
+        final resumen = await _resumenDesdeAnimal(animal);
+        utilidadTotal += resumen.utilidad ?? 0;
+        dineroTotal += v.dineroRecibido ?? 0;
+        pesoFincaTotal += v.peso ?? 0;
+        pesoPieTotal += v.pesoPie ?? 0;
+        pesoCanalTotal += v.pesoCanal ?? 0;
+        if (v.rendimiento != null) {
+          sumaRendimiento += v.rendimiento!;
+          conRendimiento++;
+        }
+        if (v.dineroRecibido != null) conDatosPlanta++;
+        items.add(
+          VentaConAnimal(venta: v, animal: animal, utilidad: resumen.utilidad),
+        );
+      }
+      out.add(
+        ResumenLoteVenta(
+          lote: lote,
+          ventas: items,
+          utilidadTotal: utilidadTotal,
+          dineroRecibidoTotal: dineroTotal,
+          pesoFincaTotal: pesoFincaTotal,
+          pesoPieTotal: pesoPieTotal,
+          pesoCanalTotal: pesoCanalTotal,
+          rendimientoPromedio: conRendimiento == 0
+              ? null
+              : sumaRendimiento / conRendimiento,
+          conDatosPlanta: conDatosPlanta,
+        ),
+      );
+    }
+    return out;
   }
 
   Future<void> actualizarCompra({
@@ -160,11 +222,13 @@ class VentasRepository {
     );
   }
 
-  /// Confirma un lote de venta (varios animales). Bloquea si alguno está en retiro.
-  /// [items] llevan peso y ₡/kg; el total se calcula como peso × precioKg.
+  /// Confirma un grupo de venta (varios animales). Bloquea si alguno está en
+  /// retiro. [items] llevan solo los **kilos de salida de la finca** (D-19): el
+  /// dinero y los datos de planta se registran después, animal por animal, con
+  /// [registrarDatosPlanta]. Mientras eso no pase, la utilidad queda en “—”.
   Future<String> confirmarLoteVenta({
     required String fincaId,
-    required List<({String animalId, double peso, double precioKg})> items,
+    required List<({String animalId, double peso})> items,
     DateTime? fecha,
   }) async {
     if (items.isEmpty) {
@@ -201,7 +265,6 @@ class VentasRepository {
         hoy: ahora,
       );
       for (final item in items) {
-        final total = item.peso * item.precioKg;
         await db
             .into(db.ventas)
             .insert(
@@ -210,9 +273,10 @@ class VentasRepository {
                 animalId: item.animalId,
                 loteVentaId: Value(loteId),
                 fecha: ahora,
-                precio: total,
+                // Todavía no se sabe cuánto pagaron: el dinero llega con los
+                // datos de planta. `precio` queda espejo de dineroRecibido.
+                precio: 0,
                 peso: Value(item.peso),
-                precioKg: Value(item.precioKg),
                 createdAt: ahora,
                 updatedAt: ahora,
                 pendiente: const Value(true),
@@ -245,7 +309,46 @@ class VentasRepository {
     return loteId;
   }
 
-  /// Venta individual (compat). Prefiere [confirmarLoteVenta].
+  /// Registra los datos que devuelve la planta para un animal ya vendido
+  /// (D-19). El rendimiento **no se digita**: sale de canal ÷ pie. El dinero
+  /// recibido es lo que alimenta la utilidad, y se refleja en `precio` para
+  /// que nada que lea el total quede desalineado.
+  ///
+  /// Se pueden guardar datos parciales (por ejemplo solo los pesos): lo que
+  /// venga null se borra, así corregir un dato es simétrico a digitarlo.
+  Future<void> registrarDatosPlanta({
+    required String ventaId,
+    double? pesoPie,
+    double? pesoCanal,
+    double? dineroRecibido,
+  }) async {
+    final ahora = DateTime.now();
+    final rendimiento = rendimientoCanal(
+      pesoPie: pesoPie,
+      pesoCanal: pesoCanal,
+    );
+    await (db.update(db.ventas)..where((t) => t.id.equals(ventaId))).write(
+      VentasCompanion(
+        pesoPie: Value(pesoPie),
+        pesoCanal: Value(pesoCanal),
+        rendimiento: Value(rendimiento),
+        dineroRecibido: Value(dineroRecibido),
+        precio: Value(dineroRecibido ?? 0),
+        // ₡/kg derivado del canal, para no perder la lectura por kilo.
+        precioKg: Value(
+          (dineroRecibido != null && pesoCanal != null && pesoCanal > 0)
+              ? dineroRecibido / pesoCanal
+              : null,
+        ),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
+  /// Venta individual (compat). Prefiere [confirmarLoteVenta] +
+  /// [registrarDatosPlanta]. Acá el dinero **sí** se conoce al registrar, así
+  /// que [precio] queda también como dinero recibido y la utilidad sale de una.
   Future<void> registrarVenta({
     required String animalId,
     required double precio,
@@ -282,6 +385,7 @@ class VentasRepository {
               loteVentaId: Value(loteVentaId),
               fecha: ahora,
               precio: total,
+              dineroRecibido: Value(total),
               peso: Value(peso),
               precioKg: Value(precioKg),
               comprador: Value(comprador),
@@ -358,8 +462,10 @@ class VentasRepository {
     );
     // Gasto fijo prorrateado: congelado si ya salió, en vivo si está activo.
     final gastosFijos = await _gastosFijosRepository.gastoFijoDeAnimal(animal);
+    // La utilidad sale del **dinero recibido** (D-19). Mientras la planta no
+    // haya liquidado, queda null → la pantalla muestra “—”, nunca ₡0.
     final utilidad = utilidadOro(
-      precioVenta: venta?.precio,
+      precioVenta: venta?.dineroRecibido,
       precioCompra: animal.precioCompra,
       costoDietas: alimentacion,
       costoSanidad: sanitario,
@@ -381,9 +487,12 @@ class VentasRepository {
       costoSanitario: sanitario,
       costoOtros: 0,
       costoGastosFijos: gastosFijos,
-      precioVenta: venta?.precio,
+      precioVenta: venta?.dineroRecibido,
       pesoVenta: venta?.peso,
       precioKgVenta: venta?.precioKg,
+      pesoPie: venta?.pesoPie,
+      pesoCanal: venta?.pesoCanal,
+      rendimiento: venta?.rendimiento,
       costoTotal: total,
       utilidad: utilidad,
       margenPorcentaje: null,

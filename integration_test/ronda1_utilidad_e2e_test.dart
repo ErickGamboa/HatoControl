@@ -351,12 +351,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('fincaDetail.venta')));
       await waitFor(
         tester,
-        find.byKey(const ValueKey('venta.precioLote')),
-        label: 'venta.precioLote',
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('venta.precioLote')),
-        '1500',
+        find.byKey(const ValueKey('venta.animalId')),
+        label: 'venta.animalId',
       );
       await tester.enterText(
         find.byKey(const ValueKey('venta.animalId')),
@@ -364,11 +360,12 @@ void main() {
       );
       await tester.enterText(find.byKey(const ValueKey('venta.peso')), '400');
       await invokeButton(tester, find.byKey(const ValueKey('venta.agregar')));
+      // El grupo se arma solo con kilos de salida: sin dinero todavía (D-19).
       await waitFor(
         tester,
-        find.textContaining('₡600000'),
+        find.textContaining('400 kg'),
         timeoutSeconds: 15,
-        label: 'total venta',
+        label: 'kilos de salida en la lista',
       );
       await invokeButton(tester, find.byKey(const ValueKey('venta.confirmar')));
       await waitFor(
@@ -388,14 +385,15 @@ void main() {
         label: 'Historial',
       );
       await tester.tap(find.text('Historial'));
+      // Recién creado el grupo, faltan los datos de planta.
       await waitFor(
         tester,
-        find.textContaining('utilidad ₡'),
+        find.textContaining('faltan datos de planta'),
         timeoutSeconds: 20,
-        label: 'lote venta en historial',
+        label: 'grupo de venta sin liquidar',
       );
       // Animal id lives inside a collapsed ExpansionTile.
-      await tester.tap(find.textContaining('Lote ·').first);
+      await tester.tap(find.textContaining('Grupo ·').first);
       await pumpSettleShort(tester);
       await waitFor(
         tester,
@@ -403,8 +401,44 @@ void main() {
         timeoutSeconds: 20,
         label: 'venta historial animal',
       );
-      expect(find.textContaining('400'), findsWidgets);
-      expect(find.textContaining('1500'), findsWidgets);
+
+      // Registrar los datos de planta del animal (D-19).
+      await e2eStep('registrar datos de planta');
+      await tester.tap(find.text(animalId));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('planta.pesoPie')),
+        timeoutSeconds: 15,
+        label: 'planta.pesoPie',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('planta.pesoPie')),
+        '400',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('planta.pesoCanal')),
+        '220',
+      );
+      await pumpSettleShort(tester);
+      // El rendimiento lo calcula la app: 220 ÷ 400 = 55 %.
+      expect(find.textContaining('55.0 %'), findsWidgets);
+      await tester.enterText(
+        find.byKey(const ValueKey('planta.dinero')),
+        '600000',
+      );
+      await pumpSettleShort(tester);
+      await invokeButton(tester, find.byKey(const ValueKey('planta.guardar')));
+
+      // Ahora sí hay utilidad y análisis del grupo.
+      await waitFor(
+        tester,
+        find.textContaining('utilidad ₡'),
+        timeoutSeconds: 25,
+        label: 'utilidad del grupo',
+      );
+      await tester.tap(find.textContaining('Grupo ·').first);
+      await pumpSettleShort(tester);
+      expect(find.textContaining('Rendimiento promedio'), findsWidgets);
       expect(find.textContaining('₡500000'), findsWidgets);
       await pauseIntegration(tester, multiplier: 2);
 

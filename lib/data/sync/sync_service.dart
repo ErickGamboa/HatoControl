@@ -1137,6 +1137,10 @@ class SyncService {
                 'precio': v.precio,
                 'peso': v.peso,
                 'precio_kg': v.precioKg,
+                'peso_pie': v.pesoPie,
+                'peso_canal': v.pesoCanal,
+                'rendimiento': v.rendimiento,
+                'dinero_recibido': v.dineroRecibido,
                 'comprador': v.comprador,
                 'observaciones': v.observaciones,
                 'created_at': v.createdAt.toIso8601String(),
@@ -1170,6 +1174,22 @@ class SyncService {
               precioKg: r['precio_kg'] != null
                   ? (r['precio_kg'] as num).toDouble()
                   : null,
+              pesoPie: r['peso_pie'] != null
+                  ? (r['peso_pie'] as num).toDouble()
+                  : null,
+              pesoCanal: r['peso_canal'] != null
+                  ? (r['peso_canal'] as num).toDouble()
+                  : null,
+              rendimiento: r['rendimiento'] != null
+                  ? (r['rendimiento'] as num).toDouble()
+                  : null,
+              // Ventas subidas antes de D-19 no traen dinero recibido: el total
+              // cobrado cumple ese papel para no perder su utilidad.
+              dineroRecibido: r['dinero_recibido'] != null
+                  ? (r['dinero_recibido'] as num).toDouble()
+                  : ((r['precio'] as num).toDouble() > 0
+                        ? (r['precio'] as num).toDouble()
+                        : null),
               comprador: r['comprador'] as String?,
               observaciones: r['observaciones'] as String?,
               createdAt: DateTime.parse(r['created_at'] as String),

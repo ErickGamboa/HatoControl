@@ -145,24 +145,43 @@ Ordenado por fecha, muestra:
 
 ## Módulo 6 — Venta de animales
 
-### Registrar la venta
+La venta ocurre en **dos momentos**, porque el ganadero no sabe cuánto le pagan
+hasta que la planta liquida (D-19).
+
+### Momento 1 — Armar el grupo de venta
 
 1. Identificador (RFID o manual).
 2. **Validación de retiro:** si hay retiro activo → **alerta y no permite vender**.
-3. Digitar **peso** y **precio de venta** → agregar a la lista de la venta en curso.
+3. Digitar los **kilos de salida de la finca** → agregar a la lista. **Nada más:
+   no se pide precio ni dinero**, porque todavía no se conocen.
 4. Repetir con todos los animales.
-5. **Confirmar la venta:**
+5. **Confirmar:**
    - Salen de su **lote de manejo**.
    - Dejan de aparecer en pesaje y lotes.
-   - Quedan en la pestaña **Historial de ventas** de este módulo.
+   - Quedan en la pestaña **Historial** de este módulo.
+   - Su utilidad se muestra como **“—”**: falta la liquidación.
+
+### Momento 2 — Registrar los datos de planta, animal por animal
+
+En el historial se toca cada animal del grupo y se registra:
+
+| Dato | Cómo entra |
+|---|---|
+| **Peso en pie** | Digitado (el de la planta; puede diferir del de salida de finca) |
+| **Peso en canal** | Digitado |
+| **% de rendimiento** | **Calculado:** peso en canal ÷ peso en pie × 100 |
+| **Dinero recibido** | Digitado. **De aquí sale la utilidad** |
+
+Se pueden guardar datos parciales (por ejemplo solo los pesos) y completar el
+dinero después. El ₡/kg de canal se muestra derivado (dinero ÷ peso en canal).
 
 ### Historial de ventas
 
-- Cada confirmación es un **lote de venta** (puede mezclar animales de distintos lotes de manejo).
-- Por cada lote de venta se muestra la **utilidad**:
+- Cada confirmación es un **grupo de venta** (puede mezclar animales de distintos lotes de manejo).
+- Por cada animal:
 
 ```text
-Utilidad = Precio de venta − (Precio de compra + Costo de dietas + Costo de sanidad + Gastos fijos)
+Utilidad = Dinero recibido − (Precio de compra + Costo de dietas + Costo de sanidad + Gastos fijos)
 ```
 
 | Componente | Origen |
@@ -171,7 +190,20 @@ Utilidad = Precio de venta − (Precio de compra + Costo de dietas + Costo de sa
 | Costo de dietas | Σ (₡/kg × kg por animal al día × días en cada dieta) |
 | Costo de sanidad | Σ costo por uso de medicamentos aplicados |
 | Gastos fijos | Parte prorrateada por días-animal (Módulo 7) |
-| Precio de venta | Digitado al vender |
+| Dinero recibido | Registrado con los datos de planta |
+
+### Análisis por grupo de venta
+
+Cada grupo muestra, sobre los animales ya liquidados:
+
+| Dato | Cálculo |
+|---|---|
+| Utilidad total | Σ utilidad de los animales con dinero registrado |
+| **Rendimiento promedio** | Promedio simple del % de los que tienen los dos pesos |
+| Dinero recibido total | Σ dinero recibido |
+| Kilos de salida / en pie / de canal | Σ de cada peso |
+| ₡ por kilo de canal | dinero total ÷ kilos de canal totales |
+| Animales pendientes | Cuántos del grupo aún no tienen liquidación |
 
 ---
 
@@ -242,8 +274,11 @@ todo el mes absorbe ₡28.882 y el que entró tarde ₡11.180. La suma de todas 
 | Costo sanidad / animal | Σ costo por uso de cada aplicación |
 | Gasto fijo / animal-día | monto del mes ÷ Σ días-animal del mes |
 | Gasto fijo / animal | Σ (por mes: monto por repartir × sus días ÷ días-animal del mes) |
-| Utilidad / animal | venta − (compra + dietas + sanidad + gastos fijos) |
-| Utilidad / lote de venta | Σ utilidad de los animales del lote |
+| Rendimiento / animal | peso en canal ÷ peso en pie × 100 |
+| Utilidad / animal | **dinero recibido** − (compra + dietas + sanidad + gastos fijos) |
+| Utilidad / grupo de venta | Σ utilidad de los animales ya liquidados del grupo |
+| Rendimiento promedio / grupo | promedio simple del rendimiento de los que lo tienen |
+| ₡ por kilo de canal | dinero recibido ÷ peso en canal |
 
 ---
 
@@ -258,6 +293,8 @@ Todo lo que no esté en los módulos 1–7 ni en los principios anteriores. En p
   siguen **fuera** de la fórmula de utilidad. Los gastos fijos del Módulo 7 **sí** entran, y son
   el único costo indirecto admitido.
 - Feature flags de producto, comparativas entre dietas/lotes, u otros dashboards no descritos.
+  **Sí** entra el análisis por **grupo de venta** del Módulo 6 (utilidad total y rendimiento
+  promedio), porque está descrito ahí (D-19).
 
 Plataforma base (auth, fincas, cuenta/licencia, sync) se mantiene como infraestructura; no es “módulo de campo” de esta especificación, pero tampoco se elimina.
 

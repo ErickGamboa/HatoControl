@@ -9332,6 +9332,50 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _pesoPieMeta = const VerificationMeta(
+    'pesoPie',
+  );
+  @override
+  late final GeneratedColumn<double> pesoPie = GeneratedColumn<double>(
+    'peso_pie',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pesoCanalMeta = const VerificationMeta(
+    'pesoCanal',
+  );
+  @override
+  late final GeneratedColumn<double> pesoCanal = GeneratedColumn<double>(
+    'peso_canal',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rendimientoMeta = const VerificationMeta(
+    'rendimiento',
+  );
+  @override
+  late final GeneratedColumn<double> rendimiento = GeneratedColumn<double>(
+    'rendimiento',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dineroRecibidoMeta = const VerificationMeta(
+    'dineroRecibido',
+  );
+  @override
+  late final GeneratedColumn<double> dineroRecibido = GeneratedColumn<double>(
+    'dinero_recibido',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _compradorMeta = const VerificationMeta(
     'comprador',
   );
@@ -9411,6 +9455,10 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
     precio,
     peso,
     precioKg,
+    pesoPie,
+    pesoCanal,
+    rendimiento,
+    dineroRecibido,
     comprador,
     observaciones,
     createdAt,
@@ -9478,6 +9526,36 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
       context.handle(
         _precioKgMeta,
         precioKg.isAcceptableOrUnknown(data['precio_kg']!, _precioKgMeta),
+      );
+    }
+    if (data.containsKey('peso_pie')) {
+      context.handle(
+        _pesoPieMeta,
+        pesoPie.isAcceptableOrUnknown(data['peso_pie']!, _pesoPieMeta),
+      );
+    }
+    if (data.containsKey('peso_canal')) {
+      context.handle(
+        _pesoCanalMeta,
+        pesoCanal.isAcceptableOrUnknown(data['peso_canal']!, _pesoCanalMeta),
+      );
+    }
+    if (data.containsKey('rendimiento')) {
+      context.handle(
+        _rendimientoMeta,
+        rendimiento.isAcceptableOrUnknown(
+          data['rendimiento']!,
+          _rendimientoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dinero_recibido')) {
+      context.handle(
+        _dineroRecibidoMeta,
+        dineroRecibido.isAcceptableOrUnknown(
+          data['dinero_recibido']!,
+          _dineroRecibidoMeta,
+        ),
       );
     }
     if (data.containsKey('comprador')) {
@@ -9560,6 +9638,22 @@ class $VentasTable extends Ventas with TableInfo<$VentasTable, VentaRow> {
         DriftSqlType.double,
         data['${effectivePrefix}precio_kg'],
       ),
+      pesoPie: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}peso_pie'],
+      ),
+      pesoCanal: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}peso_canal'],
+      ),
+      rendimiento: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}rendimiento'],
+      ),
+      dineroRecibido: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}dinero_recibido'],
+      ),
       comprador: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}comprador'],
@@ -9602,11 +9696,25 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
   /// Total derivado: peso × precioKg.
   final double precio;
 
-  /// Kilos de salida (obligatorio en ventas nuevas).
+  /// Kilos de salida de la finca, digitados al armar el grupo de venta.
   final double? peso;
 
-  /// ₡ por kilo de venta.
+  /// ₡ por kilo de venta. Dejó de digitarse al vender (D-19); se conserva por
+  /// las ventas viejas y para el ₡/kg que la app deriva del dinero recibido.
   final double? precioKg;
+
+  /// Peso en pie en la planta, registrado después de crear el grupo (D-19).
+  final double? pesoPie;
+
+  /// Peso de la canal en la planta (D-19).
+  final double? pesoCanal;
+
+  /// Derivado: pesoCanal ÷ pesoPie × 100. Null mientras falte un peso.
+  final double? rendimiento;
+
+  /// ₡ efectivamente recibidos por este animal. **Es la fuente de la utilidad**
+  /// (D-19); mientras esté null, la utilidad se muestra como “—”.
+  final double? dineroRecibido;
   final String? comprador;
   final String? observaciones;
   final DateTime createdAt;
@@ -9621,6 +9729,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     required this.precio,
     this.peso,
     this.precioKg,
+    this.pesoPie,
+    this.pesoCanal,
+    this.rendimiento,
+    this.dineroRecibido,
     this.comprador,
     this.observaciones,
     required this.createdAt,
@@ -9643,6 +9755,18 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     }
     if (!nullToAbsent || precioKg != null) {
       map['precio_kg'] = Variable<double>(precioKg);
+    }
+    if (!nullToAbsent || pesoPie != null) {
+      map['peso_pie'] = Variable<double>(pesoPie);
+    }
+    if (!nullToAbsent || pesoCanal != null) {
+      map['peso_canal'] = Variable<double>(pesoCanal);
+    }
+    if (!nullToAbsent || rendimiento != null) {
+      map['rendimiento'] = Variable<double>(rendimiento);
+    }
+    if (!nullToAbsent || dineroRecibido != null) {
+      map['dinero_recibido'] = Variable<double>(dineroRecibido);
     }
     if (!nullToAbsent || comprador != null) {
       map['comprador'] = Variable<String>(comprador);
@@ -9672,6 +9796,18 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
       precioKg: precioKg == null && nullToAbsent
           ? const Value.absent()
           : Value(precioKg),
+      pesoPie: pesoPie == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pesoPie),
+      pesoCanal: pesoCanal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pesoCanal),
+      rendimiento: rendimiento == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rendimiento),
+      dineroRecibido: dineroRecibido == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dineroRecibido),
       comprador: comprador == null && nullToAbsent
           ? const Value.absent()
           : Value(comprador),
@@ -9700,6 +9836,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
       precio: serializer.fromJson<double>(json['precio']),
       peso: serializer.fromJson<double?>(json['peso']),
       precioKg: serializer.fromJson<double?>(json['precioKg']),
+      pesoPie: serializer.fromJson<double?>(json['pesoPie']),
+      pesoCanal: serializer.fromJson<double?>(json['pesoCanal']),
+      rendimiento: serializer.fromJson<double?>(json['rendimiento']),
+      dineroRecibido: serializer.fromJson<double?>(json['dineroRecibido']),
       comprador: serializer.fromJson<String?>(json['comprador']),
       observaciones: serializer.fromJson<String?>(json['observaciones']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -9719,6 +9859,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
       'precio': serializer.toJson<double>(precio),
       'peso': serializer.toJson<double?>(peso),
       'precioKg': serializer.toJson<double?>(precioKg),
+      'pesoPie': serializer.toJson<double?>(pesoPie),
+      'pesoCanal': serializer.toJson<double?>(pesoCanal),
+      'rendimiento': serializer.toJson<double?>(rendimiento),
+      'dineroRecibido': serializer.toJson<double?>(dineroRecibido),
       'comprador': serializer.toJson<String?>(comprador),
       'observaciones': serializer.toJson<String?>(observaciones),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -9736,6 +9880,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     double? precio,
     Value<double?> peso = const Value.absent(),
     Value<double?> precioKg = const Value.absent(),
+    Value<double?> pesoPie = const Value.absent(),
+    Value<double?> pesoCanal = const Value.absent(),
+    Value<double?> rendimiento = const Value.absent(),
+    Value<double?> dineroRecibido = const Value.absent(),
     Value<String?> comprador = const Value.absent(),
     Value<String?> observaciones = const Value.absent(),
     DateTime? createdAt,
@@ -9750,6 +9898,12 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     precio: precio ?? this.precio,
     peso: peso.present ? peso.value : this.peso,
     precioKg: precioKg.present ? precioKg.value : this.precioKg,
+    pesoPie: pesoPie.present ? pesoPie.value : this.pesoPie,
+    pesoCanal: pesoCanal.present ? pesoCanal.value : this.pesoCanal,
+    rendimiento: rendimiento.present ? rendimiento.value : this.rendimiento,
+    dineroRecibido: dineroRecibido.present
+        ? dineroRecibido.value
+        : this.dineroRecibido,
     comprador: comprador.present ? comprador.value : this.comprador,
     observaciones: observaciones.present
         ? observaciones.value
@@ -9770,6 +9924,14 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
       precio: data.precio.present ? data.precio.value : this.precio,
       peso: data.peso.present ? data.peso.value : this.peso,
       precioKg: data.precioKg.present ? data.precioKg.value : this.precioKg,
+      pesoPie: data.pesoPie.present ? data.pesoPie.value : this.pesoPie,
+      pesoCanal: data.pesoCanal.present ? data.pesoCanal.value : this.pesoCanal,
+      rendimiento: data.rendimiento.present
+          ? data.rendimiento.value
+          : this.rendimiento,
+      dineroRecibido: data.dineroRecibido.present
+          ? data.dineroRecibido.value
+          : this.dineroRecibido,
       comprador: data.comprador.present ? data.comprador.value : this.comprador,
       observaciones: data.observaciones.present
           ? data.observaciones.value
@@ -9791,6 +9953,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
           ..write('precio: $precio, ')
           ..write('peso: $peso, ')
           ..write('precioKg: $precioKg, ')
+          ..write('pesoPie: $pesoPie, ')
+          ..write('pesoCanal: $pesoCanal, ')
+          ..write('rendimiento: $rendimiento, ')
+          ..write('dineroRecibido: $dineroRecibido, ')
           ..write('comprador: $comprador, ')
           ..write('observaciones: $observaciones, ')
           ..write('createdAt: $createdAt, ')
@@ -9810,6 +9976,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
     precio,
     peso,
     precioKg,
+    pesoPie,
+    pesoCanal,
+    rendimiento,
+    dineroRecibido,
     comprador,
     observaciones,
     createdAt,
@@ -9828,6 +9998,10 @@ class VentaRow extends DataClass implements Insertable<VentaRow> {
           other.precio == this.precio &&
           other.peso == this.peso &&
           other.precioKg == this.precioKg &&
+          other.pesoPie == this.pesoPie &&
+          other.pesoCanal == this.pesoCanal &&
+          other.rendimiento == this.rendimiento &&
+          other.dineroRecibido == this.dineroRecibido &&
           other.comprador == this.comprador &&
           other.observaciones == this.observaciones &&
           other.createdAt == this.createdAt &&
@@ -9844,6 +10018,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
   final Value<double> precio;
   final Value<double?> peso;
   final Value<double?> precioKg;
+  final Value<double?> pesoPie;
+  final Value<double?> pesoCanal;
+  final Value<double?> rendimiento;
+  final Value<double?> dineroRecibido;
   final Value<String?> comprador;
   final Value<String?> observaciones;
   final Value<DateTime> createdAt;
@@ -9859,6 +10037,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     this.precio = const Value.absent(),
     this.peso = const Value.absent(),
     this.precioKg = const Value.absent(),
+    this.pesoPie = const Value.absent(),
+    this.pesoCanal = const Value.absent(),
+    this.rendimiento = const Value.absent(),
+    this.dineroRecibido = const Value.absent(),
     this.comprador = const Value.absent(),
     this.observaciones = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -9875,6 +10057,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     required double precio,
     this.peso = const Value.absent(),
     this.precioKg = const Value.absent(),
+    this.pesoPie = const Value.absent(),
+    this.pesoCanal = const Value.absent(),
+    this.rendimiento = const Value.absent(),
+    this.dineroRecibido = const Value.absent(),
     this.comprador = const Value.absent(),
     this.observaciones = const Value.absent(),
     required DateTime createdAt,
@@ -9896,6 +10082,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     Expression<double>? precio,
     Expression<double>? peso,
     Expression<double>? precioKg,
+    Expression<double>? pesoPie,
+    Expression<double>? pesoCanal,
+    Expression<double>? rendimiento,
+    Expression<double>? dineroRecibido,
     Expression<String>? comprador,
     Expression<String>? observaciones,
     Expression<DateTime>? createdAt,
@@ -9912,6 +10102,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
       if (precio != null) 'precio': precio,
       if (peso != null) 'peso': peso,
       if (precioKg != null) 'precio_kg': precioKg,
+      if (pesoPie != null) 'peso_pie': pesoPie,
+      if (pesoCanal != null) 'peso_canal': pesoCanal,
+      if (rendimiento != null) 'rendimiento': rendimiento,
+      if (dineroRecibido != null) 'dinero_recibido': dineroRecibido,
       if (comprador != null) 'comprador': comprador,
       if (observaciones != null) 'observaciones': observaciones,
       if (createdAt != null) 'created_at': createdAt,
@@ -9930,6 +10124,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     Value<double>? precio,
     Value<double?>? peso,
     Value<double?>? precioKg,
+    Value<double?>? pesoPie,
+    Value<double?>? pesoCanal,
+    Value<double?>? rendimiento,
+    Value<double?>? dineroRecibido,
     Value<String?>? comprador,
     Value<String?>? observaciones,
     Value<DateTime>? createdAt,
@@ -9946,6 +10144,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
       precio: precio ?? this.precio,
       peso: peso ?? this.peso,
       precioKg: precioKg ?? this.precioKg,
+      pesoPie: pesoPie ?? this.pesoPie,
+      pesoCanal: pesoCanal ?? this.pesoCanal,
+      rendimiento: rendimiento ?? this.rendimiento,
+      dineroRecibido: dineroRecibido ?? this.dineroRecibido,
       comprador: comprador ?? this.comprador,
       observaciones: observaciones ?? this.observaciones,
       createdAt: createdAt ?? this.createdAt,
@@ -9979,6 +10181,18 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
     }
     if (precioKg.present) {
       map['precio_kg'] = Variable<double>(precioKg.value);
+    }
+    if (pesoPie.present) {
+      map['peso_pie'] = Variable<double>(pesoPie.value);
+    }
+    if (pesoCanal.present) {
+      map['peso_canal'] = Variable<double>(pesoCanal.value);
+    }
+    if (rendimiento.present) {
+      map['rendimiento'] = Variable<double>(rendimiento.value);
+    }
+    if (dineroRecibido.present) {
+      map['dinero_recibido'] = Variable<double>(dineroRecibido.value);
     }
     if (comprador.present) {
       map['comprador'] = Variable<String>(comprador.value);
@@ -10014,6 +10228,10 @@ class VentasCompanion extends UpdateCompanion<VentaRow> {
           ..write('precio: $precio, ')
           ..write('peso: $peso, ')
           ..write('precioKg: $precioKg, ')
+          ..write('pesoPie: $pesoPie, ')
+          ..write('pesoCanal: $pesoCanal, ')
+          ..write('rendimiento: $rendimiento, ')
+          ..write('dineroRecibido: $dineroRecibido, ')
           ..write('comprador: $comprador, ')
           ..write('observaciones: $observaciones, ')
           ..write('createdAt: $createdAt, ')
@@ -18056,6 +18274,10 @@ typedef $$VentasTableCreateCompanionBuilder =
       required double precio,
       Value<double?> peso,
       Value<double?> precioKg,
+      Value<double?> pesoPie,
+      Value<double?> pesoCanal,
+      Value<double?> rendimiento,
+      Value<double?> dineroRecibido,
       Value<String?> comprador,
       Value<String?> observaciones,
       required DateTime createdAt,
@@ -18073,6 +18295,10 @@ typedef $$VentasTableUpdateCompanionBuilder =
       Value<double> precio,
       Value<double?> peso,
       Value<double?> precioKg,
+      Value<double?> pesoPie,
+      Value<double?> pesoCanal,
+      Value<double?> rendimiento,
+      Value<double?> dineroRecibido,
       Value<String?> comprador,
       Value<String?> observaciones,
       Value<DateTime> createdAt,
@@ -18123,6 +18349,26 @@ class $$VentasTableFilterComposer
 
   ColumnFilters<double> get precioKg => $composableBuilder(
     column: $table.precioKg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pesoPie => $composableBuilder(
+    column: $table.pesoPie,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pesoCanal => $composableBuilder(
+    column: $table.pesoCanal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get rendimiento => $composableBuilder(
+    column: $table.rendimiento,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get dineroRecibido => $composableBuilder(
+    column: $table.dineroRecibido,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18201,6 +18447,26 @@ class $$VentasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get pesoPie => $composableBuilder(
+    column: $table.pesoPie,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pesoCanal => $composableBuilder(
+    column: $table.pesoCanal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get rendimiento => $composableBuilder(
+    column: $table.rendimiento,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get dineroRecibido => $composableBuilder(
+    column: $table.dineroRecibido,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get comprador => $composableBuilder(
     column: $table.comprador,
     builder: (column) => ColumnOrderings(column),
@@ -18264,6 +18530,22 @@ class $$VentasTableAnnotationComposer
   GeneratedColumn<double> get precioKg =>
       $composableBuilder(column: $table.precioKg, builder: (column) => column);
 
+  GeneratedColumn<double> get pesoPie =>
+      $composableBuilder(column: $table.pesoPie, builder: (column) => column);
+
+  GeneratedColumn<double> get pesoCanal =>
+      $composableBuilder(column: $table.pesoCanal, builder: (column) => column);
+
+  GeneratedColumn<double> get rendimiento => $composableBuilder(
+    column: $table.rendimiento,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get dineroRecibido => $composableBuilder(
+    column: $table.dineroRecibido,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get comprador =>
       $composableBuilder(column: $table.comprador, builder: (column) => column);
 
@@ -18320,6 +18602,10 @@ class $$VentasTableTableManager
                 Value<double> precio = const Value.absent(),
                 Value<double?> peso = const Value.absent(),
                 Value<double?> precioKg = const Value.absent(),
+                Value<double?> pesoPie = const Value.absent(),
+                Value<double?> pesoCanal = const Value.absent(),
+                Value<double?> rendimiento = const Value.absent(),
+                Value<double?> dineroRecibido = const Value.absent(),
                 Value<String?> comprador = const Value.absent(),
                 Value<String?> observaciones = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -18335,6 +18621,10 @@ class $$VentasTableTableManager
                 precio: precio,
                 peso: peso,
                 precioKg: precioKg,
+                pesoPie: pesoPie,
+                pesoCanal: pesoCanal,
+                rendimiento: rendimiento,
+                dineroRecibido: dineroRecibido,
                 comprador: comprador,
                 observaciones: observaciones,
                 createdAt: createdAt,
@@ -18352,6 +18642,10 @@ class $$VentasTableTableManager
                 required double precio,
                 Value<double?> peso = const Value.absent(),
                 Value<double?> precioKg = const Value.absent(),
+                Value<double?> pesoPie = const Value.absent(),
+                Value<double?> pesoCanal = const Value.absent(),
+                Value<double?> rendimiento = const Value.absent(),
+                Value<double?> dineroRecibido = const Value.absent(),
                 Value<String?> comprador = const Value.absent(),
                 Value<String?> observaciones = const Value.absent(),
                 required DateTime createdAt,
@@ -18367,6 +18661,10 @@ class $$VentasTableTableManager
                 precio: precio,
                 peso: peso,
                 precioKg: precioKg,
+                pesoPie: pesoPie,
+                pesoCanal: pesoCanal,
+                rendimiento: rendimiento,
+                dineroRecibido: dineroRecibido,
                 comprador: comprador,
                 observaciones: observaciones,
                 createdAt: createdAt,

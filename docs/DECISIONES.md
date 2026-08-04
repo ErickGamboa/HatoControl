@@ -295,6 +295,48 @@ Consecuencias:
 - Los **ingredientes siguen siendo solo nombres** sin costo (punto 6 de
   `CORRECCIONES.md` sigue vigente).
 
+### D-19 — Venta en dos momentos: grupo primero, datos de planta después
+**Status: Decidida (2026-08-04). Enmienda el punto 14 de `CORRECCIONES.md`, que
+definía la venta como `kilos de salida × ₡/kg de venta`.**
+El ganadero **no sabe cuánto le pagan** cuando manda los animales: la planta
+liquida días después, y paga por la canal. Pedir un ₡/kg al confirmar la venta
+obligaba a inventar un número y luego corregirlo.
+
+La venta pasa a tener dos momentos:
+
+1. **Armar el grupo de venta:** identificador + **kilos de salida de la finca**.
+   Nada más. La utilidad queda en “—”.
+2. **Datos de planta, por animal, desde el historial:** peso en pie, peso en
+   canal y **dinero recibido**. El **rendimiento es derivado**
+   (`canal ÷ pie × 100`), no se digita — un dato menos y nunca contradice a los
+   pesos.
+
+```text
+Utilidad = Dinero recibido − (compra + dietas + sanidad + gastos fijos)
+```
+
+Consecuencias:
+- **`dinero_recibido` es la nueva fuente de la utilidad**, no `precio`. Mientras
+  sea NULL la utilidad es “—”, coherente con la regla de `CORRECCIONES.md` §14
+  (“sin venta no hay utilidad, nunca ₡0”). `precio` queda como espejo para no
+  desalinear nada que lo lea, y `precio_kg` pasa a ser **₡/kg de canal**
+  derivado.
+- El **peso de salida de finca y el peso en pie son campos distintos**:
+  el segundo lo da la planta después del viaje y no tiene por qué coincidir.
+  Decisión explícita de Erick al revisar el módulo.
+- Se permiten **datos parciales** (solo los pesos, sin dinero): así el ganadero
+  registra lo que va sabiendo sin quedar bloqueado.
+- Cada grupo de venta muestra **análisis**: utilidad total, rendimiento
+  promedio, dinero recibido, kilos por etapa, ₡/kg de canal y cuántos animales
+  faltan por liquidar. El promedio de rendimiento **solo cuenta a los que tienen
+  los dos pesos** — no se rellena con ceros.
+- Migración: local Drift v16 y
+  `supabase/migrations/20260803140000_venta_datos_planta.sql`, con
+  `dinero_recibido = precio` para las ventas ya registradas, de modo que
+  ninguna utilidad cerrada se convierta en “—”.
+- `registrarVenta` (venta individual, camino de compatibilidad) sí conoce el
+  dinero al registrar, así que llena `dinero_recibido` de una.
+
 ---
 
 ## How to use this log / Cómo usar este registro

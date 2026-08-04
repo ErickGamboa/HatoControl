@@ -135,7 +135,7 @@ void main() {
     await ventas.confirmarLoteVenta(
       fincaId: 'f1',
       fecha: ventaFecha,
-      items: [(animalId: a.id, peso: 400, precioKg: 1500)],
+      items: [(animalId: a.id, peso: 400)],
     );
     final vendido = (await pesajes.buscarAnimal('f1', 'A-1'))!;
     final e2 = await gastos.estanciaDe(vendido);
@@ -219,7 +219,7 @@ void main() {
       await ventas.confirmarLoteVenta(
         fincaId: 'f1',
         fecha: DateTime(2026, 7, 31),
-        items: [(animalId: a.id, peso: 400, precioKg: 1500)],
+        items: [(animalId: a.id, peso: 400)],
       );
 
       final cargos = await gastos.cargosDe(a.id);
@@ -239,7 +239,12 @@ void main() {
       await ventas.confirmarLoteVenta(
         fincaId: 'f1',
         fecha: DateTime(2026, 7, 31),
-        items: [(animalId: a.id, peso: 400, precioKg: 1500)],
+        items: [(animalId: a.id, peso: 400)],
+      );
+      // El dinero llega con la liquidación de la planta (D-19).
+      await ventas.registrarDatosPlanta(
+        ventaId: (await db.select(db.ventas).get()).single.id,
+        dineroRecibido: 600000,
       );
 
       final r = await ventas.resumenDe(a.id);
@@ -257,7 +262,7 @@ void main() {
       await ventas.confirmarLoteVenta(
         fincaId: 'f1',
         fecha: DateTime(2026, 7, 31),
-        items: [(animalId: a.id, peso: 400, precioKg: 1500)],
+        items: [(animalId: a.id, peso: 400)],
       );
       final antes = await ventas.resumenDe(a.id);
       expect(antes.costoGastosFijos, 0);
@@ -292,7 +297,7 @@ void main() {
         await ventas.confirmarLoteVenta(
           fincaId: 'f1',
           fecha: DateTime(2026, 7, 31),
-          items: [(animalId: a.id, peso: 400, precioKg: 1500)],
+          items: [(animalId: a.id, peso: 400)],
         );
 
         final b = (await pesajes.buscarAnimal('f1', 'B-1'))!;
@@ -316,10 +321,7 @@ void main() {
       await ventas.confirmarLoteVenta(
         fincaId: 'f1',
         fecha: DateTime(2026, 7, 31),
-        items: [
-          (animalId: a.id, peso: 400, precioKg: 1500),
-          (animalId: b.id, peso: 400, precioKg: 1500),
-        ],
+        items: [(animalId: a.id, peso: 400), (animalId: b.id, peso: 400)],
       );
 
       final deA = (await gastos.cargosDe(a.id)).single.monto;
@@ -356,7 +358,11 @@ void main() {
     await ventas.confirmarLoteVenta(
       fincaId: 'f1',
       fecha: DateTime(2026, 7, 31),
-      items: [(animalId: a.id, peso: 400, precioKg: 1500)],
+      items: [(animalId: a.id, peso: 400)],
+    );
+    await ventas.registrarDatosPlanta(
+      ventaId: (await db.select(db.ventas).get()).single.id,
+      dineroRecibido: 600000,
     );
     final r = await ventas.resumenDe(a.id);
     expect(r.costoGastosFijos, 0);

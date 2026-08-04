@@ -131,3 +131,14 @@ Las dietas anteriores se rellenan como `costo_kg = costo_animal_dia,
 kg_animal_dia = 1`, lo que deja `costo_animal_dia` idéntico y no mueve los
 snapshots de `lote_dietas` ni el historial de utilidad. **Pendiente de
 `supabase db push`.**
+
+## Venta: datos de planta (2026-08-04)
+
+`20260803140000_venta_datos_planta.sql` — `ventas.peso_pie`,
+`ventas.peso_canal`, `ventas.rendimiento` (derivado `canal/pie*100`) y
+`ventas.dinero_recibido`. Por D-19 el grupo de venta se crea solo con los kilos
+de salida de finca (`ventas.peso`) y la liquidación de la planta se registra
+después, animal por animal. **`dinero_recibido` es la fuente de la utilidad**;
+`precio` queda como espejo. Espejo del schema local de Drift v16. El backfill
+`dinero_recibido = precio` evita que las ventas ya registradas pierdan su
+utilidad. **Pendiente de `supabase db push`.**

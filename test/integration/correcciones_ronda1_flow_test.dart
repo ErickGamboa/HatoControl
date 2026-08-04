@@ -144,12 +144,25 @@ void main() {
       await ventas.confirmarLoteVenta(
         fincaId: 'f1',
         fecha: ventaFecha,
-        items: [(animalId: animal.id, peso: 400, precioKg: 1500)],
+        items: [(animalId: animal.id, peso: 400)],
+      );
+      final creada = (await db.select(db.ventas).get()).single;
+      expect(creada.peso, 400, reason: 'kilos de salida de la finca');
+      // El grupo se crea sin dinero: la utilidad todavía no existe (D-19).
+      expect(creada.dineroRecibido, isNull);
+      expect((await ventas.resumenDe(animal.id)).utilidad, isNull);
+
+      await ventas.registrarDatosPlanta(
+        ventaId: creada.id,
+        pesoPie: 400,
+        pesoCanal: 220,
+        dineroRecibido: 600000,
       );
       final venta = (await db.select(db.ventas).get()).single;
-      expect(venta.peso, 400);
-      expect(venta.precioKg, 1500);
-      expect(venta.precio, 600000);
+      expect(venta.rendimiento, closeTo(55, 0.0001));
+      expect(venta.dineroRecibido, 600000);
+      expect(venta.precio, 600000, reason: 'espejo del dinero recibido');
+      expect(venta.precioKg, closeTo(600000 / 220, 0.01), reason: '₡/kg canal');
 
       final r = await ventas.resumenDe(animal.id);
       expect(r.costoAlimentacion, closeTo(215000, 1));
@@ -173,8 +186,12 @@ void main() {
       expect(dietaPush['costo_animal_semana'], 7000);
 
       final ventaPush = ultimaSubida('ventas');
-      expect(ventaPush['precio_kg'], 1500);
       expect(ventaPush['precio'], 600000);
+      expect(ventaPush['peso'], 400);
+      expect(ventaPush['peso_pie'], 400);
+      expect(ventaPush['peso_canal'], 220);
+      expect(ventaPush['rendimiento'], closeTo(55, 0.0001));
+      expect(ventaPush['dinero_recibido'], 600000);
 
       final ingPush = remote.subidas
           .where((w) => w.tabla == 'dieta_ingredientes')

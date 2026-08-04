@@ -48,11 +48,21 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
     return '';
   }
 
+  /// Detalle de la venta: lo que devolvió la planta (D-19). Si todavía no hay
+  /// liquidación, se dice qué falta en vez de dejar el renglón mudo.
   String _detalleVenta(ResumenEconomicoAnimal r) {
-    if (r.pesoVenta != null && r.precioKgVenta != null) {
-      return '${r.pesoVenta!.round()} kg × ₡${r.precioKgVenta!.round()}/kg';
+    if (r.precioVenta == null) {
+      if (r.pesoVenta == null) return '';
+      return 'salió con ${r.pesoVenta!.round()} kg · '
+          'falta registrar el dinero recibido';
     }
-    return '';
+    final partes = <String>[
+      if (r.pesoPie != null) 'pie ${r.pesoPie!.round()} kg',
+      if (r.pesoCanal != null) 'canal ${r.pesoCanal!.round()} kg',
+      if (r.rendimiento != null) '${r.rendimiento!.toStringAsFixed(1)} %',
+      if (r.precioKgVenta != null) '₡${r.precioKgVenta!.round()}/kg canal',
+    ];
+    return partes.join(' · ');
   }
 
   Future<void> _editarCompra() async {

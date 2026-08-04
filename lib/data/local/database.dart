@@ -346,11 +346,25 @@ class Ventas extends Table {
   /// Total derivado: peso × precioKg.
   RealColumn get precio => real()();
 
-  /// Kilos de salida (obligatorio en ventas nuevas).
+  /// Kilos de salida de la finca, digitados al armar el grupo de venta.
   RealColumn get peso => real().nullable()();
 
-  /// ₡ por kilo de venta.
+  /// ₡ por kilo de venta. Dejó de digitarse al vender (D-19); se conserva por
+  /// las ventas viejas y para el ₡/kg que la app deriva del dinero recibido.
   RealColumn get precioKg => real().nullable()();
+
+  /// Peso en pie en la planta, registrado después de crear el grupo (D-19).
+  RealColumn get pesoPie => real().nullable()();
+
+  /// Peso de la canal en la planta (D-19).
+  RealColumn get pesoCanal => real().nullable()();
+
+  /// Derivado: pesoCanal ÷ pesoPie × 100. Null mientras falte un peso.
+  RealColumn get rendimiento => real().nullable()();
+
+  /// ₡ efectivamente recibidos por este animal. **Es la fuente de la utilidad**
+  /// (D-19); mientras esté null, la utilidad se muestra como “—”.
+  RealColumn get dineroRecibido => real().nullable()();
   TextColumn get comprador => text().nullable()();
   TextColumn get observaciones => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
@@ -366,6 +380,10 @@ class Ventas extends Table {
     'CHECK (precio >= 0)',
     'CHECK (peso IS NULL OR peso > 0)',
     'CHECK (precio_kg IS NULL OR precio_kg >= 0)',
+    'CHECK (peso_pie IS NULL OR peso_pie > 0)',
+    'CHECK (peso_canal IS NULL OR peso_canal > 0)',
+    'CHECK (rendimiento IS NULL OR (rendimiento > 0 AND rendimiento <= 100))',
+    'CHECK (dinero_recibido IS NULL OR dinero_recibido >= 0)',
   ];
 }
 
@@ -582,7 +600,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -728,6 +746,20 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'UPDATE dietas SET costo_kg = costo_animal_dia, kg_animal_dia = 1 '
           'WHERE costo_kg = 0 AND costo_animal_dia > 0',
+        );
+      }
+      if (from < 16) {
+        // v16: datos de planta por animal vendido (D-19). El dinero recibido
+        // pasa a ser la fuente de la utilidad.
+        await _agregarColumnaSiFalta(m, ventas, ventas.pesoPie);
+        await _agregarColumnaSiFalta(m, ventas, ventas.pesoCanal);
+        await _agregarColumnaSiFalta(m, ventas, ventas.rendimiento);
+        await _agregarColumnaSiFalta(m, ventas, ventas.dineroRecibido);
+        // Ventas ya registradas: el total cobrado pasa a ser dinero recibido,
+        // así su utilidad no se vuelve “—” de un día para otro.
+        await customStatement(
+          'UPDATE ventas SET dinero_recibido = precio '
+          'WHERE dinero_recibido IS NULL AND precio > 0',
         );
       }
     },

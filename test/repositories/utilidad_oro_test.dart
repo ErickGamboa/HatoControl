@@ -129,7 +129,22 @@ void main() {
     await ventas.confirmarLoteVenta(
       fincaId: 'f1',
       fecha: ventaFecha,
-      items: [(animalId: animal.id, peso: 400, precioKg: 1500)],
+      items: [(animalId: animal.id, peso: 400)],
+    );
+
+    // Antes de que la planta liquide no hay utilidad: “—”, nunca ₡0 (D-19).
+    final sinLiquidar = await ventas.resumenDe(animal.id);
+    expect(sinLiquidar.precioVenta, isNull);
+    expect(sinLiquidar.utilidad, isNull);
+    expect(sinLiquidar.costoTotal, closeTo(319000, 1));
+
+    // La planta liquida ₡600.000 por el animal (400 kg a ₡1.500).
+    final venta = (await db.select(db.ventas).get()).single;
+    await ventas.registrarDatosPlanta(
+      ventaId: venta.id,
+      pesoPie: 400,
+      pesoCanal: 220,
+      dineroRecibido: 600000,
     );
 
     final r = await ventas.resumenDe(animal.id);
@@ -138,6 +153,7 @@ void main() {
     expect(r.costoSanitario, closeTo(4000, 0.01));
     expect(r.precioVenta, 600000);
     expect(r.utilidad, closeTo(281000, 1));
+    expect(r.rendimiento, closeTo(55, 0.0001));
 
     // La dieta no sigue corriendo después de la venta.
     await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -178,7 +194,7 @@ void main() {
     await ventas.confirmarLoteVenta(
       fincaId: 'f1',
       fecha: DateTime(2026, 1, 8), // 7 días de calendario
-      items: [(animalId: animal!.id, peso: 110, precioKg: 1000)],
+      items: [(animalId: animal!.id, peso: 110)],
     );
 
     final r = await ventas.resumenDe(animal.id);

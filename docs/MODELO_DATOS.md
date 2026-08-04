@@ -155,6 +155,26 @@ Cálculos derivados (no se guardan, se calculan; ver
 | updated_at | timestamptz | |
 | deleted_at | timestamptz | borrado suave |
 
+### ventas — venta de un animal (módulo 6)
+La venta se registra en dos momentos (D-19): al armar el grupo solo se conocen
+los kilos de salida; los datos de planta llegan después.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid (PK) | |
+| animal_id | uuid → animales.id | |
+| lote_venta_id | uuid → lotes_venta.id | el grupo de venta |
+| fecha | timestamptz | |
+| peso | numeric | **kilos de salida de la finca**, digitados al armar el grupo |
+| peso_pie | numeric | kilos en pie en la planta — digitado después |
+| peso_canal | numeric | kilos de canal — digitado después |
+| rendimiento | numeric | derivado: `peso_canal / peso_pie * 100` |
+| dinero_recibido | numeric | ₡ recibidos. **Fuente de la utilidad**; NULL = utilidad “—” |
+| precio | numeric | espejo de `dinero_recibido` (0 mientras no haya liquidación) |
+| precio_kg | numeric | derivado: `dinero_recibido / peso_canal` |
+| comprador | text | opcional |
+| observaciones | text | opcional |
+
 ### lote_dietas — historial de asignación dieta ↔ lote
 | Campo | Tipo | Notas |
 |---|---|---|
