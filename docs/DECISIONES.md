@@ -233,6 +233,37 @@ migration opaquely. Pushing itself required `supabase migration repair
 CLI's local/remote bookkeeping, not schema, and is safe to redo if the
 project is ever re-linked from a fresh machine.
 
+### D-17 — Gastos fijos: prorrateo por días-animal y congelado al vender
+**Status: Decidida (2026-08-03).**
+Los costos indirectos de la finca (salario del peón, luz, agua, combustible)
+no existían en el sistema, así que la utilidad por animal estaba inflada.
+Se agrega el **Módulo 7 — Gastos fijos** y se amplía la fórmula oro a
+`venta − (compra + dietas + sanidad + gastos fijos)`.
+
+Opciones evaluadas para el reparto: (a) partes iguales entre los animales del
+mes, (b) **días-animal**, (c) días-kilo (ponderado por peso).
+**Decisión: (b) días-animal.** Reparte exactamente el 100% del gasto y es
+justo con animales que entran o se venden a mitad de mes; (a) castiga al que
+entró tarde y (c) depende de tener pesajes al día y es difícil de explicar al
+ganadero.
+
+Consecuencias:
+- El gasto recurrente se digita una vez (`periodicidad = mensual`, vigencia
+  `desde`/`hasta`) y se devenga solo mes a mes. El mes en curso devenga
+  proporcional a los días transcurridos, igual que la dieta.
+- La parte de cada animal se **congela al vender** en `gasto_fijo_cargos`
+  (una fila por gasto × mes × animal), coherente con la regla 5 de
+  `CORRECCIONES.md` §14 (“los costos se congelan cuando ocurren”).
+- Un gasto digitado atrasado se reparte **solo entre los animales no
+  vendidos**: el prorrateo descuenta lo ya congelado y reparte el resto. Eso
+  mantiene la suma en 100% sin reescribir utilidades ya cerradas.
+- La tabla `costos_otros` (costos directos por animal) **sigue fuera** de la
+  fórmula; los gastos fijos son el único costo indirecto admitido.
+- Requirió enmendar `ESPECIFICACION_FUNCIONAL.md` (documento oro), que en su
+  lista de “fuera de alcance” excluía toda economía ajena a la fórmula
+  anterior. La enmienda es explícita para que código y contrato no queden en
+  contradicción (`AGENTS.md` §6).
+
 ---
 
 ## How to use this log / Cómo usar este registro

@@ -110,3 +110,13 @@ everything after it, in order.
 dieta_ingredientes, lotes_venta, retiro/dosis columns on eventos_sanitarios,
 peso/lote_venta_id on ventas. **Pushed to live** `geocoundyilwxrnbhcqu` on
 2026-07-23 (`supabase migration list` shows local=remote for that stamp).
+
+## Módulo 7 — gastos fijos (2026-08-03)
+
+`20260803120000_module7_gastos_fijos.sql` — `gastos_fijos` (gasto indirecto de
+la finca: peón, luz, agua; mensual o único, con vigencia `desde`/`hasta`) y
+`gasto_fijo_cargos` (la parte prorrateada que se congela al vender). RLS por
+`private.es_miembro(finca_id)` y, para los cargos, vía `EXISTS` sobre
+`animales`. Índice único `(gasto_fijo_id, animal_id, mes)` entre filas no
+borradas, espejo del índice local de Drift (schema v14). **Pendiente de
+`supabase db push`.**

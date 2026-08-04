@@ -228,6 +228,42 @@ Reglas:
   ningún scope para esa `clave`, se asume habilitado a menos que se pase
   `defaultValue: false`.
 
+### gastos_fijos — gastos indirectos de la finca (módulo 7, D-17)
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid (PK) | |
+| finca_id | uuid → fincas.id | el gasto solo se reparte entre animales de esta finca |
+| concepto | text | "Salario peón", "Luz" |
+| monto | numeric | ₡ por mes si `periodicidad = 'mensual'`; ₡ del gasto si `'unico'` |
+| periodicidad | text | `mensual` \| `unico` |
+| desde | timestamptz | mensual: 1° del mes en que empieza · único: fecha del gasto |
+| hasta | timestamptz | null = vigente; se llena al dar de baja |
+| moneda | text | default `CRC` (D-07) |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+| deleted_at | timestamptz | borrado suave |
+
+### gasto_fijo_cargos — parte congelada por animal (módulo 7, D-17)
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid (PK) | |
+| gasto_fijo_id | uuid → gastos_fijos.id | |
+| animal_id | uuid → animales.id | |
+| mes | timestamptz | primer día del mes al que corresponde el cargo |
+| dias | int | días-animal que le tocaron en ese mes |
+| monto | numeric | ₡ congelados |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+| deleted_at | timestamptz | borrado suave |
+
+Reglas:
+- Se escribe **solo al vender** (o al salir el animal). Mientras el animal está activo su
+  parte se calcula en vivo y no se persiste.
+- Único por `(gasto_fijo_id, animal_id, mes)` entre filas no borradas.
+- El prorrateo de un mes descuenta lo ya congelado y reparte el resto entre los animales
+  activos por días-animal — así un gasto digitado atrasado lo absorben solo los no vendidos
+  y la suma sigue siendo el 100% del gasto.
+
 ## Roles y permisos (resumen)
 - **admin:** todo en su finca + agregar/quitar usuarios y asignarles rol (admin u operario).
 - **operario:** opera la finca (registra pesajes, mueve animales, etc.) pero no administra usuarios.

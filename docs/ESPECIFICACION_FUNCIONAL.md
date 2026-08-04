@@ -149,7 +149,7 @@ Ordenado por fecha, muestra:
 - Por cada lote de venta se muestra la **utilidad**:
 
 ```text
-Utilidad = Precio de venta − (Precio de compra + Costo de dietas + Costo de sanidad)
+Utilidad = Precio de venta − (Precio de compra + Costo de dietas + Costo de sanidad + Gastos fijos)
 ```
 
 | Componente | Origen |
@@ -157,7 +157,58 @@ Utilidad = Precio de venta − (Precio de compra + Costo de dietas + Costo de sa
 | Precio de compra | Al ingresar el animal |
 | Costo de dietas | Σ (costo/día × días en cada dieta) |
 | Costo de sanidad | Σ costo por uso de medicamentos aplicados |
+| Gastos fijos | Parte prorrateada por días-animal (Módulo 7) |
 | Precio de venta | Digitado al vender |
+
+---
+
+## Módulo 7 — Gastos fijos
+
+Gastos de la finca que **no son de un animal en particular**: salario del peón, luz, agua,
+combustible, reparaciones. Se reparten entre los animales para que la utilidad sea real y no
+solo la diferencia de compra-venta menos costos directos.
+
+### Qué se digita
+
+| Campo | Comportamiento |
+|---|---|
+| Concepto | Texto libre corto ("Salario peón", "Luz") |
+| Monto | ₡ por mes si se repite; ₡ del gasto si es único |
+| ¿Se repite cada mes? | Sí = gasto mensual recurrente · No = gasto de una sola vez |
+| Desde | Mes en que empieza (recurrente) o fecha (único) |
+| Hasta | Solo al dar de baja. Vacío = sigue vigente |
+
+Un gasto recurrente se digita **una sola vez** y el sistema lo aplica solo cada mes hasta que
+se da de baja. El ganadero no vuelve a digitarlo.
+
+### Cómo se reparte (prorrateo por días-animal)
+
+El gasto del mes se divide entre el **total de días que todos los animales estuvieron en la
+finca ese mes**, y a cada animal se le carga su parte:
+
+```text
+días-animal del mes = Σ (días que estuvo cada animal en la finca ese mes)
+parte del animal    = monto del mes × sus días ÷ días-animal del mes
+```
+
+Ejemplo: peón ₡300.000 en un mes de 31 días, 10 animales el mes completo y 1 que entró el
+día 20 (12 días) → 10×31 + 12 = **322 días-animal** → ₡931,68 por animal-día. El que estuvo
+todo el mes absorbe ₡28.882 y el que entró tarde ₡11.180. La suma de todas las partes es
+**exactamente ₡300.000**.
+
+### Reglas
+
+1. **Alcance por finca.** Un gasto pertenece a una finca y solo se reparte entre sus animales.
+2. **Mes en curso:** se devenga por día transcurrido (monto × días transcurridos ÷ días del
+   mes), igual que la dieta corre día por día. No se carga el mes completo por adelantado.
+3. **Se congela al vender.** Al confirmar la venta, la parte acumulada de ese animal queda
+   guardada y su utilidad **no vuelve a cambiar nunca**.
+4. **Un gasto digitado atrasado se reparte solo entre los animales no vendidos.** Lo ya
+   congelado no se toca; el resto lo absorben los que todavía están en la finca.
+5. **Sin animales activos no se reparte nada.** El gasto queda registrado, sin cargo. No es
+   un error.
+6. **Animal sin venta:** el gasto fijo se muestra acumulado en vivo, pero la utilidad sigue
+   en `—` (regla general: sin venta no hay utilidad).
 
 ---
 
@@ -175,19 +226,23 @@ Utilidad = Precio de venta − (Precio de compra + Costo de dietas + Costo de sa
 | Fin de retiro | fecha aplicación + días de retiro |
 | Costo dieta / animal | Σ (costo/día × días en esa dieta) |
 | Costo sanidad / animal | Σ costo por uso de cada aplicación |
-| Utilidad / animal | venta − (compra + dietas + sanidad) |
+| Gasto fijo / animal-día | monto del mes ÷ Σ días-animal del mes |
+| Gasto fijo / animal | Σ (por mes: monto por repartir × sus días ÷ días-animal del mes) |
+| Utilidad / animal | venta − (compra + dietas + sanidad + gastos fijos) |
 | Utilidad / lote de venta | Σ utilidad de los animales del lote |
 
 ---
 
 ## Fuera de alcance (no construir / retirar si existe)
 
-Todo lo que no esté en los módulos 1–6 ni en los principios anteriores. En particular, **no** forman parte de esta visión:
+Todo lo que no esté en los módulos 1–7 ni en los principios anteriores. En particular, **no** forman parte de esta visión:
 
 - Pantalla **Corral** paralela a Pesaje (la Pantalla de Trabajo **es** Pesaje).
 - Historial agregado / gráficas por **lote** como módulo aparte.
 - Catálogo sanitario distinto al modelo de medicamentos + dosis/costo/retiro de aquí.
-- Economía con “otros costos”, márgenes o rentabilidades **fuera** de la fórmula de utilidad de arriba.
+- Economía con “otros costos” **por animal** (tabla `costos_otros`), márgenes o rentabilidades:
+  siguen **fuera** de la fórmula de utilidad. Los gastos fijos del Módulo 7 **sí** entran, y son
+  el único costo indirecto admitido.
 - Feature flags de producto, comparativas entre dietas/lotes, u otros dashboards no descritos.
 
 Plataforma base (auth, fincas, cuenta/licencia, sync) se mantiene como infraestructura; no es “módulo de campo” de esta especificación, pero tampoco se elimina.
