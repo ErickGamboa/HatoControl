@@ -6,6 +6,7 @@ import 'auth/auth_gate.dart';
 import 'config/supabase_config.dart';
 import 'demo/demo_env.dart';
 import 'demo/demo_seed.dart';
+import 'demo/seed_prueba.dart';
 import 'services.dart';
 
 export 'app/theme.dart' show kAzulHato, kVerdeHato;
@@ -21,6 +22,8 @@ Future<void> bootstrapHatoControl() async {
 
   await sesionLocalRepo.cargar();
   await maybeSeedDemoOnStartup();
+  // Datos de prueba con números redondos, sobre la sesión real del usuario.
+  await maybeSeedPruebaOnStartup();
   await estadoConexion.iniciar(alRecuperarConexion: syncService.sincronizar);
 
   if (!kSeedDemoEnabled) {

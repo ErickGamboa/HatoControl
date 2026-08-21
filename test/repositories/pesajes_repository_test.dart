@@ -261,4 +261,73 @@ void main() {
       expect(await repo.ultimoPeso('animal-1'), 180);
     },
   );
+
+  group('fechaIngreso: cuándo entró el animal a la finca', () {
+    Future<AnimalRow> animal() => (db.select(
+      db.animales,
+    )..where((t) => t.id.equals('animal-1'))).getSingle();
+
+    test('manda la fecha de compra sobre el createdAt de la fila', () async {
+      await seedFincaYLote();
+      await insertAnimal();
+      // Se registra hoy un animal comprado meses antes.
+      await (db.update(db.animales)..where((t) => t.id.equals('animal-1')))
+          .write(AnimalesCompanion(fechaCompra: Value(DateTime(2025, 10, 15))));
+
+      expect(await repo.fechaIngreso(await animal()), DateTime(2025, 10, 15));
+    });
+
+    test('sin compra digitada usa el primer movimiento al lote', () async {
+      await seedFincaYLote();
+      await insertAnimal();
+      final ahora = DateTime(2026, 1, 1);
+      for (final (id, fecha) in [
+        ('mov-2', DateTime(2026, 5, 20)),
+        ('mov-1', DateTime(2026, 3, 10)),
+      ]) {
+        await db
+            .into(db.movimientosLote)
+            .insert(
+              MovimientosLoteCompanion.insert(
+                id: id,
+                animalId: 'animal-1',
+                loteDestino: 'lote-1',
+                fecha: fecha,
+                createdAt: ahora,
+                updatedAt: ahora,
+              ),
+            );
+      }
+
+      expect(await repo.fechaIngreso(await animal()), DateTime(2026, 3, 10));
+    });
+
+    test('sin compra ni movimientos cae en el createdAt', () async {
+      await seedFincaYLote();
+      await insertAnimal();
+
+      expect(await repo.fechaIngreso(await animal()), DateTime(2026, 1, 1));
+    });
+
+    test('ignora un movimiento borrado', () async {
+      await seedFincaYLote();
+      await insertAnimal();
+      final ahora = DateTime(2026, 1, 1);
+      await db
+          .into(db.movimientosLote)
+          .insert(
+            MovimientosLoteCompanion.insert(
+              id: 'mov-borrado',
+              animalId: 'animal-1',
+              loteDestino: 'lote-1',
+              fecha: DateTime(2025, 12, 1),
+              createdAt: ahora,
+              updatedAt: ahora,
+              deletedAt: Value(ahora),
+            ),
+          );
+
+      expect(await repo.fechaIngreso(await animal()), DateTime(2026, 1, 1));
+    });
+  });
 }
