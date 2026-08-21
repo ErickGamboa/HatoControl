@@ -27,6 +27,15 @@ class AnimalInfoTab extends StatelessWidget {
   String _fecha(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
+  /// El lote actual y la fecha real de ingreso a la finca, en una sola pasada.
+  Future<({LoteRow? lote, DateTime ingreso})> _loteEIngreso() async {
+    final lote = await (db.select(
+      db.lotes,
+    )..where((t) => t.id.equals(animal.loteId))).getSingleOrNull();
+    final ingreso = await pesajesRepository.fechaIngreso(animal);
+    return (lote: lote, ingreso: ingreso);
+  }
+
   String _peso(double? p) {
     if (p == null) return '—';
     return p == p.roundToDouble()
@@ -37,12 +46,11 @@ class AnimalInfoTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return FutureBuilder<LoteRow?>(
-      future: (db.select(
-        db.lotes,
-      )..where((t) => t.id.equals(animal.loteId))).getSingleOrNull(),
-      builder: (context, loteSnap) {
-        final lote = loteSnap.data;
+    return FutureBuilder<({LoteRow? lote, DateTime ingreso})>(
+      future: _loteEIngreso(),
+      builder: (context, datosSnap) {
+        final lote = datosSnap.data?.lote;
+        final ingreso = datosSnap.data?.ingreso;
         return StreamBuilder<List<AnimalConPeso>>(
           stream: pesajesRepository.observarAnimalesDeLote(animal.loteId),
           builder: (context, pesoSnap) {
@@ -85,7 +93,10 @@ class AnimalInfoTab extends StatelessWidget {
                               ? 'No'
                               : 'Sí · hasta ${_fecha(retiro)}',
                         ),
-                        _FilaInfo('Fecha de ingreso', _fecha(animal.createdAt)),
+                        _FilaInfo(
+                          'Fecha de ingreso',
+                          ingreso == null ? '—' : _fecha(ingreso),
+                        ),
                         if (animal.precioCompra != null)
                           _FilaInfo(
                             'Precio compra',

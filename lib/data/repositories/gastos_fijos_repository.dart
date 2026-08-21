@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../estadisticas/estadisticas_gastos_fijos.dart';
 import '../local/database.dart';
+import 'pesajes_repository.dart';
 
 /// Periodicidad de un gasto fijo (Módulo 7).
 abstract final class PeriodicidadGasto {
@@ -42,9 +43,13 @@ class ResumenGastosMes {
 /// después. Un gasto digitado atrasado se reparte solo entre los animales que
 /// siguen activos, porque el prorrateo descuenta lo ya congelado.
 class GastosFijosRepository {
-  GastosFijosRepository(this.db);
+  GastosFijosRepository(this.db, {PesajesRepository? pesajesRepository})
+    : _pesajes = pesajesRepository ?? PesajesRepository(db);
 
   final AppDatabase db;
+
+  /// Dueño de la regla de "cuándo entró el animal a la finca".
+  final PesajesRepository _pesajes;
   final _uuid = const Uuid();
 
   Stream<List<GastoFijoRow>> observarGastos(String fincaId) {
@@ -149,18 +154,9 @@ class GastosFijosRepository {
   /// animal), y la salida de la última venta. Para un animal muerto sin venta
   /// se usa `updatedAt`, que es cuando se marcó el estado.
   Future<EstanciaAnimal> estanciaDe(AnimalRow animal) async {
-    final primerMovimiento =
-        await (db.select(db.movimientosLote)
-              ..where(
-                (t) => t.animalId.equals(animal.id) & t.deletedAt.isNull(),
-              )
-              ..orderBy([(t) => OrderingTerm.asc(t.fecha)])
-              ..limit(1))
-            .getSingleOrNull();
     final venta = await _ultimaVenta(animal.id);
 
-    final ingreso =
-        animal.fechaCompra ?? primerMovimiento?.fecha ?? animal.createdAt;
+    final ingreso = await _pesajes.fechaIngreso(animal);
     final salida =
         venta?.fecha ?? (animal.estado == 'activo' ? null : animal.updatedAt);
     return EstanciaAnimal(

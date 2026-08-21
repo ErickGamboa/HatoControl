@@ -370,6 +370,27 @@ class PesajesRepository {
 
   /// Devuelve el peso del pesaje más reciente de un animal (o null si no tiene
   /// ninguno todavía). Sirve para calcular la ganancia respecto al anterior.
+  /// Cuándo entró el animal a la finca. **No** es `createdAt`: la fila se crea
+  /// cuando el ganadero lo registra, que puede ser meses después de comprarlo.
+  /// Manda la fecha de compra; si no se digitó, el primer movimiento a un lote;
+  /// y de último recurso sí, cuándo se creó la fila.
+  ///
+  /// Regla única compartida con el prorrateo de gastos fijos
+  /// (`GastosFijosRepository.estanciaDe`), para que la ficha del animal y su
+  /// economía no se contradigan.
+  Future<DateTime> fechaIngreso(AnimalRow animal) async {
+    if (animal.fechaCompra != null) return animal.fechaCompra!;
+    final primerMovimiento =
+        await (db.select(db.movimientosLote)
+              ..where(
+                (t) => t.animalId.equals(animal.id) & t.deletedAt.isNull(),
+              )
+              ..orderBy([(t) => OrderingTerm.asc(t.fecha)])
+              ..limit(1))
+            .getSingleOrNull();
+    return primerMovimiento?.fecha ?? animal.createdAt;
+  }
+
   Future<double?> ultimoPeso(String animalId) async {
     final fila =
         await (db.select(db.pesajes)
