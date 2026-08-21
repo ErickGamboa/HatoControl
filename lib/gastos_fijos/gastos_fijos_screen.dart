@@ -114,14 +114,17 @@ class GastosFijosScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final soloLectura = permisosFinca.esSoloLectura;
     return Scaffold(
       appBar: AppBar(title: const Text('Gastos fijos')),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const ValueKey('gastosFijos.agregar'),
-        onPressed: () => _formulario(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Gasto'),
-      ),
+      floatingActionButton: soloLectura
+          ? null
+          : FloatingActionButton.extended(
+              key: const ValueKey('gastosFijos.agregar'),
+              onPressed: () => _formulario(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Gasto'),
+            ),
       body: StreamBuilder<List<GastoFijoRow>>(
         stream: gastosFijosRepository.observarGastos(finca.id),
         builder: (context, snap) {
@@ -183,7 +186,9 @@ class GastosFijosScreen extends StatelessWidget {
               for (final g in lista) ...[
                 _GastoCard(
                   gasto: g,
-                  onTap: () => _formulario(context, existente: g),
+                  onTap: soloLectura
+                      ? null
+                      : () => _formulario(context, existente: g),
                 ),
                 const SizedBox(height: 8),
               ],
@@ -208,7 +213,9 @@ class _GastoCard extends StatelessWidget {
   const _GastoCard({required this.gasto, required this.onTap});
 
   final GastoFijoRow gasto;
-  final VoidCallback onTap;
+
+  /// null cuando la finca es de solo lectura: la tarjeta no se puede editar.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -233,7 +240,7 @@ class _GastoCard extends StatelessWidget {
                     '${deBaja ? ' · dado de baja en ${_mesAno(gasto.hasta!)}' : ''}'
               : '${fmtColones(gasto.monto)} una sola vez · ${_mesAno(gasto.desde)}',
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: onTap == null ? null : const Icon(Icons.chevron_right),
       ),
     );
   }

@@ -93,7 +93,9 @@ class FincaMiembros extends Table {
   TextColumn get id => text()();
   TextColumn get fincaId => text()();
   TextColumn get usuarioId => text()();
-  TextColumn get rol => text()(); // 'admin' | 'operario'
+  // 'admin' | 'operario' | 'lector'. `lector` = invitado de solo lectura: ve
+  // la finca compartida pero no puede escribir nada (la RLS lo impone).
+  TextColumn get rol => text()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -103,7 +105,9 @@ class FincaMiembros extends Table {
   Set<Column> get primaryKey => {id};
 
   @override
-  List<String> get customConstraints => ["CHECK (rol IN ('admin','operario'))"];
+  List<String> get customConstraints => [
+    "CHECK (rol IN ('admin','operario','lector'))",
+  ];
 }
 
 @DataClassName('LoteRow')
@@ -600,7 +604,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -761,6 +765,14 @@ class AppDatabase extends _$AppDatabase {
           'UPDATE ventas SET dinero_recibido = precio '
           'WHERE dinero_recibido IS NULL AND precio > 0',
         );
+      }
+      if (from < 17) {
+        // v17: rol 'lector' en finca_miembros (invitado de solo lectura).
+        // SQLite no permite alterar un CHECK, así que se recrea la tabla
+        // copiando las filas (alterTable), no se borran membresías: el cursor
+        // de sync ya está avanzado y no volverían a bajar.
+        await m.alterTable(TableMigration(fincaMiembros));
+        await _crearIndicesUnicosLocales();
       }
     },
   );

@@ -34,6 +34,23 @@ class LicenciaNoDisponibleException implements Exception {
   const LicenciaNoDisponibleException();
 }
 
+/// Roles de membresía en una finca (`finca_miembros.rol`).
+abstract final class RolFinca {
+  /// Dueño o coadministrador: escribe todo y puede compartir la finca.
+  static const String admin = 'admin';
+
+  /// Colaborador con permiso de escritura, sin poder compartir.
+  static const String operario = 'operario';
+
+  /// Invitado: ve la finca compartida pero no puede escribir nada.
+  static const String lector = 'lector';
+
+  /// true solo cuando SABEMOS que el rol es de solo lectura. Un rol
+  /// desconocido (membresía sin sincronizar, sesión offline) no bloquea la UI;
+  /// la RLS del servidor es la que de verdad impide escribir.
+  static bool esSoloLectura(String? rol) => rol == lector;
+}
+
 /// Una persona con acceso a una finca: la fila de membresía + (si ya se
 /// sincronizó su perfil) su nombre y correo.
 class MiembroConUsuario {
@@ -87,6 +104,21 @@ class FincasRepository {
     return (db.select(
       db.fincas,
     )..where((t) => t.id.equals(fincaId))).watchSingleOrNull();
+  }
+
+  /// Stream con el rol del usuario en una finca (null si no hay membresía
+  /// activa local todavía). Sirve para saber si la finca es de solo lectura.
+  Stream<String?> observarMiRol(String fincaId, String usuarioId) {
+    return (db.select(db.fincaMiembros)
+          ..where(
+            (t) =>
+                t.fincaId.equals(fincaId) &
+                t.usuarioId.equals(usuarioId) &
+                t.deletedAt.isNull(),
+          )
+          ..limit(1))
+        .watchSingleOrNull()
+        .map((m) => m?.rol);
   }
 
   /// Stream reactivo con las personas que tienen acceso a una finca (miembros no

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hato_control/app/permisos_finca.dart';
 import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/data/repositories/fincas_repository.dart';
 import 'package:hato_control/data/repositories/lotes_repository.dart';
@@ -127,6 +128,54 @@ void main() {
       find.byKey(const ValueKey('fincaDetail.gastosFijos')),
       findsOneWidget,
     );
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('invitado (rol lector): sin Trabajo, sin editar ni compartir', (
+    tester,
+  ) async {
+    final finca = await seedFinca();
+    await db
+        .into(db.fincaMiembros)
+        .insert(
+          FincaMiembrosCompanion.insert(
+            id: 'miembro-1',
+            fincaId: finca.id,
+            usuarioId: 'u1',
+            rol: RolFinca.lector,
+            createdAt: DateTime(2026, 1, 1),
+            updatedAt: DateTime(2026, 1, 1),
+          ),
+        );
+    final permisos = PermisosFinca();
+    addTearDown(permisos.limpiar);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FincaDetalleScreen(
+          finca: finca,
+          usuarioId: 'u1',
+          sinConexion: false,
+          database: db,
+          fincasRepository: fincasRepo,
+          lotesRepository: lotesRepo,
+          permisos: permisos,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Nada de escribir: ni manga, ni editar finca, ni compartirla.
+    expect(find.byKey(const ValueKey('fincaDetail.pesaje')), findsNothing);
+    expect(find.byIcon(Icons.edit), findsNothing);
+    expect(find.byIcon(Icons.person_add_alt_1), findsNothing);
+
+    // Los módulos siguen visibles: el invitado sí puede ver.
+    expect(find.byKey(const ValueKey('fincaDetail.lotes')), findsOneWidget);
+    expect(find.byKey(const ValueKey('fincaDetail.venta')), findsOneWidget);
+    expect(find.textContaining('Solo lectura'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));

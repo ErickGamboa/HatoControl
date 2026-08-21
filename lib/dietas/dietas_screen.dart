@@ -194,14 +194,17 @@ class DietasScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final soloLectura = permisosFinca.esSoloLectura;
     return Scaffold(
       appBar: AppBar(title: const Text('Dietas')),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const ValueKey('dietas.crear'),
-        onPressed: () => _dietaDialog(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Dieta'),
-      ),
+      floatingActionButton: soloLectura
+          ? null
+          : FloatingActionButton.extended(
+              key: const ValueKey('dietas.crear'),
+              onPressed: () => _dietaDialog(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Dieta'),
+            ),
       body: StreamBuilder<List<DietaRow>>(
         stream: repo.observarDietas(finca.id),
         builder: (context, snapshot) {
@@ -214,7 +217,10 @@ class DietasScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Text(
-                  'Esta finca no tiene dietas.\nCreá la primera con el botón de abajo.',
+                  soloLectura
+                      ? 'Esta finca no tiene dietas.'
+                      : 'Esta finca no tiene dietas.\n'
+                            'Creá la primera con el botón de abajo.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.outline,
@@ -273,11 +279,13 @@ class DietasScreen extends StatelessWidget {
                     ],
                   ),
                   isThreeLine: true,
-                  trailing: IconButton(
-                    tooltip: 'Editar dieta',
-                    icon: const Icon(Icons.edit, size: 20),
-                    onPressed: () => _dietaDialog(context, dieta: d),
-                  ),
+                  trailing: soloLectura
+                      ? null
+                      : IconButton(
+                          tooltip: 'Editar dieta',
+                          icon: const Icon(Icons.edit, size: 20),
+                          onPressed: () => _dietaDialog(context, dieta: d),
+                        ),
                 ),
               );
             },

@@ -6,7 +6,12 @@ import '../services.dart';
 import 'invitado_screen.dart';
 import 'mensajes_auth.dart';
 
-/// Pantalla de inicio de sesión / registro con correo y contraseña.
+/// Pantalla de inicio de sesión con correo y contraseña.
+///
+/// No hay autoservicio para crear cuentas: las cuentas se abren al adquirir una
+/// licencia (light = 1 finca, medium = hasta 3, pro = N fincas). Quien fue
+/// invitado a una finca entra por "Me invitaron a una finca" y solo tiene
+/// permiso de lectura.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -16,18 +21,15 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nombreCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
 
-  bool _esRegistro = false; // false = iniciar sesión, true = crear cuenta
   bool _cargando = false;
   bool _verPass = false;
   bool _falloRedReciente = false;
 
   @override
   void dispose() {
-    _nombreCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
@@ -39,40 +41,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final auth = Supabase.instance.client.auth;
     try {
-      if (_esRegistro) {
-        await auth.signUp(
-          email: _emailCtrl.text.trim(),
-          password: _passCtrl.text,
-          data: {'nombre': _nombreCtrl.text.trim()},
-        );
-        if (!mounted) return;
-        // Si el proyecto exige confirmación por correo, no habrá sesión aún.
-        final haySesion = auth.currentSession != null;
-        final usuario = auth.currentUser;
-        if (haySesion && usuario != null) {
-          await _guardarSesionOnline(usuario);
-        }
-        _mostrarMensaje(
-          haySesion
-              ? '¡Cuenta creada! Bienvenido.'
-              : 'Cuenta creada. Revisá tu correo para confirmarla y luego iniciá sesión.',
-        );
-        if (!haySesion) setState(() => _esRegistro = false);
-      } else {
-        await auth.signInWithPassword(
-          email: _emailCtrl.text.trim(),
-          password: _passCtrl.text,
-        );
-        final usuario = auth.currentUser;
-        if (usuario != null) {
-          await _guardarSesionOnline(usuario);
-        }
-        // El AuthGate detecta la sesión y cambia de pantalla solo.
+      await auth.signInWithPassword(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text,
+      );
+      final usuario = auth.currentUser;
+      if (usuario != null) {
+        await _guardarSesionOnline(usuario);
       }
+      // El AuthGate detecta la sesión y cambia de pantalla solo.
       _falloRedReciente = false;
     } on AuthException catch (e) {
       _falloRedReciente = esErrorRedAuth(e);
-      if (_falloRedReciente && !_esRegistro) {
+      if (_falloRedReciente) {
         final entroOffline = await sesionLocalRepo.activarOfflineParaEmail(
           _emailCtrl.text,
         );
@@ -81,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) _mostrarMensaje(traducirErrorAuth(e), error: true);
     } catch (e) {
       _falloRedReciente = esErrorRedAuth(e);
-      if (_falloRedReciente && !_esRegistro) {
+      if (_falloRedReciente) {
         final entroOffline = await sesionLocalRepo.activarOfflineParaEmail(
           _emailCtrl.text,
         );
@@ -137,28 +118,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _esRegistro ? 'Creá tu cuenta' : 'Iniciá sesión',
+                      'Iniciá sesión',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 32),
-
-                    // Nombre (solo en registro)
-                    if (_esRegistro) ...[
-                      TextFormField(
-                        controller: _nombreCtrl,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre',
-                          prefixIcon: Icon(Icons.person_outline),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Ingresá tu nombre'
-                            : null,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
 
                     // Correo
                     TextFormField(
@@ -202,9 +166,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (v == null || v.isEmpty) {
                           return 'Ingresá tu contraseña';
                         }
-                        if (_esRegistro && v.length < 6) {
-                          return 'Mínimo 6 caracteres';
-                        }
                         return null;
                       },
                     ),
@@ -222,58 +183,43 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text(_esRegistro ? 'Crear cuenta' : 'Entrar'),
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextButton(
-                      onPressed: _cargando
-                          ? null
-                          : () => setState(() => _esRegistro = !_esRegistro),
-                      child: Text(
-                        _esRegistro
-                            ? '¿Ya tenés cuenta? Iniciá sesión'
-                            : '¿No tenés cuenta? Creá una',
-                      ),
+                          : const Text('Entrar'),
                     ),
 
-                    if (!_esRegistro)
-                      ValueListenableBuilder<SesionLocalRow?>(
-                        valueListenable: sesionLocalRepo.sesion,
-                        builder: (context, sesionLocal, _) {
-                          return ValueListenableBuilder<bool>(
-                            valueListenable: estadoConexion.hayConexion,
-                            builder: (context, hayConexion, _) {
-                              return OfflineLoginAction(
-                                sesionLocal: sesionLocal,
-                                hayConexion: hayConexion,
-                                falloRedReciente: _falloRedReciente,
-                                cargando: _cargando,
-                                onEntrarSinConexion: _entrarSinConexion,
-                              );
-                            },
-                          );
-                        },
-                      ),
+                    ValueListenableBuilder<SesionLocalRow?>(
+                      valueListenable: sesionLocalRepo.sesion,
+                      builder: (context, sesionLocal, _) {
+                        return ValueListenableBuilder<bool>(
+                          valueListenable: estadoConexion.hayConexion,
+                          builder: (context, hayConexion, _) {
+                            return OfflineLoginAction(
+                              sesionLocal: sesionLocal,
+                              hayConexion: hayConexion,
+                              falloRedReciente: _falloRedReciente,
+                              cargando: _cargando,
+                              onEntrarSinConexion: _entrarSinConexion,
+                            );
+                          },
+                        );
+                      },
+                    ),
 
                     // Acceso para personas a las que les compartieron una finca.
-                    if (!_esRegistro) ...[
-                      const Divider(height: 24),
-                      OutlinedButton.icon(
-                        onPressed: _cargando
-                            ? null
-                            : () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const InvitadoScreen(),
-                                ),
+                    const Divider(height: 24),
+                    OutlinedButton.icon(
+                      onPressed: _cargando
+                          ? null
+                          : () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const InvitadoScreen(),
                               ),
-                        icon: const Icon(Icons.mark_email_read_outlined),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        label: const Text('Me invitaron a una finca'),
+                            ),
+                      icon: const Icon(Icons.mark_email_read_outlined),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                    ],
+                      label: const Text('Me invitaron a una finca'),
+                    ),
                   ],
                 ),
               ),

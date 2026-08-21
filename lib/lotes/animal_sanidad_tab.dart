@@ -121,14 +121,15 @@ class AnimalSanidadTab extends StatelessWidget {
             );
           },
         ),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton(
-            onPressed: () => _abrirMedicamentos(context),
-            child: const Icon(Icons.add),
+        if (!permisosFinca.esSoloLectura)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton(
+              onPressed: () => _abrirMedicamentos(context),
+              child: const Icon(Icons.add),
+            ),
           ),
-        ),
       ],
     );
   }

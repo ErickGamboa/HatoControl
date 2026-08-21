@@ -17,6 +17,7 @@ Flutter offline-first app for cattle farm management: fincas, lotes, animals, we
 - `lib/data/local/database.dart`: Drift schema and migrations.
 - `lib/data/repositories/`: local-first business operations. UI should call repositories, not Supabase directly.
 - `lib/data/sync/sync_service.dart`: bidirectional sync between local Drift tables and Supabase.
+- `lib/app/permisos_finca.dart`: `PermisosFinca` — read-only state for the open finca (invited users). Loaded by `FincaDetalleScreen`, read by the module screens.
 - Feature UI folders: `auth/`, `cuenta/`, `fincas/`, `lotes/`, `pesaje/`, `dietas/`, `sanidad/`, `venta/`, `home/`.
 - `docs/ESPECIFICACION_FUNCIONAL.md`: product behavior (oro).
 - `docs/MODELO_DATOS.md`: domain model and Supabase/RLS expectations.
@@ -32,6 +33,13 @@ Flutter offline-first app for cattle farm management: fincas, lotes, animals, we
 8. Animal identifiers must be unique per finca; enforce in UI/repository and rely on server constraint.
 9. Never commit Supabase `service_role` secrets. The anon/publishable keys are public, but keep service credentials out of the repo.
 10. Generated Drift files (`database.g.dart`) must be regenerated after schema changes.
+11. Invited users are read-only. `finca_miembros.rol = 'lector'` may never write:
+    server-side, every `INSERT`/`UPDATE`/`DELETE` policy must go through
+    `private.puede_escribir(finca, uid)` (not `es_miembro`, which is read-level);
+    client-side, new write UI must be hidden when `permisosFinca.esSoloLectura`
+    (`lib/app/permisos_finca.dart`). Sharing a finca always grants `lector`.
+12. The app never calls `auth.signUp`. There is no self-service account creation:
+    accounts are opened by the admin when a license is bought, or by invitation.
 
 ## Before changing code
 - Read the relevant repository and screen file.

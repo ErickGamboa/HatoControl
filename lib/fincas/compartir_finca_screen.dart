@@ -6,7 +6,7 @@ import '../data/repositories/fincas_repository.dart';
 import '../services.dart';
 
 /// Pantalla para administrar el acceso a una finca: invitar personas por correo
-/// (como administrador) y ver/quitar a quienes ya tienen acceso.
+/// (con permiso de **solo lectura**) y ver/quitar a quienes ya tienen acceso.
 class CompartirFincaScreen extends StatefulWidget {
   const CompartirFincaScreen({
     super.key,
@@ -31,7 +31,8 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
       ..showSnackBar(SnackBar(content: Text(mensaje)));
   }
 
-  /// Pide un correo y comparte la finca con esa persona como administrador.
+  /// Pide un correo y comparte la finca con esa persona como invitado de solo
+  /// lectura: ve todo pero no puede escribir nada.
   Future<void> _invitar() async {
     if (!estadoConexion.hayConexion.value ||
         supabase.auth.currentSession == null) {
@@ -48,7 +49,11 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
     try {
       final res = await supabase.functions.invoke(
         'compartir-finca',
-        body: {'finca_id': widget.finca.id, 'email': email, 'rol': 'admin'},
+        body: {
+          'finca_id': widget.finca.id,
+          'email': email,
+          'rol': RolFinca.lector,
+        },
       );
       final data = res.data;
       final status = data is Map ? data['status'] as String? : null;
@@ -56,8 +61,8 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
         case 'agregado':
           sincronizarSiSePuede();
           _mostrar(
-            'Listo. Compartiste la finca con $email '
-            'como administrador.',
+            'Listo. Compartiste la finca con $email. '
+            'Puede verla, no cambiarla.',
           );
         case 'ya_es_miembro':
           _mostrar('Esa persona ya tiene acceso a esta finca.');
@@ -78,6 +83,10 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
         'sin_permiso' => 'Solo un administrador de la finca puede compartirla.',
         'no_autenticado' => 'Tu sesión expiró. Iniciá sesión de nuevo.',
         'datos_incompletos' => 'Falta el correo.',
+        // La Edge Function todavía no acepta el rol de solo lectura.
+        'rol_invalido' =>
+          'La app necesita una actualización del servidor para compartir '
+              'en solo lectura. Avisale a soporte.',
         _ => 'No se pudo compartir. Revisá tu conexión e intentá de nuevo.',
       });
     } catch (_) {
@@ -175,12 +184,20 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
   Widget _filaMiembro(ThemeData theme, MiembroConUsuario m) {
     final esYo = m.miembro.usuarioId == _miUsuarioId;
     final esDueno = m.miembro.usuarioId == widget.finca.creadaPor;
-    final esAdmin = m.miembro.rol == 'admin';
+    final esAdmin = m.miembro.rol == RolFinca.admin;
+    final esLector = m.miembro.rol == RolFinca.lector;
 
     final titulo = m.nombre ?? m.email ?? 'Usuario (pendiente de sincronizar)';
     final partes = <String>[
       if (m.nombre != null && m.email != null) m.email!,
-      if (esDueno) 'Dueño' else if (esAdmin) 'Administrador' else 'Operario',
+      if (esDueno)
+        'Dueño'
+      else if (esAdmin)
+        'Administrador'
+      else if (esLector)
+        'Solo lectura'
+      else
+        'Operario',
       if (esYo) 'vos',
     ];
 
@@ -188,7 +205,11 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
       leading: CircleAvatar(
         backgroundColor: theme.colorScheme.primaryContainer,
         child: Icon(
-          esAdmin ? Icons.shield_outlined : Icons.person_outline,
+          esAdmin
+              ? Icons.shield_outlined
+              : esLector
+              ? Icons.visibility_outlined
+              : Icons.person_outline,
           color: theme.colorScheme.onPrimaryContainer,
         ),
       ),
@@ -207,8 +228,8 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
 }
 
 /// Diálogo que pide el correo de la persona con quien compartir la finca.
-/// Devuelve el correo (en minúsculas) o null si se cancela. Por ahora el rol
-/// es siempre administrador (mismos poderes que el dueño en la finca).
+/// Devuelve el correo (en minúsculas) o null si se cancela. El rol es siempre
+/// `lector`: los invitados ven la finca pero no pueden cambiarla.
 class _DialogoCompartir extends StatefulWidget {
   const _DialogoCompartir();
 
@@ -246,7 +267,7 @@ class _DialogoCompartirState extends State<_DialogoCompartir> {
         children: [
           Text(
             'Escribí el correo de la persona con quien querés compartir esta '
-            'finca. Tendrá los mismos permisos que vos dentro de la finca.',
+            'finca. Va a poder ver toda la información, pero no cambiar nada.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
@@ -268,13 +289,13 @@ class _DialogoCompartirState extends State<_DialogoCompartir> {
           Row(
             children: [
               Icon(
-                Icons.shield_outlined,
+                Icons.visibility_outlined,
                 size: 18,
                 color: theme.colorScheme.primary,
               ),
               const SizedBox(width: 8),
               Text(
-                'Se compartirá como Administrador',
+                'Se compartirá como Solo lectura',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.primary,
                 ),

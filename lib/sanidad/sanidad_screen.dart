@@ -74,14 +74,17 @@ class SanidadScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final soloLectura = permisosFinca.esSoloLectura;
     return Scaffold(
       appBar: AppBar(title: const Text('Sanidad')),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const ValueKey('sanidad.agregar'),
-        onPressed: () => _formulario(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Medicamento'),
-      ),
+      floatingActionButton: soloLectura
+          ? null
+          : FloatingActionButton.extended(
+              key: const ValueKey('sanidad.agregar'),
+              onPressed: () => _formulario(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Medicamento'),
+            ),
       body: StreamBuilder<List<MedicamentoRow>>(
         stream: medicamentosRepository.observarMedicamentos(finca.id),
         builder: (context, snap) {
@@ -138,7 +141,9 @@ class SanidadScreen extends StatelessWidget {
               return Card(
                 margin: EdgeInsets.zero,
                 child: ListTile(
-                  onTap: () => _formulario(context, existente: m),
+                  onTap: soloLectura
+                      ? null
+                      : () => _formulario(context, existente: m),
                   leading: Icon(
                     Icons.vaccines_outlined,
                     color: theme.colorScheme.primary,
@@ -152,7 +157,9 @@ class SanidadScreen extends StatelessWidget {
                     ' · retiro ${m.diasRetiro} d'
                     ' · ₡${m.costoEnvase.toStringAsFixed(0)} envase',
                   ),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: soloLectura
+                      ? null
+                      : const Icon(Icons.chevron_right),
                 ),
               );
             },

@@ -245,6 +245,21 @@ class _VentaScreenState extends State<VentaScreen>
   }
 
   Widget _tabEnCurso(ThemeData theme) {
+    if (permisosFinca.esSoloLectura) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(HatoSpacing.xl),
+          child: Text(
+            'Te compartieron esta finca solo para verla: podés revisar el '
+            'historial de ventas, pero no registrar una venta nueva.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ),
+      );
+    }
     final totalKg = _enCurso.fold<double>(0, (s, i) => s + i.peso);
 
     return SafeArea(
@@ -479,7 +494,9 @@ class _GrupoVentaCard extends StatelessWidget {
             ListTile(
               key: ValueKey('venta.animal.${v.venta.id}'),
               dense: true,
-              onTap: () => _registrarDatos(context, v),
+              onTap: permisosFinca.esSoloLectura
+                  ? null
+                  : () => _registrarDatos(context, v),
               title: Text(v.animal.identificador),
               subtitle: Text(
                 v.tieneDatosPlanta
@@ -487,6 +504,9 @@ class _GrupoVentaCard extends StatelessWidget {
                           '${_kg(v.venta.pesoCanal)} · '
                           '${_pct(v.venta.rendimiento)} · '
                           '${_colones(v.venta.dineroRecibido!)}'
+                    : permisosFinca.esSoloLectura
+                    ? 'Salida ${_kg(v.venta.peso)} · '
+                          'faltan los datos de planta'
                     : 'Salida ${_kg(v.venta.peso)} · '
                           'tocá para registrar los datos de planta',
               ),

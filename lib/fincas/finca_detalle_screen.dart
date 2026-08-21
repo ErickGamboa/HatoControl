@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 
+import '../app/permisos_finca.dart';
 import '../app/theme.dart';
 import '../data/local/database.dart';
 import '../data/repositories/fincas_repository.dart';
@@ -29,9 +30,11 @@ class FincaDetalleScreen extends StatefulWidget {
     AppDatabase? database,
     FincasRepository? fincasRepository,
     LotesRepository? lotesRepository,
+    PermisosFinca? permisos,
   }) : database = database ?? db,
        fincasRepository = fincasRepository ?? fincasRepo,
-       lotesRepository = lotesRepository ?? lotesRepo;
+       lotesRepository = lotesRepository ?? lotesRepo,
+       permisos = permisos ?? permisosFinca;
 
   final FincaRow finca;
   final String usuarioId;
@@ -39,12 +42,28 @@ class FincaDetalleScreen extends StatefulWidget {
   final AppDatabase database;
   final FincasRepository fincasRepository;
   final LotesRepository lotesRepository;
+  final PermisosFinca permisos;
 
   @override
   State<FincaDetalleScreen> createState() => _FincaDetalleScreenState();
 }
 
 class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Los módulos leen `permisos` para esconder sus acciones de escritura.
+    widget.permisos.seguir(
+      widget.fincasRepository.observarMiRol(widget.finca.id, widget.usuarioId),
+    );
+  }
+
+  @override
+  void dispose() {
+    widget.permisos.limpiar();
+    super.dispose();
+  }
+
   Future<void> _editarFincaDialog(FincaRow finca) async {
     final resultado = await showDialog<(String, String?)>(
       context: context,
@@ -131,106 +150,121 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
       builder: (context, snapshot) {
         final finca = snapshot.data ?? widget.finca;
         final theme = Theme.of(context);
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(finca.nombre),
-            actions: [
-              IconButton(
-                tooltip: 'Compartir finca',
-                icon: const Icon(Icons.person_add_alt_1),
-                onPressed: widget.sinConexion
-                    ? null
-                    : () => _abrir(
-                        CompartirFincaScreen(
-                          finca: finca,
-                          usuarioId: widget.usuarioId,
-                        ),
+        return ValueListenableBuilder<bool>(
+          valueListenable: widget.permisos.soloLectura,
+          builder: (context, soloLectura, _) => Scaffold(
+            appBar: AppBar(
+              title: Text(finca.nombre),
+              // Un invitado no comparte ni edita la finca: solo la ve.
+              actions: soloLectura
+                  ? const []
+                  : [
+                      IconButton(
+                        tooltip: 'Compartir finca',
+                        icon: const Icon(Icons.person_add_alt_1),
+                        onPressed: widget.sinConexion
+                            ? null
+                            : () => _abrir(
+                                CompartirFincaScreen(
+                                  finca: finca,
+                                  usuarioId: widget.usuarioId,
+                                ),
+                              ),
                       ),
-              ),
-              IconButton(
-                tooltip: 'Editar finca',
-                icon: const Icon(Icons.edit),
-                onPressed: () => _editarFincaDialog(finca),
-              ),
-            ],
-          ),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _kpiHeader(finca),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(HatoSpacing.lg),
-                  children: [
-                    _TrabajoHero(
-                      key: const ValueKey('fincaDetail.pesaje'),
-                      onTap: () => _abrir(
-                        PesajeScreen(finca: finca, usuarioId: widget.usuarioId),
+                      IconButton(
+                        tooltip: 'Editar finca',
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _editarFincaDialog(finca),
                       ),
-                    ),
-                    const SizedBox(height: HatoSpacing.lg),
-                    Text(
-                      'Módulos',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: theme.colorScheme.outline,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: HatoSpacing.sm),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: HatoSpacing.md,
-                      crossAxisSpacing: HatoSpacing.md,
-                      childAspectRatio: 1.15,
-                      children: [
-                        _BotonOpcion(
-                          key: const ValueKey('fincaDetail.sanidad'),
-                          assetIcono: 'assets/iconos/sanidad.png',
-                          label: 'Sanidad',
-                          onTap: () => _abrir(SanidadScreen(finca: finca)),
-                        ),
-                        _BotonOpcion(
-                          key: const ValueKey('fincaDetail.lotes'),
-                          assetIcono: 'assets/iconos/lotes.png',
-                          label: 'Lotes',
+                    ],
+            ),
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AvisoSoloLectura(permisos: widget.permisos),
+                _kpiHeader(finca),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(HatoSpacing.lg),
+                    children: [
+                      // Recolección de datos es puro registro: un invitado de
+                      // solo lectura no entra a la manga.
+                      if (!soloLectura) ...[
+                        _TrabajoHero(
+                          key: const ValueKey('fincaDetail.pesaje'),
                           onTap: () => _abrir(
-                            LotesScreen(
+                            PesajeScreen(
                               finca: finca,
                               usuarioId: widget.usuarioId,
                             ),
                           ),
                         ),
-                        _BotonOpcion(
-                          key: const ValueKey('fincaDetail.dietas'),
-                          assetIcono: 'assets/iconos/dietas.png',
-                          label: 'Dietas',
-                          onTap: () => _abrir(DietasScreen(finca: finca)),
-                        ),
-                        _BotonOpcion(
-                          key: const ValueKey('fincaDetail.venta'),
-                          assetIcono: 'assets/iconos/venta.png',
-                          label: 'Venta',
-                          onTap: () => _abrir(
-                            VentaScreen(
-                              finca: finca,
-                              usuarioId: widget.usuarioId,
-                            ),
-                          ),
-                        ),
-                        _BotonOpcion(
-                          key: const ValueKey('fincaDetail.gastosFijos'),
-                          icono: Icons.receipt_long_outlined,
-                          label: 'Gastos fijos',
-                          onTap: () => _abrir(GastosFijosScreen(finca: finca)),
-                        ),
+                        const SizedBox(height: HatoSpacing.lg),
                       ],
-                    ),
-                  ],
+                      Text(
+                        'Módulos',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: HatoSpacing.sm),
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        mainAxisSpacing: HatoSpacing.md,
+                        crossAxisSpacing: HatoSpacing.md,
+                        childAspectRatio: 1.15,
+                        children: [
+                          _BotonOpcion(
+                            key: const ValueKey('fincaDetail.sanidad'),
+                            assetIcono: 'assets/iconos/sanidad.png',
+                            label: 'Sanidad',
+                            onTap: () => _abrir(SanidadScreen(finca: finca)),
+                          ),
+                          _BotonOpcion(
+                            key: const ValueKey('fincaDetail.lotes'),
+                            assetIcono: 'assets/iconos/lotes.png',
+                            label: 'Lotes',
+                            onTap: () => _abrir(
+                              LotesScreen(
+                                finca: finca,
+                                usuarioId: widget.usuarioId,
+                              ),
+                            ),
+                          ),
+                          _BotonOpcion(
+                            key: const ValueKey('fincaDetail.dietas'),
+                            assetIcono: 'assets/iconos/dietas.png',
+                            label: 'Dietas',
+                            onTap: () => _abrir(DietasScreen(finca: finca)),
+                          ),
+                          _BotonOpcion(
+                            key: const ValueKey('fincaDetail.venta'),
+                            assetIcono: 'assets/iconos/venta.png',
+                            label: 'Venta',
+                            onTap: () => _abrir(
+                              VentaScreen(
+                                finca: finca,
+                                usuarioId: widget.usuarioId,
+                              ),
+                            ),
+                          ),
+                          _BotonOpcion(
+                            key: const ValueKey('fincaDetail.gastosFijos'),
+                            icono: Icons.receipt_long_outlined,
+                            label: 'Gastos fijos',
+                            onTap: () =>
+                                _abrir(GastosFijosScreen(finca: finca)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

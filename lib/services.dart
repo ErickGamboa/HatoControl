@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'app/permisos_finca.dart';
 import 'connectivity/estado_conexion.dart';
 import 'data/local/database.dart';
 import 'data/repositories/cuentas_repository.dart';
@@ -31,6 +32,10 @@ final FeatureFlagsRepository featureFlagsRepo = FeatureFlagsRepository(db);
 final SesionLocalRepository sesionLocalRepo = SesionLocalRepository(db);
 final SyncService syncService = SyncService(db);
 final EstadoConexion estadoConexion = EstadoConexion();
+
+/// Permisos en la finca abierta (los invitados son de solo lectura).
+/// La llena `FincaDetalleScreen` al entrar a una finca.
+final PermisosFinca permisosFinca = PermisosFinca();
 
 SupabaseClient get supabase => Supabase.instance.client;
 

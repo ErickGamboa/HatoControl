@@ -25,7 +25,12 @@ Comportamiento de producto: `docs/ESPECIFICACION_FUNCIONAL.md`.
   registrarse por el trigger `private.crear_perfil_usuario`). Cada **finca pertenece a una
   Cuenta** (`fincas.cuenta_id`).
 - **Licencia por número de fincas propias** de la Cuenta. Planes: **Light=1, Medium=3,
-  Pro=5** (tabla `planes`, editable en Supabase).
+  Pro=N** (sin tope práctico; `limite_fincas = 999`). Tabla `planes`, editable en
+  Supabase. El plan `invitado` tiene límite 0: no abre fincas propias, solo ve las
+  que le comparten.
+- **No hay autoservicio de registro**: la app no crea cuentas (el login solo
+  inicia sesión). Las cuentas nacen al comprar la licencia — las abre el admin en
+  Supabase — o por invitación a una finca.
 - El límite cuenta solo las fincas **propias** (`cuenta_id` = esa Cuenta, no borradas).
   Colaborar en fincas de otra Cuenta (vía `finca_miembros`) NO consume el límite.
 - **Administración:** cambiar `cuentas.plan` a light/medium/pro en Supabase. Enforcement:
@@ -35,9 +40,9 @@ Comportamiento de producto: `docs/ESPECIFICACION_FUNCIONAL.md`.
 ### planes
 | Campo | Tipo | Notas |
 |---|---|---|
-| codigo | text (PK) | 'light' \| 'medium' \| 'pro' |
+| codigo | text (PK) | 'invitado' \| 'light' \| 'medium' \| 'pro' |
 | nombre | text | |
-| limite_fincas | int | 1 / 3 / 5 |
+| limite_fincas | int | 0 / 1 / 3 / 999 (pro = N) |
 
 ### cuentas
 | Campo | Tipo | Notas |
@@ -85,13 +90,31 @@ Corazón del modelo multi-usuario. Define quién pertenece a cada finca y con qu
 | id | uuid (PK) | |
 | finca_id | uuid → fincas.id | |
 | usuario_id | uuid → usuarios.id | |
-| rol | text | `admin` \| `operario` |
+| rol | text | `admin` \| `operario` \| `lector` |
 | created_at | timestamptz | |
 
 Reglas:
 - Restricción única `(finca_id, usuario_id)` — un usuario no se repite en la misma finca.
 - El dueño es el primer miembro con rol `admin`. **Puede haber varios admins** (socios).
 - Un usuario solo ve las fincas donde tiene una fila aquí, con los permisos de su rol.
+- **`lector` = invitado de solo lectura** (es el rol con el que se comparte una
+  finca desde la app). Ve todo, no escribe nada.
+
+Permisos por rol (RLS, `supabase/migrations/20260821120000_rol_lector_y_plan_pro.sql`):
+- `SELECT` → `private.es_miembro(finca, uid)`: los tres roles leen.
+- `INSERT` / `UPDATE` / `DELETE` → `private.puede_escribir(finca, uid)`, que
+  exige rol `admin` u `operario`. Un `lector` choca contra la RLS.
+- **Ojo con las aritméticas:** en el proyecto vivo las políticas llaman a los
+  helpers con **un solo argumento** (`private.es_miembro(finca_id)`, que toma
+  `auth.uid()` por dentro). Todo helper de RLS nuevo debe existir en las dos
+  formas — con y sin usuario — o el `CREATE POLICY` falla con `42883`. Y hay que
+  otorgarle `EXECUTE` a `authenticated` **a cada sobrecarga**: a la de un
+  argumento de `es_miembro` se le había olvidado, y eso hacía que bajadas de
+  sync fallaran con `42501 permission denied for function es_miembro`.
+- Compartir/quitar acceso (`finca_miembros`) → `private.es_admin(finca, uid)`.
+- En el cliente, `PermisosFinca` (`lib/app/permisos_finca.dart`) esconde las
+  acciones de escritura cuando el rol es `lector`. Es solo UX: el candado real
+  es la RLS (ver `docs/DECISIONES.md` A-09).
 
 ### lotes
 | Campo | Tipo | Notas |

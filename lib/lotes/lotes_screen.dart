@@ -87,14 +87,17 @@ class LotesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final soloLectura = permisosFinca.esSoloLectura;
     return Scaffold(
       appBar: AppBar(title: const Text('Lotes')),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const ValueKey('lotes.create'),
-        onPressed: () => _loteDialog(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Lote'),
-      ),
+      floatingActionButton: soloLectura
+          ? null
+          : FloatingActionButton.extended(
+              key: const ValueKey('lotes.create'),
+              onPressed: () => _loteDialog(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Lote'),
+            ),
       body: StreamBuilder<List<LoteRow>>(
         stream: lotesRepo.observarLotes(finca.id),
         builder: (context, snapshot) {
@@ -103,7 +106,7 @@ class LotesScreen extends StatelessWidget {
           }
           final lotes = snapshot.data ?? const [];
           if (lotes.isEmpty) {
-            return _VacioLotes(onCrear: () => _loteDialog(context));
+            return _VacioLotes(soloLectura: soloLectura);
           }
           return ListView.separated(
             padding: const EdgeInsets.all(12),
@@ -121,11 +124,13 @@ class LotesScreen extends StatelessWidget {
                   subtitle: l.pendiente
                       ? const Text('Pendiente de sincronizar')
                       : null,
-                  trailing: IconButton(
-                    tooltip: 'Editar lote',
-                    icon: const Icon(Icons.edit, size: 20),
-                    onPressed: () => _loteDialog(context, lote: l),
-                  ),
+                  trailing: soloLectura
+                      ? null
+                      : IconButton(
+                          tooltip: 'Editar lote',
+                          icon: const Icon(Icons.edit, size: 20),
+                          onPressed: () => _loteDialog(context, lote: l),
+                        ),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) =>
@@ -143,9 +148,9 @@ class LotesScreen extends StatelessWidget {
 }
 
 class _VacioLotes extends StatelessWidget {
-  const _VacioLotes({required this.onCrear});
+  const _VacioLotes({required this.soloLectura});
 
-  final VoidCallback onCrear;
+  final bool soloLectura;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +174,9 @@ class _VacioLotes extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Creá el primer lote con el botón de abajo.',
+              soloLectura
+                  ? 'Cuando el dueño cree lotes, los vas a ver acá.'
+                  : 'Creá el primer lote con el botón de abajo.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.outline,

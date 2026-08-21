@@ -250,6 +250,27 @@ class _PesajeScreenState extends State<PesajeScreen> {
     final theme = Theme.of(context);
     final fabActivo = _ultimoAnimal != null;
 
+    // Red de seguridad: la finca esconde este módulo a los invitados, pero si
+    // alguno llega acá (por historial de navegación) no ve la manga.
+    if (permisosFinca.esSoloLectura) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Trabajo')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(HatoSpacing.xl),
+            child: Text(
+              'Te compartieron esta finca solo para verla: no podés registrar '
+              'pesajes ni sanidad.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Trabajo'),

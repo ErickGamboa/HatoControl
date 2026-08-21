@@ -219,6 +219,7 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final soloLectura = permisosFinca.esSoloLectura;
 
     Widget encabezado(
       String t,
@@ -244,6 +245,7 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
             resumenStream: _resumenStream,
             onAsignar: _asignarDieta,
             onQuitar: _quitarDieta,
+            soloLectura: soloLectura,
           ),
           // Buscador (fuera del StreamBuilder: nunca pierde el foco)
           Padding(
@@ -278,7 +280,8 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
               children: [
                 encabezado('Animal', 4),
                 encabezado('Peso actual', 3, align: TextAlign.end),
-                encabezado('Cambiar lote', 3, align: TextAlign.center),
+                if (!soloLectura)
+                  encabezado('Cambiar lote', 3, align: TextAlign.center),
               ],
             ),
           ),
@@ -395,18 +398,20 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                                       ),
                                     ),
                                   ),
-                                  Expanded(
-                                    flex: 3,
-                                    child: Align(
-                                      alignment: Alignment.center,
-                                      child: IconButton(
-                                        tooltip: 'Cambiar de lote',
-                                        icon: const Icon(Icons.swap_horiz),
-                                        color: theme.colorScheme.primary,
-                                        onPressed: () => _moverAnimal(a.animal),
+                                  if (!soloLectura)
+                                    Expanded(
+                                      flex: 3,
+                                      child: Align(
+                                        alignment: Alignment.center,
+                                        child: IconButton(
+                                          tooltip: 'Cambiar de lote',
+                                          icon: const Icon(Icons.swap_horiz),
+                                          color: theme.colorScheme.primary,
+                                          onPressed: () =>
+                                              _moverAnimal(a.animal),
+                                        ),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -447,12 +452,14 @@ class _TarjetaDietaLote extends StatelessWidget {
     required this.resumenStream,
     required this.onAsignar,
     required this.onQuitar,
+    required this.soloLectura,
   });
 
   final Stream<DietaVigenteLote?> dietaStream;
   final Stream<List<PeriodoLote>> resumenStream;
   final VoidCallback onAsignar;
   final VoidCallback onQuitar;
+  final bool soloLectura;
 
   String _fecha(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
@@ -517,7 +524,9 @@ class _TarjetaDietaLote extends StatelessWidget {
                                 )
                               else
                                 Text(
-                                  'Tocá para asignar una dieta',
+                                  soloLectura
+                                      ? 'Este lote no tiene dieta asignada'
+                                      : 'Tocá para asignar una dieta',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color:
                                         theme.colorScheme.onSecondaryContainer,
@@ -526,21 +535,23 @@ class _TarjetaDietaLote extends StatelessWidget {
                             ],
                           ),
                         ),
-                        IconButton(
-                          key: const ValueKey('lote.asignarDieta'),
-                          tooltip: vigente == null
-                              ? 'Asignar dieta'
-                              : 'Cambiar dieta',
-                          icon: const Icon(Icons.edit),
-                          onPressed: onAsignar,
-                        ),
-                        if (vigente != null)
+                        if (!soloLectura) ...[
                           IconButton(
-                            key: const ValueKey('lote.quitarDieta'),
-                            tooltip: 'Quitar dieta',
-                            icon: const Icon(Icons.link_off),
-                            onPressed: onQuitar,
+                            key: const ValueKey('lote.asignarDieta'),
+                            tooltip: vigente == null
+                                ? 'Asignar dieta'
+                                : 'Cambiar dieta',
+                            icon: const Icon(Icons.edit),
+                            onPressed: onAsignar,
                           ),
+                          if (vigente != null)
+                            IconButton(
+                              key: const ValueKey('lote.quitarDieta'),
+                              tooltip: 'Quitar dieta',
+                              icon: const Icon(Icons.link_off),
+                              onPressed: onQuitar,
+                            ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 8),

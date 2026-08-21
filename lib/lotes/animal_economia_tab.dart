@@ -302,11 +302,12 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
           ),
         ),
         const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: _editarCompra,
-          icon: const Icon(Icons.shopping_cart_outlined),
-          label: const Text('Editar compra'),
-        ),
+        if (!permisosFinca.esSoloLectura)
+          OutlinedButton.icon(
+            onPressed: _editarCompra,
+            icon: const Icon(Icons.shopping_cart_outlined),
+            label: const Text('Editar compra'),
+          ),
       ],
     );
   }
