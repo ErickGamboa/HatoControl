@@ -18,7 +18,20 @@ class EstadoLicencia {
   final int limite;
   final int usadas;
 
-  bool get alcanzoLimite => usadas >= limite;
+  /// A partir de este número el plan se considera sin tope (plan `pro` = "N
+  /// fincas"). Es el mismo centinela que se siembra en `planes.limite_fincas`.
+  static const int limiteSinTope = 999;
+
+  bool get esSinTope => limite >= limiteSinTope;
+
+  bool get alcanzoLimite => !esSinTope && usadas >= limite;
+
+  /// Cómo se le muestra el límite al ganadero: "N" cuando no hay tope, para no
+  /// mostrar un número inventado como 999.
+  String get limiteTexto => textoLimite(limite);
+
+  static String textoLimite(int limite) =>
+      limite >= limiteSinTope ? 'N' : '$limite';
 }
 
 /// Se lanza al intentar crear una finca habiendo alcanzado el límite del plan.

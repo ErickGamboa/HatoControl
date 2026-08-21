@@ -82,7 +82,7 @@ class _FincasScreenState extends State<FincasScreen> {
     // Aviso temprano si ya alcanzó el límite (mejor experiencia).
     if (_estado != null && _estado!.alcanzoLimite) {
       _mostrar(
-        'Tu plan ${_estado!.planNombre} permite ${_estado!.limite} '
+        'Tu plan ${_estado!.planNombre} permite ${_estado!.limiteTexto} '
         'finca(s). Cambiá a un plan superior para agregar más.',
       );
       return;
@@ -106,7 +106,8 @@ class _FincasScreenState extends State<FincasScreen> {
       await _cargarEstado();
     } on LimiteFincasException catch (e) {
       _mostrar(
-        'Tu plan ${e.planNombre} permite ${e.limite} finca(s). '
+        'Tu plan ${e.planNombre} permite '
+        '${EstadoLicencia.textoLimite(e.limite)} finca(s). '
         'Cambiá a un plan superior para agregar más.',
       );
     } on LicenciaNoDisponibleException {
@@ -480,7 +481,8 @@ class _BannerLicencia extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Plan ${estado.planNombre} · ${estado.usadas} de ${estado.limite} fincas',
+              'Plan ${estado.planNombre} · ${estado.usadas} de '
+              '${estado.limiteTexto} fincas',
               style: theme.textTheme.bodyMedium?.copyWith(color: textColor),
             ),
           ),

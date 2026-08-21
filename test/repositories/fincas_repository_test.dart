@@ -141,4 +141,48 @@ void main() {
 
     expect(visibles.map((f) => f.nombre), ['Visible']);
   });
+
+  group('límite del plan pro (sin tope)', () {
+    test('el plan pro se muestra como "N" y nunca alcanza el límite', () async {
+      await seedCuenta(
+        usuarioId: 'user-1',
+        cuentaId: 'account-1',
+        plan: 'pro',
+        limite: EstadoLicencia.limiteSinTope,
+      );
+      await repo.crearFinca(nombre: 'Una', creadaPor: 'user-1');
+
+      final estado = await repo.estadoLicencia('user-1');
+
+      expect(estado!.esSinTope, isTrue);
+      expect(estado.limiteTexto, 'N');
+      expect(estado.alcanzoLimite, isFalse);
+      expect(estado.usadas, 1);
+    });
+
+    test('los planes con tope siguen mostrando el número', () async {
+      await seedCuenta(
+        usuarioId: 'user-1',
+        cuentaId: 'account-1',
+        plan: 'medium',
+        limite: 3,
+      );
+
+      final estado = await repo.estadoLicencia('user-1');
+
+      expect(estado!.esSinTope, isFalse);
+      expect(estado.limiteTexto, '3');
+      expect(estado.alcanzoLimite, isFalse);
+    });
+
+    test('el tope se sigue respetando al llegar al límite', () async {
+      await seedCuenta(usuarioId: 'user-1', cuentaId: 'account-1', limite: 1);
+      await repo.crearFinca(nombre: 'Única', creadaPor: 'user-1');
+
+      final estado = await repo.estadoLicencia('user-1');
+
+      expect(estado!.alcanzoLimite, isTrue);
+      expect(estado.limiteTexto, '1');
+    });
+  });
 }
