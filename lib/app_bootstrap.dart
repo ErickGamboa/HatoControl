@@ -64,6 +64,14 @@ class HatoControlApp extends StatelessWidget {
       theme: HatoTheme.light,
       darkTheme: HatoTheme.dark,
       themeMode: ThemeMode.system,
+      // Flutter no cierra el teclado al tocar fuera del campo. Los
+      // formularios se llenan a una mano en la manga, asi que tocar
+      // cualquier espacio vacio debe ocultarlo, en toda la app.
+      builder: (context, child) => GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: child,
+      ),
       home: const AuthGate(),
     );
   }
