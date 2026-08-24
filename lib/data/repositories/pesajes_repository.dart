@@ -22,6 +22,7 @@ class AnimalConPeso {
 class PesajeHoy {
   PesajeHoy({
     required this.id,
+    required this.animalId,
     required this.identificador,
     required this.loteId,
     required this.loteNombre,
@@ -29,8 +30,12 @@ class PesajeHoy {
     required this.fecha,
     required this.ganancia,
     required this.dias,
+    required this.pesoCompra,
+    required this.precioKgCompra,
+    required this.fechaCompra,
   });
   final String id; // id del pesaje (para poder eliminarlo)
+  final String animalId; // para corregirle el lote o la compra
   final String identificador;
   final String loteId;
   final String loteNombre;
@@ -38,6 +43,9 @@ class PesajeHoy {
   final DateTime fecha;
   final double? ganancia; // total vs. el pesaje anterior; null = entrada
   final int? dias; // días entre el pesaje anterior y este; null = entrada
+  final double? pesoCompra; // kilos de entrada; null = nació en la finca
+  final double? precioKgCompra; // ₡/kg de compra; 0 = nació en la finca
+  final DateTime? fechaCompra; // para no moverla al corregir el ₡/kg
 
   /// Kilos ganados/perdidos por día. null si es entrada o si pasó menos de
   /// un día desde el pesaje anterior (no se puede promediar por día aún).
@@ -292,6 +300,7 @@ class PesajesRepository {
         resultado.add(
           PesajeHoy(
             id: p.id,
+            animalId: a.id,
             identificador: a.identificador,
             loteId: l.id,
             loteNombre: l.nombre,
@@ -299,6 +308,9 @@ class PesajesRepository {
             fecha: p.fecha,
             ganancia: prev == null ? null : p.peso - prev.peso,
             dias: prev == null ? null : _diasCalendario(prev.fecha, p.fecha),
+            pesoCompra: a.pesoCompra,
+            precioKgCompra: a.precioKgCompra,
+            fechaCompra: a.fechaCompra,
           ),
         );
       }
@@ -389,6 +401,19 @@ class PesajesRepository {
               ..limit(1))
             .getSingleOrNull();
     return primerMovimiento?.fecha ?? animal.createdAt;
+  }
+
+  /// Peso del PRIMER pesaje del animal (el de entrada). Sirve como peso de
+  /// compra cuando el ganadero le pone precio a un animal que se había
+  /// registrado como nacido en la finca y nunca tuvo `pesoCompra`.
+  Future<double?> primerPeso(String animalId) async {
+    final fila =
+        await (db.select(db.pesajes)
+              ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.asc(t.fecha)])
+              ..limit(1))
+            .getSingleOrNull();
+    return fila?.peso;
   }
 
   Future<double?> ultimoPeso(String animalId) async {

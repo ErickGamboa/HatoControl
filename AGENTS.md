@@ -61,6 +61,11 @@ If Drift schema changed:
 dart run build_runner build --delete-conflicting-outputs
 ```
 
+## Manual testing account (mandatory)
+- Manual testing on a device or emulator happens ONLY in the account `erick.yosue@gmail.com`, inside the finca named **`pruebas`**.
+- Every other account and every other finca holds the owner's real production data. Never register, edit, or delete anything there — not even data you plan to undo, because deletes are soft and still sync to Supabase.
+- If the emulator is signed into another account, sign out and switch before touching any write flow.
+
 ## Testing expectations
 - Repository/domain logic: unit tests with an in-memory Drift database.
 - Sync logic: tests with a fake Supabase boundary or extracted remote gateway.
