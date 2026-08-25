@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,6 +12,9 @@ import 'demo/seed_prueba.dart';
 import 'services.dart';
 
 export 'app/theme.dart' show kAzulHato, kVerdeHato;
+
+/// Cada cuánto se reintenta solo la sincronización si quedó algo pendiente.
+const kReintentoSyncCada = Duration(minutes: 2);
 
 /// Initializes Supabase, local session, connectivity, and optional demo seed.
 Future<void> bootstrapHatoControl() async {
@@ -38,6 +43,14 @@ Future<void> bootstrapHatoControl() async {
   }
 
   sincronizarSiSePuede();
+
+  // Red de seguridad: si algo quedó sin subir (la red se cayó a mitad, el
+  // servidor no respondió), se reintenta solo cada dos minutos. El usuario no
+  // tiene que acordarse de apretar el botón de sincronizar.
+  Timer.periodic(kReintentoSyncCada, (_) async {
+    if (await syncService.hayPendientes()) await sincronizarSiSePuede();
+  });
+
   supabase.auth.onAuthStateChange.listen((estado) async {
     if (estado.event == AuthChangeEvent.signedIn) {
       final usuario = estado.session?.user ?? supabase.auth.currentUser;

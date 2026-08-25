@@ -26,7 +26,7 @@ void main() {
     dietas = DietasRepository(db);
     ventas = VentasRepository(db);
     remote = FakeSyncRemoteGateway();
-    sync = SyncService(db, remote: remote);
+    sync = SyncService(db, remote: remote, esperasReintento: const []);
   });
 
   tearDown(() async {

@@ -14,7 +14,7 @@ void main() {
   setUp(() {
     db = AppDatabase.forExecutor(NativeDatabase.memory());
     remote = FakeSyncRemoteGateway();
-    sync = SyncService(db, remote: remote);
+    sync = SyncService(db, remote: remote, esperasReintento: const []);
   });
 
   tearDown(() async {

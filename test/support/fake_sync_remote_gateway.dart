@@ -30,13 +30,26 @@ class FakeSyncRemoteGateway implements SyncRemoteGateway {
   final fallarSubidas = <String>{};
   final fallarConsultas = <String>{};
 
+  /// `'tabla:id'` que falla la primera vez y funciona en el reintento, para
+  /// simular la red que se corta a mitad de una subida grande.
+  final fallarSubidasUnaVez = <String>{};
+
+  /// Cuántas veces se llamó a [insertarOActualizar] por `'tabla:id'`,
+  /// contando los intentos fallidos.
+  final intentosPorFila = <String, int>{};
+
   @override
   Future<void> insertarOActualizar(
     String tabla,
     String id,
     Map<String, dynamic> datos,
   ) async {
-    if (fallarSubidas.contains('$tabla:$id')) {
+    final clave = '$tabla:$id';
+    intentosPorFila[clave] = (intentosPorFila[clave] ?? 0) + 1;
+    if (fallarSubidasUnaVez.remove(clave)) {
+      throw StateError('fallo remoto simulado (solo la primera vez)');
+    }
+    if (fallarSubidas.contains(clave)) {
       throw StateError('fallo remoto simulado');
     }
     subidas.add(RemoteWrite(tabla: tabla, id: id, datos: Map.of(datos)));

@@ -14,7 +14,11 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forExecutor(NativeDatabase.memory());
-    sync = SyncService(db, remote: FakeSyncRemoteGateway());
+    sync = SyncService(
+      db,
+      remote: FakeSyncRemoteGateway(),
+      esperasReintento: const [],
+    );
   });
 
   tearDown(() async {

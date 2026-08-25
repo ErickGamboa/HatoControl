@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../data/local/database.dart';
 import '../data/repositories/fincas_repository.dart';
+import '../data/sync/sync_service.dart';
 import '../services.dart';
 import 'finca_detalle_screen.dart';
 import 'foto_picker.dart';
@@ -128,12 +129,29 @@ class _FincasScreenState extends State<FincasScreen> {
                 valueListenable: syncService.sincronizando,
                 builder: (context, sincronizando, _) {
                   if (sincronizando) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                    // Mostramos cuánto va subido: una ruedita sin números
+                    // parece trabada y hace que uno apriete el botón de más.
+                    return ValueListenableBuilder<SyncProgreso>(
+                      valueListenable: syncService.progreso,
+                      builder: (context, avance, _) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            if (avance.activo) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                '${avance.hechas}/${avance.total}',
+                                style: Theme.of(context).textTheme.labelLarge,
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     );
                   }

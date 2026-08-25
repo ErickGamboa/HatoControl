@@ -53,6 +53,19 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
 
   final SupabaseClient _sb;
 
+  // Tiempo límite POR PETICIÓN. Antes el límite era uno solo para TODA la
+  // sincronización (20 s en SyncService), así que un día entero de campo se
+  // cortaba a la mitad y dejaba filas pendientes. Por petición, una conexión
+  // colgada se corta sola, pero una conexión lenta pero viva termina el
+  // trabajo por más registros que haya.
+  //
+  // Cortar una escritura es seguro: `insertarOActualizar` hace UPDATE
+  // primero, así que si la escritura llegó al servidor pero la respuesta se
+  // perdió, el reintento la actualiza en vez de duplicarla.
+  static const _limiteEscritura = Duration(seconds: 30);
+  static const _limiteLectura = Duration(seconds: 60);
+  static const _limiteFoto = Duration(minutes: 2);
+
   @override
   bool get tieneUsuario => _sb.auth.currentUser != null;
 
@@ -74,10 +87,11 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
         .from(tabla)
         .update(datos)
         .eq('id', id)
-        .select();
+        .select()
+        .timeout(_limiteEscritura);
     if ((actualizadas as List).isEmpty) {
       // No existía en el servidor -> es una fila nueva.
-      await _sb.from(tabla).insert(datos);
+      await _sb.from(tabla).insert(datos).timeout(_limiteEscritura);
     }
   }
 
@@ -100,7 +114,8 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
     }
     final res = await query
         .order('updated_at', ascending: true)
-        .order(idColumna, ascending: true);
+        .order(idColumna, ascending: true)
+        .timeout(_limiteLectura);
     return (res as List).cast<Map<String, dynamic>>();
   }
 
@@ -109,10 +124,12 @@ class SupabaseSyncRemoteGateway implements SyncRemoteGateway {
     required String fincaId,
     required String imagenBase64,
   }) async {
-    final res = await _sb.functions.invoke(
-      'subir-foto-finca',
-      body: {'finca_id': fincaId, 'imagen_base64': imagenBase64},
-    );
+    final res = await _sb.functions
+        .invoke(
+          'subir-foto-finca',
+          body: {'finca_id': fincaId, 'imagen_base64': imagenBase64},
+        )
+        .timeout(_limiteFoto);
     final data = res.data;
     return data is Map ? data['url'] as String? : null;
   }
