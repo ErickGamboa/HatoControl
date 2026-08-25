@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../data/estadisticas/estadisticas_pesajes.dart';
 import '../data/local/database.dart';
 import '../data/repositories/dietas_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
@@ -31,8 +30,6 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
       .observarAnimalesDeLote(widget.lote.id);
   late final Stream<DietaVigenteLote?> _dietaStream = dietasRepo
       .observarDietaVigente(widget.lote.id);
-  late final Stream<List<PeriodoLote>> _resumenStream = pesajesRepo
-      .observarResumenLote(widget.lote.id);
 
   @override
   void initState() {
@@ -242,7 +239,6 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
         children: [
           _TarjetaDietaLote(
             dietaStream: _dietaStream,
-            resumenStream: _resumenStream,
             onAsignar: _asignarDieta,
             onQuitar: _quitarDieta,
             soloLectura: soloLectura,
@@ -445,24 +441,20 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
   }
 }
 
-/// Tarjeta con la dieta vigente del lote y ganancia promedio del último período.
+/// Tarjeta con la dieta vigente del lote. La ganancia de peso vive ahora en el
+/// módulo Análisis, donde se puede comparar entre lotes y en el tiempo.
 class _TarjetaDietaLote extends StatelessWidget {
   const _TarjetaDietaLote({
     required this.dietaStream,
-    required this.resumenStream,
     required this.onAsignar,
     required this.onQuitar,
     required this.soloLectura,
   });
 
   final Stream<DietaVigenteLote?> dietaStream;
-  final Stream<List<PeriodoLote>> resumenStream;
   final VoidCallback onAsignar;
   final VoidCallback onQuitar;
   final bool soloLectura;
-
-  String _fecha(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
@@ -471,127 +463,67 @@ class _TarjetaDietaLote extends StatelessWidget {
       stream: dietaStream,
       builder: (context, dietaSnap) {
         final vigente = dietaSnap.data;
-        return StreamBuilder<List<PeriodoLote>>(
-          stream: resumenStream,
-          builder: (context, resumenSnap) {
-            final periodos = resumenSnap.data ?? const [];
-            PeriodoLote? ultimoConGanancia;
-            for (var i = periodos.length - 1; i >= 0; i--) {
-              if (periodos[i].gananciaPromedio != null) {
-                ultimoConGanancia = periodos[i];
-                break;
-              }
-            }
-            final soloUnaJornada =
-                periodos.length == 1 ||
-                (periodos.isNotEmpty &&
-                    periodos.every((p) => p.gananciaPromedio == null));
-
-            return Material(
-              color: theme.colorScheme.secondaryContainer,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.restaurant_menu,
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                vigente == null
-                                    ? 'Sin dieta'
-                                    : vigente.dieta.nombre,
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.onSecondaryContainer,
-                                ),
-                              ),
-                              if (vigente != null)
-                                Text(
-                                  '₡${vigente.asignacion.costoAnimalDiaSnapshot.toStringAsFixed(0)} / animal / día',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color:
-                                        theme.colorScheme.onSecondaryContainer,
-                                  ),
-                                )
-                              else
-                                Text(
-                                  soloLectura
-                                      ? 'Este lote no tiene dieta asignada'
-                                      : 'Tocá para asignar una dieta',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color:
-                                        theme.colorScheme.onSecondaryContainer,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        if (!soloLectura) ...[
-                          IconButton(
-                            key: const ValueKey('lote.asignarDieta'),
-                            tooltip: vigente == null
-                                ? 'Asignar dieta'
-                                : 'Cambiar dieta',
-                            icon: const Icon(Icons.edit),
-                            onPressed: onAsignar,
-                          ),
-                          if (vigente != null)
-                            IconButton(
-                              key: const ValueKey('lote.quitarDieta'),
-                              tooltip: 'Quitar dieta',
-                              icon: const Icon(Icons.link_off),
-                              onPressed: onQuitar,
-                            ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (ultimoConGanancia != null) ...[
-                      Text(
-                        'Ganancia promedio lote: '
-                        '${ultimoConGanancia.gananciaPromedio! >= 0 ? '+' : ''}'
-                        '${ultimoConGanancia.gananciaPromedio!.toStringAsFixed(1)} kg'
-                        ' · GMD ${ultimoConGanancia.gananciaDiariaPromedio!.toStringAsFixed(2)} kg/día',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                      Text(
-                        '${ultimoConGanancia.animalesConGanancia} animales · '
-                        '${_fecha(ultimoConGanancia.desde!)} → ${_fecha(ultimoConGanancia.hasta)}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ] else if (soloUnaJornada && periodos.isNotEmpty)
-                      Text(
-                        'Hace falta un segundo pesaje del lote para ver la ganancia promedio.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                      )
-                    else if (periodos.isEmpty)
-                      Text(
-                        'Sin pesajes aún en este lote.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                  ],
+        return Material(
+          color: theme.colorScheme.secondaryContainer,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.restaurant_menu,
+                  color: theme.colorScheme.onSecondaryContainer,
                 ),
-              ),
-            );
-          },
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        vigente == null ? 'Sin dieta' : vigente.dieta.nombre,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                      if (vigente != null)
+                        Text(
+                          '₡${vigente.asignacion.costoAnimalDiaSnapshot.toStringAsFixed(0)} / animal / día',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSecondaryContainer,
+                          ),
+                        )
+                      else
+                        Text(
+                          soloLectura
+                              ? 'Este lote no tiene dieta asignada'
+                              : 'Tocá para asignar una dieta',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (!soloLectura) ...[
+                  IconButton(
+                    key: const ValueKey('lote.asignarDieta'),
+                    tooltip: vigente == null
+                        ? 'Asignar dieta'
+                        : 'Cambiar dieta',
+                    icon: const Icon(Icons.edit),
+                    onPressed: onAsignar,
+                  ),
+                  if (vigente != null)
+                    IconButton(
+                      key: const ValueKey('lote.quitarDieta'),
+                      tooltip: 'Quitar dieta',
+                      icon: const Icon(Icons.link_off),
+                      onPressed: onQuitar,
+                    ),
+                ],
+              ],
+            ),
+          ),
         );
       },
     );

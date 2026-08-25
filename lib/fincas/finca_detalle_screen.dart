@@ -10,6 +10,7 @@ import '../data/repositories/fincas_repository.dart';
 import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/ventas_repository.dart' show EstadoAnimal;
 import '../dietas/dietas_screen.dart';
+import '../analisis/analisis_screen.dart';
 import '../gastos_fijos/gastos_fijos_screen.dart';
 import '../lotes/lotes_screen.dart';
 import '../pesaje/pesaje_screen.dart';
@@ -257,6 +258,17 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
                             label: 'Gastos fijos',
                             onTap: () =>
                                 _abrir(GastosFijosScreen(finca: finca)),
+                          ),
+                          _BotonOpcion(
+                            key: const ValueKey('fincaDetail.analisis'),
+                            icono: Icons.insights_outlined,
+                            label: 'Análisis',
+                            onTap: () => _abrir(
+                              AnalisisScreen(
+                                finca: finca,
+                                usuarioId: widget.usuarioId,
+                              ),
+                            ),
                           ),
                         ],
                       ),

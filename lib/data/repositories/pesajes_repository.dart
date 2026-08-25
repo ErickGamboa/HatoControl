@@ -75,6 +75,29 @@ class PesajeHistorial {
   }
 }
 
+/// Historial de pesos de un lote, jornada por jornada. Lo consume el módulo
+/// Análisis para comparar lotes entre sí y ver cómo viene cada uno.
+class ResumenPesosLote {
+  const ResumenPesosLote({required this.lote, required this.periodos});
+
+  final LoteRow lote;
+
+  /// Jornadas de pesaje en orden cronológico (la más vieja primero).
+  final List<PeriodoLote> periodos;
+
+  PeriodoLote? get ultimaJornada => periodos.isEmpty ? null : periodos.last;
+
+  /// La jornada más reciente que sí pudo compararse contra la anterior. Puede
+  /// no ser la última: si en la última nadie tenía pesaje previo, no hay
+  /// ganancia que mostrar.
+  PeriodoLote? get ultimaConGanancia {
+    for (var i = periodos.length - 1; i >= 0; i--) {
+      if (periodos[i].gananciaPromedio != null) return periodos[i];
+    }
+    return null;
+  }
+}
+
 /// Se lanza cuando se intenta registrar un animal con un identificador que ya
 /// existe activo dentro de la misma finca.
 class AnimalDuplicadoException implements Exception {
@@ -377,6 +400,53 @@ class PesajesRepository {
         return (animalId: p.animalId, fecha: p.fecha, peso: p.peso);
       }).toList();
       return resumenPorPeriodos(pesajes);
+    });
+  }
+
+  /// Stream con el historial de pesos de TODOS los lotes de la finca, para
+  /// compararlos en Análisis. Una sola consulta para toda la finca y luego se
+  /// agrupa en memoria: pedir el resumen lote por lote haría N consultas.
+  ///
+  /// Incluye los lotes sin pesajes (con la lista de períodos vacía) para que en
+  /// pantalla se vea que existen y que les falta pesar.
+  Stream<List<ResumenPesosLote>> observarResumenPesosFinca(String fincaId) {
+    final consulta =
+        db.select(db.pesajes).join([
+          innerJoin(db.animales, db.animales.id.equalsExp(db.pesajes.animalId)),
+        ])..where(
+          db.animales.fincaId.equals(fincaId) &
+              db.animales.deletedAt.isNull() &
+              db.pesajes.deletedAt.isNull(),
+        );
+
+    return consulta.watch().asyncMap((filas) async {
+      final porLote = <String, List<PesajeDeAnimal>>{};
+      for (final fila in filas) {
+        final p = fila.readTable(db.pesajes);
+        final a = fila.readTable(db.animales);
+        porLote
+            .putIfAbsent(a.loteId, () => [])
+            .add((animalId: p.animalId, fecha: p.fecha, peso: p.peso));
+      }
+
+      final lotes =
+          await (db.select(db.lotes)
+                ..where(
+                  (t) => t.fincaId.equals(fincaId) & t.deletedAt.isNull(),
+                )
+                ..orderBy([
+                  (t) => OrderingTerm.asc(t.numero),
+                  (t) => OrderingTerm.asc(t.nombre),
+                ]))
+              .get();
+
+      return [
+        for (final l in lotes)
+          ResumenPesosLote(
+            lote: l,
+            periodos: resumenPorPeriodos(porLote[l.id] ?? const []),
+          ),
+      ];
     });
   }
 
