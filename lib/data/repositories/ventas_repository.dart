@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../estadisticas/estadisticas_economicas.dart';
+import '../estadisticas/estadisticas_financieras.dart';
 import '../estadisticas/estadisticas_sanidad.dart';
 import '../local/database.dart';
 import 'dietas_repository.dart';
@@ -15,6 +16,31 @@ abstract final class EstadoAnimal {
   static const muerto = 'muerto';
 
   static const activosInventario = [activo];
+}
+
+/// Un animal con su economía y los kilos que ganó, para el módulo Análisis.
+class AnimalFinanciero {
+  const AnimalFinanciero({
+    required this.animal,
+    required this.resumen,
+    required this.kilosGanados,
+  });
+
+  final AnimalRow animal;
+  final ResumenEconomicoAnimal resumen;
+
+  /// Último peso menos el primero. 0 si tiene un solo pesaje o ninguno.
+  final double kilosGanados;
+
+  AporteFinanciero get aporte => (
+    compra: resumen.precioCompra ?? 0,
+    alimentacion: resumen.costoAlimentacion,
+    sanidad: resumen.costoSanitario,
+    gastosFijos: resumen.costoGastosFijos,
+    dineroRecibido: resumen.precioVenta,
+    utilidad: resumen.utilidad,
+    kilosGanados: kilosGanados,
+  );
 }
 
 /// Análisis de un grupo de venta: totales y promedios sobre los animales que
@@ -118,6 +144,53 @@ class VentasRepository {
       db.animales,
     )..where((t) => t.id.equals(animalId))).getSingle();
     return _resumenDesdeAnimal(animal);
+  }
+
+  /// Economía de cada animal de la finca (en pie y ya vendidos), con los kilos
+  /// que ganó. El módulo Análisis agrupa esto por lote y lo suma.
+  ///
+  /// Reusa `_resumenDesdeAnimal`, el mismo cálculo que muestra la ficha del
+  /// animal: así Análisis y ficha nunca dicen números distintos. Cuesta varias
+  /// consultas por animal, por eso es un Future con indicador de carga y no un
+  /// stream que se recalcula solo.
+  Future<List<AnimalFinanciero>> financieroDeFinca(String fincaId) async {
+    final animales =
+        await (db.select(db.animales)
+              ..where(
+                (t) =>
+                    t.fincaId.equals(fincaId) &
+                    t.deletedAt.isNull() &
+                    t.estado.equals(EstadoAnimal.muerto).not(),
+              )
+              ..orderBy([(t) => OrderingTerm.asc(t.identificador)]))
+            .get();
+
+    // Primer y último peso de cada animal, en una sola pasada.
+    final pesajes =
+        await (db.select(db.pesajes)
+              ..where((t) => t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.asc(t.fecha)]))
+            .get();
+    final primero = <String, double>{};
+    final ultimo = <String, double>{};
+    for (final p in pesajes) {
+      primero.putIfAbsent(p.animalId, () => p.peso);
+      ultimo[p.animalId] = p.peso;
+    }
+
+    final resultado = <AnimalFinanciero>[];
+    for (final a in animales) {
+      final desde = primero[a.id];
+      final hasta = ultimo[a.id];
+      resultado.add(
+        AnimalFinanciero(
+          animal: a,
+          resumen: await _resumenDesdeAnimal(a),
+          kilosGanados: (desde == null || hasta == null) ? 0 : hasta - desde,
+        ),
+      );
+    }
+    return resultado;
   }
 
   Stream<List<ResumenLoteVenta>> observarLotesVenta(String fincaId) {

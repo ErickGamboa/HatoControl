@@ -180,7 +180,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining('no siempre se pesó a la misma cantidad'),
+      find.textContaining(
+        'la cantidad de animales pesados varía entre jornadas',
+      ),
       findsOneWidget,
     );
 
@@ -198,7 +200,7 @@ void main() {
     await bajarHasta(tester, const ValueKey('analisis.parejo'));
     expect(find.byKey(const ValueKey('analisis.parejo')), findsOneWidget);
     // 320 − 250 = 70 kg de diferencia en la jornada del 11 de marzo.
-    expect(find.textContaining('70 kg entre el más liviano'), findsOneWidget);
+    expect(find.textContaining('el más pesado es de 70 kg'), findsOneWidget);
 
     await cerrar(tester);
   });
@@ -239,7 +241,7 @@ void main() {
     await seedPesaje('b1', base, 180);
     await abrir(tester, finca);
 
-    expect(find.text('Faltan pesajes'), findsOneWidget);
+    expect(find.text('Sin datos suficientes'), findsOneWidget);
     expect(find.text('Recién · 1 jornada'), findsOneWidget);
 
     await cerrar(tester);
@@ -287,7 +289,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('analisis.lote.Vacío')));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('todavía no tiene pesajes'), findsOneWidget);
+    expect(find.textContaining('todavía no registra pesajes'), findsOneWidget);
 
     await cerrar(tester);
   });

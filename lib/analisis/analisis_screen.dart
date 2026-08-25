@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../data/local/database.dart';
+import 'analisis_financiero_screen.dart';
 import 'analisis_pesos_screen.dart';
 
 /// Puerta del módulo Análisis: dos caminos, sin menús escondidos.
@@ -31,7 +32,7 @@ class AnalisisScreen extends StatelessWidget {
               key: const ValueKey('analisis.pesos'),
               icono: Icons.monitor_weight_outlined,
               titulo: 'Análisis de pesos',
-              detalle: 'Cómo viene ganando cada lote y cada animal',
+              detalle: 'Ganancia de peso por lote y por animal',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) =>
@@ -44,8 +45,15 @@ class AnalisisScreen extends StatelessWidget {
               key: const ValueKey('analisis.financiero'),
               icono: Icons.payments_outlined,
               titulo: 'Análisis financiero',
-              detalle: 'En qué se va la plata y cuánto deja cada animal',
-              onTap: null,
+              detalle: 'Costos, utilidad y rentabilidad por animal',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => AnalisisFinancieroScreen(
+                    finca: finca,
+                    usuarioId: usuarioId,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -100,7 +108,7 @@ class _OpcionAnalisis extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      listo ? detalle : 'En camino',
+                      listo ? detalle : 'Disponible próximamente',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.outline,
                       ),

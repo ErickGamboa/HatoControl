@@ -54,8 +54,8 @@ class _AnalisisPesosScreenState extends State<AnalisisPesosScreen> {
             final lotes = snapshot.data!;
             if (lotes.isEmpty) {
               return const _Vacio(
-                'Esta finca todavía no tiene lotes. Creá uno en Lotes y pesá '
-                'los animales para ver el análisis.',
+                'Esta finca todavía no tiene lotes registrados. Creá uno en '
+                'Lotes y registrá los pesajes para ver el análisis.',
               );
             }
             // Si el lote elegido se borró, se vuelve a la comparativa.
@@ -260,8 +260,8 @@ class _ComparativaLotes extends StatelessWidget {
 
     if (conDatos.isEmpty) {
       return const _Vacio(
-        'Todavía no hay dos jornadas de pesaje en ningún lote. Con un segundo '
-        'pesaje ya se puede comparar la ganancia.',
+        'Ningún lote registra dos jornadas de pesaje todavía. Con un segundo '
+        'pesaje se puede comparar la ganancia.',
       );
     }
 
@@ -271,10 +271,10 @@ class _ComparativaLotes extends StatelessWidget {
       children: [
         _Tarjeta(
           key: const ValueKey('analisis.comparativa'),
-          titulo: 'Lote contra lote',
+          titulo: 'Comparación entre lotes',
           lectura:
-              'Ganancia diaria por animal en la última jornada de cada lote. '
-              'El de arriba es el que mejor está rindiendo.',
+              'Ganancia diaria por animal en la última jornada de pesaje de '
+              'cada lote. El primero es el de mejor rendimiento.',
           hijo: Column(
             children: [
               for (final r in conDatos)
@@ -319,10 +319,10 @@ class _ComparativaLotes extends StatelessWidget {
         ),
         if (sinDatos.isNotEmpty)
           _Tarjeta(
-            titulo: 'Faltan pesajes',
+            titulo: 'Sin datos suficientes',
             lectura:
-                'Estos lotes no tienen dos jornadas todavía, así que no hay '
-                'ganancia que comparar.',
+                'Estos lotes aún no registran dos jornadas de pesaje, por lo '
+                'que no hay ganancia que comparar.',
             hijo: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -363,8 +363,8 @@ class _DetalleLote extends StatelessWidget {
     final periodos = resumen.periodos;
     if (periodos.isEmpty) {
       return const _Vacio(
-        'Este lote todavía no tiene pesajes. Pesá los animales en Trabajo y '
-        'acá vas a ver cómo vienen.',
+        'Este lote todavía no registra pesajes. Registralos en Trabajo para '
+        'ver el análisis.',
       );
     }
 
@@ -397,14 +397,15 @@ class _ComoViene extends StatelessWidget {
 
     return _Tarjeta(
       key: const ValueKey('analisis.comoViene'),
-      titulo: 'Cómo viene el peso',
+      titulo: 'Evolución del peso',
       lectura: ultima == null
-          ? 'Hace falta una segunda jornada de pesaje para saber cuánto ganó.'
+          ? 'Se requiere una segunda jornada de pesaje para calcular la '
+                'ganancia.'
           : 'Entre el ${_fecha(ultima.desde!)} y el ${_fecha(ultima.hasta)} '
-                'cada animal ganó ${_conSigno(ultima.gananciaPromedio!)} kg '
-                'en promedio. Se comparó '
-                '${_animales(ultima.animalesConGanancia)} contra su propio '
-                'pesaje anterior.',
+                'la ganancia promedio fue de '
+                '${_conSigno(ultima.gananciaPromedio!)} kg por animal. El '
+                'cálculo compara ${_animales(ultima.animalesConGanancia)} '
+                'contra su propio pesaje anterior.',
       hijo: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -436,8 +437,8 @@ class _ComoViene extends StatelessWidget {
                 child: Text(
                   vigente == null
                       ? 'Sin dieta asignada'
-                      : 'Con dieta ${vigente.dieta.nombre} · '
-                            '₡${vigente.asignacion.costoAnimalDiaSnapshot.toStringAsFixed(0)} por animal al día',
+                      : 'Dieta ${vigente.dieta.nombre} · '
+                            '₡${vigente.asignacion.costoAnimalDiaSnapshot.toStringAsFixed(0)} por animal por día',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
@@ -562,14 +563,15 @@ class _CadaPesaje extends StatelessWidget {
 
     return _Tarjeta(
       key: const ValueKey('analisis.cadaPesaje'),
-      titulo: 'Cada pesaje',
+      titulo: 'Detalle por jornada de pesaje',
       lectura: grupoCambio
-          ? 'El promedio es el total de kilos dividido entre los animales '
-                'pesados ese día. Ojo: no siempre se pesó a la misma cantidad, '
-                'así que el promedio puede subir o bajar por eso y no porque '
-                'los animales cambiaran. La ganancia sí compara a cada animal '
-                'contra su propio pesaje anterior.'
-          : 'El promedio es el total de kilos dividido entre los animales '
+          ? 'El peso promedio es el total de kilos dividido entre los animales '
+                'pesados ese día. Importante: la cantidad de animales pesados '
+                'varía entre jornadas, por lo que el promedio puede subir o '
+                'bajar sin que los animales hayan cambiado de peso. La '
+                'ganancia sí compara a cada animal contra su propio pesaje '
+                'anterior.'
+          : 'El peso promedio es el total de kilos dividido entre los animales '
                 'pesados ese día. La ganancia compara a cada animal contra su '
                 'propio pesaje anterior.',
       hijo: Column(
@@ -672,15 +674,15 @@ class _QueTanParejo extends StatelessWidget {
 
     return _Tarjeta(
       key: const ValueKey('analisis.parejo'),
-      titulo: 'Qué tan parejo está el lote',
+      titulo: 'Uniformidad del lote',
       lectura:
-          'En el pesaje del ${_fecha(ultima.hasta)} hay ${_kg(diferencia)} kg '
-          'entre el más liviano y el más pesado.',
+          'En la jornada del ${_fecha(ultima.hasta)} la diferencia entre el '
+          'animal más liviano y el más pesado es de ${_kg(diferencia)} kg.',
       hijo: Row(
         children: [
-          dato('El más liviano', '${_kg(ultima.pesoMinimo)} kg'),
-          dato('Promedio', '${_kg(ultima.pesoPromedio)} kg'),
-          dato('El más pesado', '${_kg(ultima.pesoMaximo)} kg'),
+          dato('Peso mínimo', '${_kg(ultima.pesoMinimo)} kg'),
+          dato('Peso promedio', '${_kg(ultima.pesoPromedio)} kg'),
+          dato('Peso máximo', '${_kg(ultima.pesoMaximo)} kg'),
         ],
       ),
     );
@@ -713,10 +715,10 @@ class _Rankings extends StatelessWidget {
           children: [
             _Tarjeta(
               key: const ValueKey('analisis.ranking'),
-              titulo: 'Los que más y menos ganan',
+              titulo: 'Mejor y menor rendimiento',
               lectura:
-                  'Kilos por día entre sus dos últimos pesajes. Tocá uno para '
-                  'abrir su ficha.',
+                  'Ganancia diaria entre los dos últimos pesajes de cada '
+                  'animal. Tocá uno para ver su ficha.',
               hijo: Column(
                 children: [
                   for (final a in mejores)
@@ -732,10 +734,10 @@ class _Rankings extends StatelessWidget {
             if (enBaja.isNotEmpty)
               _Tarjeta(
                 key: const ValueKey('analisis.enBaja'),
-                titulo: 'Ojo con estos',
+                titulo: 'Animales con pérdida de peso',
                 lectura:
-                    'Bajaron de peso entre sus dos últimos pesajes. Vale la '
-                    'pena revisarlos.',
+                    'Registraron menos peso que en su pesaje anterior. '
+                    'Conviene revisarlos.',
                 hijo: Column(
                   children: [
                     for (final a in enBaja)
