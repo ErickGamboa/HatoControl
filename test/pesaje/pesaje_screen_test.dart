@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/data/repositories/lotes_repository.dart';
@@ -191,7 +192,9 @@ void main() {
     await cerrarPantalla(tester);
   });
 
-  testWidgets('corrige el lote y deja el movimiento registrado', (tester) async {
+  testWidgets('corrige el lote y deja el movimiento registrado', (
+    tester,
+  ) async {
     final finca = await seedFinca();
     await seedLote('lote-1', 'Montaña');
     await seedLote('lote-2', 'Engorde');
@@ -333,4 +336,104 @@ void main() {
 
     await cerrarPantalla(tester);
   });
+
+  // ---- Lector de aretes (entra por Bluetooth como teclado) ----
+
+  /// Simula que el ganadero tocó otra parte de la pantalla: ninguna casilla de
+  /// texto queda encendida. Es el caso en que hoy se pierde la lectura.
+  Future<void> soltarFoco(WidgetTester tester) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> leerArete(WidgetTester tester, String arete) async {
+    for (final d in arete.split('')) {
+      await tester.sendKeyEvent(_teclaDe(d));
+    }
+    await tester.pump();
+  }
+
+  String areteEnPantalla(WidgetTester tester) => tester
+      .widget<TextField>(
+        find.descendant(
+          of: find.byKey(const ValueKey('pesaje.animalId')),
+          matching: find.byType(TextField),
+        ),
+      )
+      .controller!
+      .text;
+
+  testWidgets('la lectura entra al arete aunque nadie tenga el foco', (
+    tester,
+  ) async {
+    final finca = await seedFinca();
+    await seedLote('lote-1', 'Montaña');
+    await abrirPantalla(tester, finca);
+    await soltarFoco(tester);
+
+    await leerArete(tester, '188000002093951');
+
+    expect(areteEnPantalla(tester), '188000002093951');
+
+    await cerrarPantalla(tester);
+  });
+
+  testWidgets('el Enter del lector pasa el foco al peso', (tester) async {
+    final finca = await seedFinca();
+    await seedLote('lote-1', 'Montaña');
+    await abrirPantalla(tester, finca);
+    await soltarFoco(tester);
+
+    await leerArete(tester, '77');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.byKey(const ValueKey('pesaje.weight')),
+              matching: find.byType(TextField),
+            ),
+          )
+          .focusNode!
+          .hasFocus,
+      isTrue,
+    );
+    // Y ese mismo Enter no debe caer en el campo del peso: si cayera, lo
+    // tomaría como "listo" y dispararía Registrar con el peso vacío.
+    expect(find.text('Ingresá el peso (kg).'), findsNothing);
+
+    await cerrarPantalla(tester);
+  });
+
+  testWidgets('una lectura nueva reemplaza el arete anterior', (tester) async {
+    final finca = await seedFinca();
+    await seedLote('lote-1', 'Montaña');
+    await abrirPantalla(tester, finca);
+    await soltarFoco(tester);
+
+    await leerArete(tester, '11');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await soltarFoco(tester);
+    await leerArete(tester, '22');
+
+    expect(areteEnPantalla(tester), '22');
+
+    await cerrarPantalla(tester);
+  });
 }
+
+LogicalKeyboardKey _teclaDe(String digito) => const {
+  '0': LogicalKeyboardKey.digit0,
+  '1': LogicalKeyboardKey.digit1,
+  '2': LogicalKeyboardKey.digit2,
+  '3': LogicalKeyboardKey.digit3,
+  '4': LogicalKeyboardKey.digit4,
+  '5': LogicalKeyboardKey.digit5,
+  '6': LogicalKeyboardKey.digit6,
+  '7': LogicalKeyboardKey.digit7,
+  '8': LogicalKeyboardKey.digit8,
+  '9': LogicalKeyboardKey.digit9,
+}[digito]!;

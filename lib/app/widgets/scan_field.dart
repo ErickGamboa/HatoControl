@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Campo para escanear/ingresar un identificador (p. ej. arete): toma foco al
 /// aparecer y selecciona todo el texto al recibir foco, para que escribir
@@ -15,6 +16,7 @@ class ScanField extends StatefulWidget {
     this.onChanged,
     this.onSubmitted,
     this.autofocus = true,
+    this.soloNumeros = true,
   });
 
   final TextEditingController controller;
@@ -26,6 +28,12 @@ class ScanField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final bool autofocus;
+
+  /// Los aretes son numéricos: además del teclado numérico se filtra la
+  /// entrada, porque en Android el teclado se puede cambiar a letras y un
+  /// lector conectado como teclado también podría mandarlas. Ponelo en false
+  /// si algún día hay que aceptar identificadores con letras.
+  final bool soloNumeros;
 
   @override
   State<ScanField> createState() => _ScanFieldState();
@@ -65,6 +73,9 @@ class _ScanFieldState extends State<ScanField> {
       controller: widget.controller,
       focusNode: widget.focusNode,
       keyboardType: widget.keyboardType,
+      inputFormatters: widget.soloNumeros
+          ? [FilteringTextInputFormatter.digitsOnly]
+          : null,
       textInputAction: widget.textInputAction,
       onChanged: widget.onChanged,
       onSubmitted: widget.onSubmitted,
