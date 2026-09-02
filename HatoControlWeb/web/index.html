@@ -28,11 +28,26 @@
       margin: 0;
       padding: 0;
       height: 100%;
+      width: 100%;
       /* Blanco en claro y en oscuro: la pantalla de login de HatoControl es
          blanca en los dos modos, así que no hay salto de color al arrancar. */
       background-color: #ffffff;
       /* Evita el rebote elástico al arrastrar en el celular. */
       overscroll-behavior: none;
+      /* El scroll lo maneja la app por dentro, no el documento. Sin esto, en
+         el celular el navegador esconde y muestra su barra de direcciones al
+         deslizar: eso cambia el alto de la ventana a media pantalla, la app
+         se recalcula y el contenido brinca o deja un espacio abajo. */
+      overflow: hidden;
+      /* Que el navegador no reescale el texto solo al girar el teléfono. */
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+    /* Fijar el body al viewport remata lo anterior: el documento no puede
+       desplazarse, así que la barra del navegador se queda quieta. */
+    body {
+      position: fixed;
+      inset: 0;
     }
     /* Pantalla de carga: el logo mientras baja la app, para que el usuario no
        vea un rectángulo en blanco. La borra el propio Flutter al arrancar. */
