@@ -58,8 +58,20 @@ Future<void> sincronizarSiSePuede() async {
   await syncService.sincronizar();
 }
 
+/// Cierra la sesión y, si no quedó nada por subir, deja la copia local limpia
+/// para quien entre después en este aparato.
+///
+/// El borrado es CONDICIONAL a propósito: cerrar sesión sin internet con un
+/// día de campo sin subir no puede costar ese día. Si algo queda pendiente, la
+/// caché se conserva y el reintento la sube cuando ese mismo usuario vuelva a
+/// entrar; si entra otra cuenta, [SesionLocalRepository.guardarUsuarioVerificado]
+/// la limpia de todos modos.
 Future<void> cerrarSesion() async {
+  final quedaPorSubir = await syncService.hayPendientes();
   await sesionLocalRepo.borrar();
+  if (!quedaPorSubir) {
+    await db.borrarDatosLocales();
+  }
   try {
     await supabase.auth.signOut();
   } catch (_) {

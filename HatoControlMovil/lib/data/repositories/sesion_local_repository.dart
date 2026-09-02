@@ -31,6 +31,16 @@ class SesionLocalRepository {
     String? email,
     String? nombre,
   }) async {
+    // Si en este aparato estaba OTRA cuenta, su caché no solo sobra: estorba.
+    // Los cursores de bajada son del aparato, así que el que entra heredaría
+    // un cursor más nuevo que sus propias filas y nunca las vería bajar (ver
+    // [AppDatabase.borrarDatosLocales]). Se limpia antes de guardar la
+    // identidad nueva.
+    final anterior = await obtener();
+    if (anterior != null && anterior.usuarioId != usuarioId) {
+      await db.borrarDatosLocales();
+    }
+
     final fila = SesionLocalRow(
       id: _filaActual,
       usuarioId: usuarioId,

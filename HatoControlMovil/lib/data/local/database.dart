@@ -777,6 +777,27 @@ class AppDatabase extends _$AppDatabase {
     },
   );
 
+  /// Deja la copia local como recién instalada: borra las filas de TODAS las
+  /// tablas, los cursores de bajada y el estado por tabla.
+  ///
+  /// Hace falta porque los cursores de sync son **del aparato, no del
+  /// usuario**. Si en el mismo teléfono (o el mismo navegador) entra una
+  /// segunda cuenta, hereda el cursor del primero; como ese cursor es más
+  /// nuevo que las filas del que entra, esas filas NO BAJAN NUNCA y la cuenta
+  /// se ve vacía teniendo su finca sana en la nube. Así apareció el caso de
+  /// `erick.yosue` en la web: la finca bajó pero su membresía y su fila de
+  /// `usuarios` (más viejas que el cursor de la otra cuenta) no, y sin
+  /// membresía no hay fincas que mostrar ni licencia que leer.
+  ///
+  /// Ver `test/sync/sync_cambio_de_usuario_test.dart`.
+  Future<void> borrarDatosLocales() async {
+    await transaction(() async {
+      for (final tabla in allTables) {
+        await delete(tabla).go();
+      }
+    });
+  }
+
   Future<void> _crearTablaSiFalta(Migrator m, TableInfo table) async {
     final filas = await customSelect(
       "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
