@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <!--
+    Si la app se sirve en una subcarpeta (por ejemplo /app/), este valor lo
+    reemplaza `flutter build web --base-href`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="HatoControl: manejo de fincas ganaderas. Pesajes, lotes, sanidad, dietas y ventas.">
+
+  <!-- Instalable en el teléfono como una app más -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HatoControl">
+  <meta name="theme-color" content="#1B3A5B">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>HatoControl</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      /* Blanco en claro y en oscuro: la pantalla de login de HatoControl es
+         blanca en los dos modos, así que no hay salto de color al arrancar. */
+      background-color: #ffffff;
+      /* Evita el rebote elástico al arrastrar en el celular. */
+      overscroll-behavior: none;
+    }
+    /* Pantalla de carga: el logo mientras baja la app, para que el usuario no
+       vea un rectángulo en blanco. La borra el propio Flutter al arrancar. */
+    #cargando {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      background: #ffffff;
+      transition: opacity 250ms ease-out;
+    }
+    #cargando img { width: 200px; max-width: 60vw; }
+    #cargando .barra {
+      width: 180px;
+      max-width: 50vw;
+      height: 4px;
+      border-radius: 4px;
+      background: rgba(27, 58, 91, 0.15);
+      overflow: hidden;
+    }
+    #cargando .barra i {
+      display: block;
+      width: 40%;
+      height: 100%;
+      border-radius: 4px;
+      background: #3C8C56;
+      animation: corre 1.1s ease-in-out infinite;
+    }
+    @keyframes corre {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+  </style>
+</head>
+<body>
+  <div id="cargando">
+    <img src="assets/assets/logo/hatocontrol_logo_sin_fondo.png" alt="HatoControl">
+    <div class="barra"><i></i></div>
+  </div>
+
+  <script>
+    // Cuando Flutter ya pintó el primer cuadro, se desvanece la pantalla de
+    // carga. Si algo saliera mal, igual se quita a los 20 segundos para no
+    // dejar al usuario mirando el logo para siempre.
+    window.addEventListener('flutter-first-frame', quitarCarga);
+    setTimeout(quitarCarga, 20000);
+
+    function quitarCarga() {
+      var capa = document.getElementById('cargando');
+      if (!capa) return;
+      capa.style.opacity = '0';
+      setTimeout(function () { capa.remove(); }, 300);
+    }
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

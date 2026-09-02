@@ -1,0 +1,43 @@
+name: hato_control_web
+description: "HatoControl Web — la misma app, en el navegador."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Todo el producto (pantallas, repositorios, sync, tema) vive en el paquete
+  # de la app móvil. Aquí NO se reescribe nada: se reutiliza tal cual, para que
+  # la web móvil sea idéntica a la app nativa y un cambio salga en las tres.
+  hato_control:
+    path: ../HatoControlMovil
+
+  cupertino_icons: ^1.0.8
+  drift: ^2.33.0
+  supabase_flutter: ^2.14.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Mismos assets que la app móvil (los copia scripts/sync_assets.ps1).
+  # Se declaran aquí, con las mismas rutas, para que el código compartido que
+  # llama a Image.asset('assets/...') los encuentre sin cambios.
+  #
+  # Del logo se declara solo lo que se usa, igual que en la app móvil: el del
+  # login (que viene del código compartido), el emblema de la barra lateral y
+  # la versión sin fondo de la pantalla de carga de `web/index.html`.
+  assets:
+    - assets/iconos/
+    - assets/logo/hatocontrol_logo.png
+    - assets/logo/emblema_sin_fondo.png
+    - assets/logo/hatocontrol_logo_sin_fondo.png
