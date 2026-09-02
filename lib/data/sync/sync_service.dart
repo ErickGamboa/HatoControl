@@ -34,6 +34,19 @@ class PullSpec {
     this.idColumnaRemota = 'id',
   });
 
+  /// OJO al escribir: hay que pasarle a `insertOnConflictUpdate` el
+  /// **companion completo** (`XRow(...).toCompanion(false)`), nunca la fila
+  /// pelada. Drift arma el `DO UPDATE SET` con `toColumns(true)`, que **omite
+  /// los campos nulos**: con la fila pelada, un valor que el servidor borró se
+  /// quedaba con el dato viejo en la copia local para siempre. Así se coló el
+  /// bug de las licencias — al pagar, `cuentas.prueba_termina` pasa a null en
+  /// la nube, pero el aparato conservaba la fecha vencida y seguía mostrando
+  /// "Tu prueba gratis terminó". Con el companion, un null viaja como
+  /// `Value(null)` y sí pisa. Ver `test/sync/sync_nulos_remotos_test.dart`.
+  ///
+  /// La excepción es `fincas`, que arma su companion a mano porque tiene
+  /// columnas SOLO locales (`fotoLocalPath`, `fotoPendiente`) que la bajada no
+  /// debe tocar: escribirlas borraría una foto todavía sin subir.
   final Future<void> Function(Map<String, dynamic> fila) aplicar;
   final Future<bool> Function(String id)? tieneCambioLocalPendiente;
   final String Function(Map<String, dynamic> fila) idDe;
@@ -499,7 +512,7 @@ class SyncService {
               nombre: r['nombre'] as String,
               limiteFincas: r['limite_fincas'] as int,
               updatedAt: DateTime.parse(r['updated_at'] as String),
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -531,7 +544,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -558,7 +571,7 @@ class SyncService {
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -676,7 +689,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -727,7 +740,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -798,7 +811,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -850,7 +863,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -910,7 +923,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -981,7 +994,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -1036,7 +1049,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -1109,7 +1122,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -1185,7 +1198,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -1236,7 +1249,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -1321,7 +1334,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -1376,7 +1389,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -1440,7 +1453,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -1499,7 +1512,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -1554,7 +1567,7 @@ class SyncService {
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
               pendiente: false,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
@@ -1581,7 +1594,7 @@ class SyncService {
               deletedAt: r['deleted_at'] != null
                   ? DateTime.parse(r['deleted_at'] as String)
                   : null,
-            ),
+            ).toCompanion(false),
           ),
     ),
   );
