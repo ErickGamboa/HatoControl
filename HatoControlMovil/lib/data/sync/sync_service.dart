@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
+import '../local/archivo_foto.dart';
 import '../local/database.dart';
 import 'sync_remote_gateway.dart';
 
@@ -407,8 +407,8 @@ class SyncService {
     for (final f in conFoto) {
       final ruta = f.fotoLocalPath;
       if (ruta == null) continue;
-      final archivo = File(ruta);
-      if (!await archivo.exists()) {
+      final bytes = await leerFotoLocal(ruta);
+      if (bytes == null) {
         // El archivo local ya no está; no insistir.
         await (db.update(db.fincas)..where((t) => t.id.equals(f.id))).write(
           const FincasCompanion(fotoPendiente: Value(false)),
@@ -416,7 +416,6 @@ class SyncService {
         continue;
       }
       try {
-        final bytes = await archivo.readAsBytes();
         final url = await _remote.subirFotoFinca(
           fincaId: f.id,
           imagenBase64: base64Encode(bytes),

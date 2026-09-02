@@ -1,11 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../data/local/database.dart';
 import '../data/repositories/fincas_repository.dart';
 import '../data/sync/sync_service.dart';
 import '../services.dart';
+import 'crear_finca_flujo.dart';
 import 'finca_detalle_screen.dart';
 import 'foto_picker.dart';
 import 'sync_status_sheet.dart';
@@ -80,40 +79,16 @@ class _FincasScreenState extends State<FincasScreen> {
   }
 
   Future<void> _crearFincaDialog() async {
-    // Aviso temprano si ya alcanzó el límite (mejor experiencia).
-    if (_estado != null && _estado!.alcanzoLimite) {
-      _mostrar(
-        'Tu plan ${_estado!.planNombre} permite ${_estado!.limiteTexto} '
-        'finca(s). Cambiá a un plan superior para agregar más.',
-      );
+    final aviso = await flujoCrearFinca(
+      context,
+      usuarioId: _usuarioId,
+      estado: _estado,
+    );
+    if (aviso != null) {
+      _mostrar(aviso);
       return;
     }
-
-    final resultado = await showDialog<(String, String?)>(
-      context: context,
-      builder: (_) => const _DialogoNuevaFinca(),
-    );
-    if (resultado == null) return;
-    final (nombre, fotoLocalPath) = resultado;
-    if (nombre.isEmpty) return;
-
-    try {
-      await fincasRepo.crearFinca(
-        nombre: nombre,
-        creadaPor: _usuarioId,
-        fotoLocalPath: fotoLocalPath,
-      );
-      sincronizarSiSePuede();
-      await _cargarEstado();
-    } on LimiteFincasException catch (e) {
-      _mostrar(
-        'Tu plan ${e.planNombre} permite '
-        '${EstadoLicencia.textoLimite(e.limite)} finca(s). '
-        'Cambiá a un plan superior para agregar más.',
-      );
-    } on LicenciaNoDisponibleException {
-      _mostrar('Conectate a internet una vez para activar tu cuenta.');
-    }
+    await _cargarEstado();
   }
 
   @override
@@ -333,8 +308,8 @@ class _FotoFinca extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final local = finca.fotoLocalPath;
-    if (local != null && File(local).existsSync()) {
-      return Image.file(File(local), fit: BoxFit.cover);
+    if (local != null && existeFotoLocal(local)) {
+      return imagenFotoLocal(local);
     }
     final url = finca.fotoUrl;
     if (url != null && url.isNotEmpty) {
@@ -373,105 +348,6 @@ class _PlaceholderFoto extends StatelessWidget {
                 color: theme.colorScheme.outline,
               ),
       ),
-    );
-  }
-}
-
-/// Diálogo para crear una finca: nombre + foto opcional.
-class _DialogoNuevaFinca extends StatefulWidget {
-  const _DialogoNuevaFinca();
-
-  @override
-  State<_DialogoNuevaFinca> createState() => _DialogoNuevaFincaState();
-}
-
-class _DialogoNuevaFincaState extends State<_DialogoNuevaFinca> {
-  final _ctrl = TextEditingController();
-  String? _fotoPath;
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _elegirFoto() async {
-    final path = await elegirFotoFinca(context);
-    if (path != null && mounted) setState(() => _fotoPath = path);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AlertDialog(
-      title: const Text('Nueva finca'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Foto opcional (toca para elegir)
-          GestureDetector(
-            onTap: _elegirFoto,
-            child: Container(
-              height: 140,
-              width: double.infinity,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: theme.colorScheme.outlineVariant),
-              ),
-              child: _fotoPath == null
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.add_a_photo_outlined,
-                          size: 36,
-                          color: theme.colorScheme.outline,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Agregar foto (opcional)',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.outline,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Image.file(File(_fotoPath!), fit: BoxFit.cover),
-            ),
-          ),
-          if (_fotoPath != null)
-            TextButton.icon(
-              onPressed: () => setState(() => _fotoPath = null),
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Quitar foto'),
-            ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const ValueKey('fincas.name'),
-            controller: _ctrl,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              labelText: 'Nombre de la finca',
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          key: const ValueKey('fincas.save'),
-          onPressed: () =>
-              Navigator.pop(context, (_ctrl.text.trim(), _fotoPath)),
-          child: const Text('Crear'),
-        ),
-      ],
     );
   }
 }

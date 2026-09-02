@@ -5,6 +5,22 @@ Flutter offline-first app for cattle farm management: fincas, lotes, animals, we
 
 **Product behavior source of truth:** `docs/ESPECIFICACION_FUNCIONAL.md` (documento oro). If a feature is not described there, do not build it; remove or align existing code that contradicts it. Implementation sequencing lives in `docs/ROADMAP.md`.
 
+**This package is also the web app.** `../HatoControlWeb` is a Flutter web
+project that depends on this one by path (`hato_control`) and reuses these
+screens, repositories, sync and theme as-is — it adds only a desktop layout
+for wide screens. So `lib/` is shared product code for three clients (Android,
+web on a phone, web on a computer), not just for the APK. Two consequences:
+
+- **Keep `lib/` web-safe.** No bare `dart:io` / `path_provider` imports: put
+  platform code behind a conditional import pair (`foto_picker.dart` and
+  `data/local/archivo_foto.dart` are the examples). `flutter build web` must
+  keep passing from `../HatoControlWeb`.
+- **Shared behavior goes in this package, not in the web project.** When a
+  rule or a dialog has to exist in both clients, extract it here (see
+  `fincas/crear_finca_flujo.dart`, `fincas/editar_finca_flujo.dart`,
+  `cuenta/estado_cuenta.dart`, `data/estadisticas/estadisticas_finca.dart`)
+  so the phone and the computer can never drift apart.
+
 ## Language and documentation policy
 - The product domain is Spanish-first (`finca`, `lote`, `animal`, `pesaje`, `cuenta`). Preserve domain names in code and UI unless a product decision changes them.
 - Agent/developer docs should be understandable in English. When adding user-facing setup or QA instructions, prefer bilingual headings or short Spanish/English notes.
@@ -59,6 +75,13 @@ If Drift schema changed:
 
 ```bash
 dart run build_runner build --delete-conflicting-outputs
+```
+
+If `lib/` changed, the web client has to stay green too (it consumes this
+package):
+
+```bash
+cd ../HatoControlWeb && flutter analyze && flutter test && flutter build web
 ```
 
 ## Manual testing account (mandatory)

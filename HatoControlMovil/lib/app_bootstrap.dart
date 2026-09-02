@@ -66,8 +66,13 @@ Future<void> bootstrapHatoControl() async {
   });
 }
 
+/// El [home] existe para que la versión web pueda meter su adaptador de
+/// pantalla sin duplicar el tema, el título ni el comportamiento del teclado:
+/// el marco de la app es uno solo para las tres versiones.
 class HatoControlApp extends StatelessWidget {
-  const HatoControlApp({super.key});
+  const HatoControlApp({super.key, this.home = const AuthGate()});
+
+  final Widget home;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +90,7 @@ class HatoControlApp extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: child,
       ),
-      home: const AuthGate(),
+      home: home,
     );
   }
 }

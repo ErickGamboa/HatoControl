@@ -826,5 +826,16 @@ class AppDatabase extends _$AppDatabase {
 QueryExecutor _abrirConexion() {
   // drift_flutter resuelve la ruta del archivo y las librerías nativas de
   // SQLite en Android/iOS/escritorio automáticamente.
-  return driftDatabase(name: 'hatocontrol');
+  //
+  // En web no hay SQLite nativo: se usa el motor compilado a WebAssembly.
+  // Los dos archivos los sirve la app web desde su carpeta `web/` y drift
+  // escoge solo el mejor almacenamiento del navegador (OPFS o IndexedDB).
+  // En móvil y escritorio estas opciones se ignoran.
+  return driftDatabase(
+    name: 'hatocontrol',
+    web: DriftWebOptions(
+      sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+      driftWorker: Uri.parse('drift_worker.js'),
+    ),
+  );
 }

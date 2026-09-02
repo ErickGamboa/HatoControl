@@ -79,9 +79,15 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Se declara archivo por archivo, no la carpeta `assets/logo/` completa: ahí
+  # viven los originales de marca y las variantes que usa la web, y declarar
+  # la carpeta entera metía ~1.8 MB de imágenes que la app nunca abre dentro
+  # del APK y del IPA. `hatocontrol_icono_fg.png` no va acá a propósito:
+  # flutter_launcher_icons lo lee del disco al generar los íconos, no del
+  # paquete de assets.
   assets:
     - assets/iconos/
-    - assets/logo/
+    - assets/logo/hatocontrol_logo.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

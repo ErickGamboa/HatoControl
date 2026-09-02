@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/local/database.dart';
 import '../fincas/fincas_screen.dart';
 import '../services.dart';
+import 'estado_cuenta.dart';
 import 'suscripcion_screen.dart';
 import 'suspendida_screen.dart';
 
@@ -39,23 +40,13 @@ class _CuentaGateState extends State<CuentaGate> {
     return StreamBuilder<CuentaRow?>(
       stream: cuentasRepo.observarMiCuenta(widget.usuarioId),
       builder: (context, snapshot) {
-        final cuenta = snapshot.data;
-        // Mientras no conocemos la cuenta (aún sin sincronizar), dejamos entrar;
-        // FincasScreen dispara el sync y, si corresponde, se bloqueará al
-        // recibir el dato.
-        if (cuenta != null) {
-          if (cuenta.estado != 'activa') {
+        switch (evaluarEstadoCuenta(snapshot.data)) {
+          case EstadoCuentaApp.suspendida:
             return const SuspendidaScreen();
-          }
-          // Prueba gratis vencida sin licencia pagada. Los invitados (plan
-          // 'invitado') nunca tienen prueba (pruebaTermina null), así que no
-          // entran acá: colaboran sin límite de tiempo.
-          final fin = cuenta.pruebaTermina;
-          if (cuenta.plan != 'invitado' &&
-              fin != null &&
-              fin.isBefore(DateTime.now())) {
+          case EstadoCuentaApp.pruebaVencida:
             return const SuscripcionScreen();
-          }
+          case EstadoCuentaApp.normal:
+            break;
         }
         return FincasScreen(
           usuarioId: widget.usuarioId,

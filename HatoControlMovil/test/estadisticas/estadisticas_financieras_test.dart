@@ -78,11 +78,14 @@ void main() {
     expect(r.costoPorKiloGanado, 500);
   });
 
-  test('sin kilos ganados no hay costo por kilo en vez de dividir entre cero', () {
-    final r = sumarFinanciero([aporte(alimentacion: 5000)]);
-    expect(r.kilosGanados, 0);
-    expect(r.costoPorKiloGanado, isNull);
-  });
+  test(
+    'sin kilos ganados no hay costo por kilo en vez de dividir entre cero',
+    () {
+      final r = sumarFinanciero([aporte(alimentacion: 5000)]);
+      expect(r.kilosGanados, 0);
+      expect(r.costoPorKiloGanado, isNull);
+    },
+  );
 
   test('el desglose ordena de mayor a menor y omite lo que está en cero', () {
     final r = sumarFinanciero([

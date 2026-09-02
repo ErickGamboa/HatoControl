@@ -424,16 +424,16 @@ class PesajesRepository {
       for (final fila in filas) {
         final p = fila.readTable(db.pesajes);
         final a = fila.readTable(db.animales);
-        porLote
-            .putIfAbsent(a.loteId, () => [])
-            .add((animalId: p.animalId, fecha: p.fecha, peso: p.peso));
+        porLote.putIfAbsent(a.loteId, () => []).add((
+          animalId: p.animalId,
+          fecha: p.fecha,
+          peso: p.peso,
+        ));
       }
 
       final lotes =
           await (db.select(db.lotes)
-                ..where(
-                  (t) => t.fincaId.equals(fincaId) & t.deletedAt.isNull(),
-                )
+                ..where((t) => t.fincaId.equals(fincaId) & t.deletedAt.isNull())
                 ..orderBy([
                   (t) => OrderingTerm.asc(t.numero),
                   (t) => OrderingTerm.asc(t.nombre),
