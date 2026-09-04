@@ -375,18 +375,6 @@ class $CuentasTable extends Cuentas with TableInfo<$CuentasTable, CuentaRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _pruebaTerminaMeta = const VerificationMeta(
-    'pruebaTermina',
-  );
-  @override
-  late final GeneratedColumn<DateTime> pruebaTermina =
-      GeneratedColumn<DateTime>(
-        'prueba_termina',
-        aliasedName,
-        true,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: false,
-      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -442,7 +430,6 @@ class $CuentasTable extends Cuentas with TableInfo<$CuentasTable, CuentaRow> {
     duenoId,
     plan,
     estado,
-    pruebaTermina,
     createdAt,
     updatedAt,
     deletedAt,
@@ -496,15 +483,6 @@ class $CuentasTable extends Cuentas with TableInfo<$CuentasTable, CuentaRow> {
       );
     } else if (isInserting) {
       context.missing(_estadoMeta);
-    }
-    if (data.containsKey('prueba_termina')) {
-      context.handle(
-        _pruebaTerminaMeta,
-        pruebaTermina.isAcceptableOrUnknown(
-          data['prueba_termina']!,
-          _pruebaTerminaMeta,
-        ),
-      );
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -563,10 +541,6 @@ class $CuentasTable extends Cuentas with TableInfo<$CuentasTable, CuentaRow> {
         DriftSqlType.string,
         data['${effectivePrefix}estado'],
       )!,
-      pruebaTermina: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}prueba_termina'],
-      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -598,7 +572,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
   final String duenoId;
   final String plan;
   final String estado;
-  final DateTime? pruebaTermina;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -609,7 +582,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
     required this.duenoId,
     required this.plan,
     required this.estado,
-    this.pruebaTermina,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -623,9 +595,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
     map['dueno_id'] = Variable<String>(duenoId);
     map['plan'] = Variable<String>(plan);
     map['estado'] = Variable<String>(estado);
-    if (!nullToAbsent || pruebaTermina != null) {
-      map['prueba_termina'] = Variable<DateTime>(pruebaTermina);
-    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -642,9 +611,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
       duenoId: Value(duenoId),
       plan: Value(plan),
       estado: Value(estado),
-      pruebaTermina: pruebaTermina == null && nullToAbsent
-          ? const Value.absent()
-          : Value(pruebaTermina),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -665,7 +631,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
       duenoId: serializer.fromJson<String>(json['duenoId']),
       plan: serializer.fromJson<String>(json['plan']),
       estado: serializer.fromJson<String>(json['estado']),
-      pruebaTermina: serializer.fromJson<DateTime?>(json['pruebaTermina']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -681,7 +646,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
       'duenoId': serializer.toJson<String>(duenoId),
       'plan': serializer.toJson<String>(plan),
       'estado': serializer.toJson<String>(estado),
-      'pruebaTermina': serializer.toJson<DateTime?>(pruebaTermina),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -695,7 +659,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
     String? duenoId,
     String? plan,
     String? estado,
-    Value<DateTime?> pruebaTermina = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -706,9 +669,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
     duenoId: duenoId ?? this.duenoId,
     plan: plan ?? this.plan,
     estado: estado ?? this.estado,
-    pruebaTermina: pruebaTermina.present
-        ? pruebaTermina.value
-        : this.pruebaTermina,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -721,9 +681,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
       duenoId: data.duenoId.present ? data.duenoId.value : this.duenoId,
       plan: data.plan.present ? data.plan.value : this.plan,
       estado: data.estado.present ? data.estado.value : this.estado,
-      pruebaTermina: data.pruebaTermina.present
-          ? data.pruebaTermina.value
-          : this.pruebaTermina,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -739,7 +696,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
           ..write('duenoId: $duenoId, ')
           ..write('plan: $plan, ')
           ..write('estado: $estado, ')
-          ..write('pruebaTermina: $pruebaTermina, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -755,7 +711,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
     duenoId,
     plan,
     estado,
-    pruebaTermina,
     createdAt,
     updatedAt,
     deletedAt,
@@ -770,7 +725,6 @@ class CuentaRow extends DataClass implements Insertable<CuentaRow> {
           other.duenoId == this.duenoId &&
           other.plan == this.plan &&
           other.estado == this.estado &&
-          other.pruebaTermina == this.pruebaTermina &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -783,7 +737,6 @@ class CuentasCompanion extends UpdateCompanion<CuentaRow> {
   final Value<String> duenoId;
   final Value<String> plan;
   final Value<String> estado;
-  final Value<DateTime?> pruebaTermina;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -795,7 +748,6 @@ class CuentasCompanion extends UpdateCompanion<CuentaRow> {
     this.duenoId = const Value.absent(),
     this.plan = const Value.absent(),
     this.estado = const Value.absent(),
-    this.pruebaTermina = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -808,7 +760,6 @@ class CuentasCompanion extends UpdateCompanion<CuentaRow> {
     required String duenoId,
     required String plan,
     required String estado,
-    this.pruebaTermina = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -827,7 +778,6 @@ class CuentasCompanion extends UpdateCompanion<CuentaRow> {
     Expression<String>? duenoId,
     Expression<String>? plan,
     Expression<String>? estado,
-    Expression<DateTime>? pruebaTermina,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -840,7 +790,6 @@ class CuentasCompanion extends UpdateCompanion<CuentaRow> {
       if (duenoId != null) 'dueno_id': duenoId,
       if (plan != null) 'plan': plan,
       if (estado != null) 'estado': estado,
-      if (pruebaTermina != null) 'prueba_termina': pruebaTermina,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -855,7 +804,6 @@ class CuentasCompanion extends UpdateCompanion<CuentaRow> {
     Value<String>? duenoId,
     Value<String>? plan,
     Value<String>? estado,
-    Value<DateTime?>? pruebaTermina,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -868,7 +816,6 @@ class CuentasCompanion extends UpdateCompanion<CuentaRow> {
       duenoId: duenoId ?? this.duenoId,
       plan: plan ?? this.plan,
       estado: estado ?? this.estado,
-      pruebaTermina: pruebaTermina ?? this.pruebaTermina,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -894,9 +841,6 @@ class CuentasCompanion extends UpdateCompanion<CuentaRow> {
     }
     if (estado.present) {
       map['estado'] = Variable<String>(estado.value);
-    }
-    if (pruebaTermina.present) {
-      map['prueba_termina'] = Variable<DateTime>(pruebaTermina.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -924,7 +868,6 @@ class CuentasCompanion extends UpdateCompanion<CuentaRow> {
           ..write('duenoId: $duenoId, ')
           ..write('plan: $plan, ')
           ..write('estado: $estado, ')
-          ..write('pruebaTermina: $pruebaTermina, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -13995,7 +13938,6 @@ typedef $$CuentasTableCreateCompanionBuilder =
       required String duenoId,
       required String plan,
       required String estado,
-      Value<DateTime?> pruebaTermina,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
@@ -14009,7 +13951,6 @@ typedef $$CuentasTableUpdateCompanionBuilder =
       Value<String> duenoId,
       Value<String> plan,
       Value<String> estado,
-      Value<DateTime?> pruebaTermina,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -14048,11 +13989,6 @@ class $$CuentasTableFilterComposer
 
   ColumnFilters<String> get estado => $composableBuilder(
     column: $table.estado,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get pruebaTermina => $composableBuilder(
-    column: $table.pruebaTermina,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14111,11 +14047,6 @@ class $$CuentasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get pruebaTermina => $composableBuilder(
-    column: $table.pruebaTermina,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -14160,11 +14091,6 @@ class $$CuentasTableAnnotationComposer
 
   GeneratedColumn<String> get estado =>
       $composableBuilder(column: $table.estado, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get pruebaTermina => $composableBuilder(
-    column: $table.pruebaTermina,
-    builder: (column) => column,
-  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -14212,7 +14138,6 @@ class $$CuentasTableTableManager
                 Value<String> duenoId = const Value.absent(),
                 Value<String> plan = const Value.absent(),
                 Value<String> estado = const Value.absent(),
-                Value<DateTime?> pruebaTermina = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -14224,7 +14149,6 @@ class $$CuentasTableTableManager
                 duenoId: duenoId,
                 plan: plan,
                 estado: estado,
-                pruebaTermina: pruebaTermina,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -14238,7 +14162,6 @@ class $$CuentasTableTableManager
                 required String duenoId,
                 required String plan,
                 required String estado,
-                Value<DateTime?> pruebaTermina = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -14250,7 +14173,6 @@ class $$CuentasTableTableManager
                 duenoId: duenoId,
                 plan: plan,
                 estado: estado,
-                pruebaTermina: pruebaTermina,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

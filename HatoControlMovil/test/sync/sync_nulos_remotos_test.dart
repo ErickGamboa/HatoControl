@@ -6,9 +6,11 @@ import 'package:hato_control/data/sync/sync_service.dart';
 import '../support/fake_sync_remote_gateway.dart';
 
 /// Un valor que en el servidor pasa a NULL tiene que quedar NULL también en la
-/// copia local. El caso real: al pagar la licencia, el admin pone
-/// `cuentas.prueba_termina = null`; si la bajada no borra la fecha vieja, el
-/// `CuentaGate` sigue mostrando "Tu prueba gratis terminó" para siempre.
+/// copia local. El caso que lo destapó: cuando había prueba gratis de 7 días,
+/// al pagar se borraba la fecha de vencimiento en la nube y, si la bajada no
+/// limpiaba la vieja, el cliente quedaba bloqueado para siempre. Esa prueba ya
+/// no existe, pero la regla del **companion completo** (ver `SyncService`) sí,
+/// y se sigue cuidando acá con otra columna que se puede vaciar.
 void main() {
   late AppDatabase db;
   late FakeSyncRemoteGateway remote;
@@ -24,103 +26,62 @@ void main() {
     await db.close();
   });
 
-  test(
-    'la bajada limpia prueba_termina cuando el servidor la manda en null',
-    () async {
-      // Caché vieja: prueba vencida, plan light (lo que tiene el cliente hoy).
-      await db
-          .into(db.cuentas)
-          .insert(
-            CuentaRow(
-              id: 'cuenta-1',
-              nombre: 'Mi cuenta',
-              duenoId: 'user-1',
-              plan: 'light',
-              estado: 'activa',
-              pruebaTermina: DateTime(2026, 8, 29),
-              createdAt: DateTime(2026, 8, 22),
-              updatedAt: DateTime(2026, 8, 22),
-              pendiente: false,
-            ),
-          );
+  Future<void> sembrarUsuarioLocal({String? nombre}) {
+    return db
+        .into(db.usuarios)
+        .insert(
+          UsuarioRow(
+            id: 'user-1',
+            nombre: nombre,
+            email: 'quien@ejemplo.com',
+            cuentaId: 'cuenta-1',
+            createdAt: DateTime(2026, 8, 22),
+            updatedAt: DateTime(2026, 8, 22),
+            pendiente: false,
+          ),
+        );
+  }
 
-      // El admin le vendió la licencia: pro y sin prueba.
-      remote.descargas['cuentas'] = [
-        {
-          'id': 'cuenta-1',
-          'nombre': 'Mi cuenta',
-          'dueno_id': 'user-1',
-          'plan': 'pro',
-          'estado': 'activa',
-          'prueba_termina': null,
-          'created_at': DateTime(2026, 8, 22).toIso8601String(),
-          'updated_at': DateTime(2026, 9, 1).toIso8601String(),
-          'deleted_at': null,
-        },
-      ];
+  void responderConNombre(String? nombre) {
+    remote.descargas['usuarios'] = [
+      {
+        'id': 'user-1',
+        'nombre': nombre,
+        'email': 'quien@ejemplo.com',
+        'cuenta_id': 'cuenta-1',
+        'created_at': DateTime(2026, 8, 22).toIso8601String(),
+        'updated_at': DateTime(2026, 9, 1).toIso8601String(),
+      },
+    ];
+  }
 
-      await sync.sincronizar();
+  Future<UsuarioRow> leerUsuario() {
+    return (db.select(
+      db.usuarios,
+    )..where((t) => t.id.equals('user-1'))).getSingle();
+  }
 
-      final cuenta = await (db.select(
-        db.cuentas,
-      )..where((t) => t.id.equals('cuenta-1'))).getSingle();
+  test('la bajada limpia un valor que el servidor mandó en null', () async {
+    await sembrarUsuarioLocal(nombre: 'Nombre viejo');
+    responderConNombre(null);
 
-      expect(cuenta.plan, 'pro', reason: 'el plan sí se actualiza');
-      expect(
-        cuenta.pruebaTermina,
-        isNull,
-        reason:
-            'la fecha de prueba tiene que quedar en null, como en el servidor',
-      );
-    },
-  );
+    await sync.sincronizar();
 
-  test(
-    'una fecha futura NO nula sí pisa la vieja (rodeo sin app nueva)',
-    () async {
-      await db
-          .into(db.cuentas)
-          .insert(
-            CuentaRow(
-              id: 'cuenta-1',
-              nombre: 'Mi cuenta',
-              duenoId: 'user-1',
-              plan: 'light',
-              estado: 'activa',
-              pruebaTermina: DateTime(2026, 8, 29),
-              createdAt: DateTime(2026, 8, 22),
-              updatedAt: DateTime(2026, 8, 22),
-              pendiente: false,
-            ),
-          );
+    final usuario = await leerUsuario();
+    expect(
+      usuario.nombre,
+      isNull,
+      reason: 'el dato borrado en el servidor tiene que borrarse acá también',
+    );
+    expect(usuario.email, 'quien@ejemplo.com', reason: 'lo demás no se toca');
+  });
 
-      remote.descargas['cuentas'] = [
-        {
-          'id': 'cuenta-1',
-          'nombre': 'Mi cuenta',
-          'dueno_id': 'user-1',
-          'plan': 'pro',
-          'estado': 'activa',
-          'prueba_termina': DateTime(2126, 1, 1).toIso8601String(),
-          'created_at': DateTime(2026, 8, 22).toIso8601String(),
-          'updated_at': DateTime(2026, 9, 1).toIso8601String(),
-          'deleted_at': null,
-        },
-      ];
+  test('un valor no nulo también pisa el viejo', () async {
+    await sembrarUsuarioLocal(nombre: 'Nombre viejo');
+    responderConNombre('Nombre nuevo');
 
-      await sync.sincronizar();
+    await sync.sincronizar();
 
-      final cuenta = await (db.select(
-        db.cuentas,
-      )..where((t) => t.id.equals('cuenta-1'))).getSingle();
-
-      expect(cuenta.plan, 'pro');
-      expect(cuenta.pruebaTermina, DateTime(2126, 1, 1));
-      expect(
-        cuenta.pruebaTermina!.isBefore(DateTime.now()),
-        isFalse,
-        reason: 'el CuentaGate ya no bloquea',
-      );
-    },
-  );
+    expect((await leerUsuario()).nombre, 'Nombre nuevo');
+  });
 }

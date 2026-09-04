@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:hato_control/auth/login_screen.dart';
-import 'package:hato_control/cuenta/estado_cuenta.dart';
-import 'package:hato_control/cuenta/suscripcion_screen.dart';
-import 'package:hato_control/cuenta/suspendida_screen.dart';
 import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'escritorio_shell.dart';
 
-/// Mismo portero que la app del teléfono (sesión → estado de la cuenta →
-/// app), pero llevando a las pantallas de escritorio. Las reglas de quién
-/// entra y quién no son compartidas: viven en el paquete de la app móvil.
+/// Mismo portero que la app del teléfono (hay sesión → adentro), pero llevando
+/// a las pantallas de escritorio. La licencia no decide quién entra: solo
+/// limita cuántas fincas puede tener la cuenta, y eso lo aplica el servidor al
+/// crear una finca.
 class EscritorioGate extends StatelessWidget {
   const EscritorioGate({super.key});
 
@@ -48,6 +46,8 @@ class EscritorioGate extends StatelessWidget {
   }
 }
 
+/// En el teléfono el sync lo dispara la lista de fincas al abrirse; acá la
+/// lista vive dentro del shell, así que el empujón lo damos desde aquí.
 class _CuentaEscritorio extends StatefulWidget {
   const _CuentaEscritorio({
     required this.usuarioId,
@@ -67,29 +67,15 @@ class _CuentaEscritorioState extends State<_CuentaEscritorio> {
   @override
   void initState() {
     super.initState();
-    // Asegurar que bajamos el estado actual de la cuenta.
     sincronizarSiSePuede();
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<CuentaRow?>(
-      stream: cuentasRepo.observarMiCuenta(widget.usuarioId),
-      builder: (context, snapshot) {
-        switch (evaluarEstadoCuenta(snapshot.data)) {
-          case EstadoCuentaApp.suspendida:
-            return const SuspendidaScreen();
-          case EstadoCuentaApp.pruebaVencida:
-            return const SuscripcionScreen();
-          case EstadoCuentaApp.normal:
-            break;
-        }
-        return EscritorioShell(
-          usuarioId: widget.usuarioId,
-          correo: widget.correo,
-          sinConexion: widget.sinConexion,
-        );
-      },
+    return EscritorioShell(
+      usuarioId: widget.usuarioId,
+      correo: widget.correo,
+      sinConexion: widget.sinConexion,
     );
   }
 }

@@ -3,11 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/local/database.dart';
 import 'login_screen.dart';
-import '../cuenta/cuenta_gate.dart';
+import '../fincas/fincas_screen.dart';
 import '../services.dart';
 
 /// Decide qué pantalla mostrar según el estado de la sesión:
-/// - Si hay sesión activa  -> HomeScreen
+/// - Si hay sesión activa  -> FincasScreen
 /// - Si no hay sesión      -> LoginScreen
 ///
 /// Escucha los cambios de autenticación en tiempo real, así que al iniciar o
@@ -25,10 +25,13 @@ class AuthGate extends StatelessWidget {
           builder: (context, sesionLocal, _) {
             final session = Supabase.instance.client.auth.currentSession;
             if (session != null) {
-              return CuentaGate(usuarioId: session.user.id, sinConexion: false);
+              return FincasScreen(
+                usuarioId: session.user.id,
+                sinConexion: false,
+              );
             }
             if (sesionLocal?.offlineActiva == true) {
-              return CuentaGate(
+              return FincasScreen(
                 usuarioId: sesionLocal!.usuarioId,
                 sinConexion: true,
               );

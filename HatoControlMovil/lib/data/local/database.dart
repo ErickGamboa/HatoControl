@@ -34,8 +34,6 @@ class Cuentas extends Table {
   TextColumn get duenoId => text()();
   TextColumn get plan => text()(); // 'invitado' | 'light' | 'medium' | 'pro'
   TextColumn get estado => text()(); // 'activa' | 'suspendida'
-  // Fin de la prueba gratis de 7 días. null = sin prueba (pagado o invitado).
-  DateTimeColumn get pruebaTermina => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -604,7 +602,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -625,10 +623,8 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(fincas, fincas.fotoLocalPath);
         await m.addColumn(fincas, fincas.fotoPendiente);
       }
-      if (from < 4) {
-        // v4: fin de la prueba gratis de 7 días en la cuenta.
-        await m.addColumn(cuentas, cuentas.pruebaTermina);
-      }
+      // v4 agregaba cuentas.prueba_termina (la prueba gratis de 7 días). Se
+      // eliminó en v18, así que ya no hace falta crearla para borrarla.
       if (from < 5) {
         // v5: identidad local para entrar sin conexión tras login online.
         await m.createTable(sesionesLocales);
@@ -773,6 +769,15 @@ class AppDatabase extends _$AppDatabase {
         // de sync ya está avanzado y no volverían a bajar.
         await m.alterTable(TableMigration(fincaMiembros));
         await _crearIndicesUnicosLocales();
+      }
+      if (from < 18) {
+        // v18: se va cuentas.prueba_termina. Ya no hay licencia que venza a
+        // los 7 días: el plan solo limita cuántas fincas se pueden crear.
+        // SQLite viejo no sabe soltar columnas, así que se recrea la tabla
+        // copiando las filas. Si el aparato venía de una versión anterior a
+        // la v4 nunca tuvo esa columna, y alterTable igual funciona: copia
+        // las columnas que existen en las dos.
+        await m.alterTable(TableMigration(cuentas));
       }
     },
   );
