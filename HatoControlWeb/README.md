@@ -68,6 +68,22 @@ flutter run -d chrome            # desarrollo
 flutter build web                # release -> build/web/
 ```
 
+Para armar lo que se publica de verdad (la portada y la app juntas):
+
+```bash
+bash scripts/construir_sitio.sh  # -> build/sitio/
+```
+
+### El sitio público
+
+`sitio/` es la portada de HatoControl y sus dos páginas legales, en HTML
+plano: `index.html`, `privacidad.html` y `soporte.html`. No son parte del
+bundle de Flutter a propósito: App Store y Google Play piden un enlace
+público a la política de privacidad y otro a soporte, y tienen que abrir sin
+esperar a que baje la app. En el dominio quedan como `/`, `/privacidad`,
+`/soporte`, y la app queda colgada de `/app/`. Los detalles del deploy están
+en `VERCEL.md`.
+
 Para probar la vista móvil en la computadora: abrir las herramientas de
 desarrollo de Chrome (F12) y activar el modo dispositivo, o simplemente
 angostar la ventana a menos de 1000 px.
