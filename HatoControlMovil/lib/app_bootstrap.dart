@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'app/teclado/teclado_del_app.dart';
 import 'app/theme.dart';
 import 'auth/auth_gate.dart';
 import 'config/supabase_config.dart';
@@ -85,10 +86,14 @@ class HatoControlApp extends StatelessWidget {
       // Flutter no cierra el teclado al tocar fuera del campo. Los
       // formularios se llenan a una mano en la manga, asi que tocar
       // cualquier espacio vacio debe ocultarlo, en toda la app.
-      builder: (context, child) => GestureDetector(
-        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        behavior: HitTestBehavior.opaque,
-        child: child,
+      // El teclado propio va por fuera del GestureDetector: si quedara adentro,
+      // tocar entre dos teclas apagaria el campo que se esta llenando.
+      builder: (context, child) => TecladoDelApp(
+        child: GestureDetector(
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          behavior: HitTestBehavior.opaque,
+          child: child,
+        ),
       ),
       home: home,
     );

@@ -34,6 +34,7 @@ web on a phone, web on a computer), not just for the APK. Two consequences:
 - `lib/data/repositories/`: local-first business operations. UI should call repositories, not Supabase directly.
 - `lib/data/sync/sync_service.dart`: bidirectional sync between local Drift tables and Supabase.
 - `lib/app/permisos_finca.dart`: `PermisosFinca` — read-only state for the open finca (invited users). Loaded by `FincaDetalleScreen`, read by the module screens.
+- `lib/app/teclado/`: the app's own on-screen keyboard. The ear-tag reader pairs over Bluetooth as an HID keyboard, and the OS then hides its own keyboard app-wide (on iOS with no setting or public API to bring it back), so no field could be typed by hand — not even the login. `TecladoDelApp` wraps the whole app from the `MaterialApp.builder`, watches the `FocusManager`, and draws its own keyboard only while a physical keyboard is connected. With no reader connected it does nothing and the system keyboard behaves as always.
 - Feature UI folders: `auth/`, `cuenta/`, `fincas/`, `lotes/`, `pesaje/`, `dietas/`, `sanidad/`, `venta/`, `home/`.
 - `docs/ESPECIFICACION_FUNCIONAL.md`: product behavior (oro).
 - `docs/MODELO_DATOS.md`: domain model and Supabase/RLS expectations.
