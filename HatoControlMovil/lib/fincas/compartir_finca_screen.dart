@@ -273,7 +273,6 @@ class _DialogoCompartirState extends State<_DialogoCompartir> {
           const SizedBox(height: 16),
           TextField(
             controller: _ctrl,
-            autofocus: true,
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
             onSubmitted: (_) => _compartir(),

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Campo para escanear/ingresar un identificador (p. ej. arete): toma foco al
-/// aparecer y selecciona todo el texto al recibir foco, para que escribir
-/// encima reemplace el valor anterior en vez de agregarlo.
+/// Campo para escanear/ingresar un identificador (p. ej. arete): selecciona
+/// todo el texto al recibir foco, para que escribir encima reemplace el valor
+/// anterior en vez de agregarlo.
+///
+/// **No toma el foco solo.** Ningún campo de la app lo hace: el teclado sale
+/// cuando el ganadero toca donde quiere escribir, y no al abrirse la pantalla.
+/// La lectura del lector no depende del foco — la recoge la pantalla entera
+/// (ver `LectorDeAretes`).
 class ScanField extends StatefulWidget {
   const ScanField({
     super.key,
@@ -15,7 +20,6 @@ class ScanField extends StatefulWidget {
     this.textInputAction = TextInputAction.next,
     this.onChanged,
     this.onSubmitted,
-    this.autofocus = true,
     this.soloNumeros = true,
   });
 
@@ -27,7 +31,6 @@ class ScanField extends StatefulWidget {
   final TextInputAction textInputAction;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
-  final bool autofocus;
 
   /// Los aretes son numéricos: además del teclado numérico se filtra la
   /// entrada, porque en Android el teclado se puede cambiar a letras y un
@@ -44,11 +47,6 @@ class _ScanFieldState extends State<ScanField> {
   void initState() {
     super.initState();
     widget.focusNode.addListener(_seleccionarTodo);
-    if (widget.autofocus) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.focusNode.requestFocus();
-      });
-    }
   }
 
   void _seleccionarTodo() {

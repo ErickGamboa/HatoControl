@@ -195,7 +195,6 @@ class _InvitadoScreenState extends State<InvitadoScreen> {
           controller: _emailCtrl,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
-          autofocus: true,
           decoration: const InputDecoration(
             labelText: 'Correo',
             prefixIcon: Icon(Icons.email_outlined),
@@ -249,7 +248,6 @@ class _InvitadoScreenState extends State<InvitadoScreen> {
         TextField(
           controller: _codigoCtrl,
           keyboardType: TextInputType.number,
-          autofocus: true,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           style: const TextStyle(fontSize: 24, letterSpacing: 4),
           textAlign: TextAlign.center,

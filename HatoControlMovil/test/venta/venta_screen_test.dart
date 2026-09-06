@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/data/repositories/pesajes_repository.dart';
@@ -90,6 +91,50 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
   }
+
+  testWidgets('el lector escribe el arete sin que nadie tenga el foco', (
+    tester,
+  ) async {
+    // Ningun campo de la app toma el foco solo, asi que Venta tiene que
+    // recoger la lectura a nivel de pantalla igual que Trabajo. Antes dependia
+    // de dejar el campo del arete enfocado, y eso hacia saltar el teclado.
+    final finca = await (db.select(
+      db.fincas,
+    )..where((t) => t.id.equals('f1'))).getSingle();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VentaScreen(
+          finca: finca,
+          usuarioId: 'u1',
+          pesajesRepository: pesajes,
+          ventasRepository: ventas,
+          sanidadRepository: sanidad,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    TextField campo(String clave) => tester.widget<TextField>(
+      find.descendant(
+        of: find.byKey(ValueKey(clave)),
+        matching: find.byType(TextField),
+      ),
+    );
+
+    // Al abrirse la pantalla ningun campo tiene el foco: sin foco no hay
+    // teclado tapando la lista.
+    expect(campo('venta.animalId').focusNode!.hasFocus, isFalse);
+    expect(campo('venta.peso').focusNode!.hasFocus, isFalse);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit4);
+    await tester.pumpAndSettle();
+
+    expect(campo('venta.animalId').controller!.text, '904');
+
+    await cerrar(tester);
+  });
 
   testWidgets('el grupo recién creado avisa que faltan datos de planta', (
     tester,

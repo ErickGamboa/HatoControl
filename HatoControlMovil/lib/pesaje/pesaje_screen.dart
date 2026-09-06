@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../app/teclado/lector_de_aretes.dart';
 import '../app/theme.dart';
 import '../app/widgets/quick_number_field.dart';
 import '../app/widgets/scan_field.dart';
@@ -65,104 +66,37 @@ class _PesajeScreenState extends State<PesajeScreen> {
   late final Stream<List<PesajeHoy>> _pesajesDelDia = widget.pesajesRepository
       .observarPesajesDelDia(widget.finca.id, _inicioDeHoy);
 
-  /// Cuándo llegó la última tecla del lector. Si pasó más de [_pausaLectura]
-  /// se toma como una lectura nueva y se reemplaza el arete anterior: en la
-  /// manga lo que importa es el animal que se tiene enfrente.
-  DateTime? _ultimaTecla;
-  static const _pausaLectura = Duration(milliseconds: 400);
+  /// El lector escribe en el campo del arete sin necesidad de que ese campo
+  /// tenga el foco: ningún campo de la app toma el foco solo.
+  late final _lector = LectorDeAretes(
+    campo: _identCtrl,
+    // El campo del arete recibe solo cuando lo tiene; el del peso es del
+    // ganadero. Con una hoja o un diálogo abierto manda lo que esté arriba.
+    puedeLeer: () =>
+        mounted &&
+        !_identFocus.hasFocus &&
+        !_pesoFocus.hasFocus &&
+        ModalRoute.of(context)?.isCurrent == true,
+    alTerminarLaLectura: () {
+      if (mounted) _pesoFocus.requestFocus();
+    },
+  );
 
   @override
   void initState() {
     super.initState();
-    // El lector de aretes entra por Bluetooth como un teclado, y un teclado
-    // solo escribe donde está el foco. Escuchando acá, a nivel de pantalla, la
-    // lectura entra igual aunque el ganadero haya tocado un botón o la lista.
-    HardwareKeyboard.instance.addHandler(_lecturaDeArete);
+    _lector.escuchar();
   }
 
   @override
   void dispose() {
-    HardwareKeyboard.instance.removeHandler(_lecturaDeArete);
+    _lector.soltar();
     _identCtrl.dispose();
     _pesoCtrl.dispose();
     _identFocus.dispose();
     _pesoFocus.dispose();
     super.dispose();
   }
-
-  /// Mete en el campo del arete lo que manda el lector cuando ninguna casilla
-  /// de texto tiene el foco. Devuelve false siempre: solo observa, no bloquea.
-  ///
-  /// El hueco que queda es el campo del peso: ahí las teclas son del ganadero
-  /// y Flutter no permite quitárselas (solo verlas), así que una lectura en ese
-  /// momento ensuciaría los dos campos.
-  bool _lecturaDeArete(KeyEvent evento) {
-    if (evento is! KeyDownEvent || !mounted) return false;
-    // El campo del arete ya recibe solo; el del peso es del ganadero.
-    if (_identFocus.hasFocus || _pesoFocus.hasFocus) return false;
-    // Con una hoja o un diálogo abierto manda lo que esté arriba.
-    if (ModalRoute.of(context)?.isCurrent != true) return false;
-
-    final tecla = evento.logicalKey;
-    if (tecla == LogicalKeyboardKey.enter ||
-        tecla == LogicalKeyboardKey.numpadEnter) {
-      if (_identCtrl.text.isEmpty) return false;
-      _ultimaTecla = null;
-      // El foco se mueve DESPUÉS de que este Enter termine de repartirse. Si
-      // se moviera ya, el mismo Enter caería en el campo del peso, que lo
-      // tomaría como "listo" y dispararía Registrar con el peso vacío.
-      scheduleMicrotask(() {
-        if (mounted) _pesoFocus.requestFocus();
-      });
-      return false;
-    }
-
-    final digito = _digitoDe(evento);
-    if (digito == null) return false;
-
-    final ahora = DateTime.now();
-    final anterior = _ultimaTecla;
-    final lecturaNueva =
-        anterior == null || ahora.difference(anterior) > _pausaLectura;
-    _ultimaTecla = ahora;
-    _identCtrl.text = lecturaNueva ? digito : '${_identCtrl.text}$digito';
-    return false;
-  }
-
-  /// El dígito que trae la tecla, o null si no es un dígito. Se mira primero
-  /// el carácter y si no viene se cae a la tecla: hay lectores que mandan el
-  /// código sin carácter.
-  static String? _digitoDe(KeyEvent evento) {
-    final c = evento.character;
-    if (c != null && c.length == 1) {
-      final u = c.codeUnitAt(0);
-      if (u >= 0x30 && u <= 0x39) return c;
-    }
-    return _teclasDigito[evento.logicalKey];
-  }
-
-  static final _teclasDigito = <LogicalKeyboardKey, String>{
-    LogicalKeyboardKey.digit0: '0',
-    LogicalKeyboardKey.digit1: '1',
-    LogicalKeyboardKey.digit2: '2',
-    LogicalKeyboardKey.digit3: '3',
-    LogicalKeyboardKey.digit4: '4',
-    LogicalKeyboardKey.digit5: '5',
-    LogicalKeyboardKey.digit6: '6',
-    LogicalKeyboardKey.digit7: '7',
-    LogicalKeyboardKey.digit8: '8',
-    LogicalKeyboardKey.digit9: '9',
-    LogicalKeyboardKey.numpad0: '0',
-    LogicalKeyboardKey.numpad1: '1',
-    LogicalKeyboardKey.numpad2: '2',
-    LogicalKeyboardKey.numpad3: '3',
-    LogicalKeyboardKey.numpad4: '4',
-    LogicalKeyboardKey.numpad5: '5',
-    LogicalKeyboardKey.numpad6: '6',
-    LogicalKeyboardKey.numpad7: '7',
-    LogicalKeyboardKey.numpad8: '8',
-    LogicalKeyboardKey.numpad9: '9',
-  };
 
   /// Confirmación que se siente: en un corral con ruido la vibración es lo que
   /// se nota, y si no vibró es que no quedó registrado.
@@ -171,10 +105,11 @@ class _PesajeScreenState extends State<PesajeScreen> {
     SystemSound.play(SystemSoundType.click);
   }
 
-  /// Deja el campo del arete listo para la próxima lectura. Se llama al volver
-  /// de cualquier hoja o diálogo: es justo donde el foco quedaba flotando.
-  void _volverAlArete() {
-    if (mounted) _identFocus.requestFocus();
+  /// Suelta el foco: ni el arete ni el peso quedan activos, así que no sale
+  /// ningún teclado y el lector vuelve a entrar por la pantalla entera. Se
+  /// llama al volver de cualquier hoja o diálogo y después de registrar.
+  void _soltarElFoco() {
+    if (mounted) FocusScope.of(context).unfocus();
   }
 
   void _mostrar(String texto) {
@@ -197,12 +132,10 @@ class _PesajeScreenState extends State<PesajeScreen> {
     final peso = _parsePeso();
     if (ident.isEmpty) {
       _mostrar('Escaneá o escribí el identificador.');
-      _identFocus.requestFocus();
       return;
     }
     if (peso == null) {
       _mostrar('Ingresá el peso (kg).');
-      _pesoFocus.requestFocus();
       return;
     }
 
@@ -259,7 +192,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
       );
       _identCtrl.clear();
       _pesoCtrl.clear();
-      _identFocus.requestFocus();
+      _soltarElFoco();
       return;
     }
 
@@ -310,7 +243,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
         lotes: lotes,
       ),
     );
-    _volverAlArete();
+    _soltarElFoco();
     if (alta == null) return;
 
     await widget.pesajesRepository.crearAnimalConPesaje(
@@ -348,7 +281,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
     });
     _identCtrl.clear();
     _pesoCtrl.clear();
-    _identFocus.requestFocus();
+    _soltarElFoco();
   }
 
   /// Toca una fila de la lista del día → corregir lote, peso y precio por kilo,
@@ -366,7 +299,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
         pesoInicial: _pesoFmt(p.peso),
       ),
     );
-    _volverAlArete();
+    _soltarElFoco();
     if (r == null) return;
     if (r.eliminar) {
       await _eliminarPesaje(p);
@@ -479,7 +412,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
       usuarioId: widget.usuarioId,
       sanidadRepository: widget.sanidadRepository,
     );
-    _volverAlArete();
+    _soltarElFoco();
   }
 
   @override
@@ -782,7 +715,6 @@ class _CorregirPesajeSheetState extends State<_CorregirPesajeSheet> {
                 controller: _pesoCtrl,
                 labelText: 'Peso',
                 suffixText: 'kg',
-                autofocus: true,
               ),
               const SizedBox(height: HatoSpacing.md),
               QuickNumberField(

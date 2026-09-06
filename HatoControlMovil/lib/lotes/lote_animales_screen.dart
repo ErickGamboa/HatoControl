@@ -249,7 +249,6 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
             child: TextField(
               controller: _buscarCtrl,
               focusNode: _buscarFocus,
-              autofocus: true,
               onChanged: (v) => setState(() => _filtro = v.trim()),
               decoration: InputDecoration(
                 hintText: 'Buscar o escanear arete',

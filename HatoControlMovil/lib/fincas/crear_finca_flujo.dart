@@ -125,7 +125,6 @@ class _DialogoNuevaFincaState extends State<DialogoNuevaFinca> {
           TextField(
             key: const ValueKey('fincas.name'),
             controller: _ctrl,
-            autofocus: true,
             textCapitalization: TextCapitalization.words,
             decoration: const InputDecoration(
               labelText: 'Nombre de la finca',

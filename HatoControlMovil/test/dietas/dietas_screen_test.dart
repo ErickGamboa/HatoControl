@@ -1,6 +1,9 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hato_control/app/teclado/teclado_del_app.dart';
+import 'package:hato_control/app/teclado/teclado_del_sistema.dart';
+import 'package:hato_control/app/teclado/teclado_en_pantalla.dart';
 import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/data/repositories/dietas_repository.dart';
 import 'package:hato_control/dietas/dietas_screen.dart';
@@ -50,6 +53,50 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
   }
+
+  testWidgets('el modal abre sin teclado y con el teclado propio no desborda', (
+    tester,
+  ) async {
+    // El diálogo de dietas es alto. Antes el campo Nombre pedía el foco solo,
+    // así que el teclado salía encima y dejaba componentes afuera; y el
+    // teclado propio, cuando era más alto que el del sistema, desbordaba el
+    // diálogo. Este test lo agarra: cualquier overflow revienta la prueba.
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    final finca = await laFinca();
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => TecladoDelApp(
+          detector: TecladoDelSistema.fijo(true),
+          child: child!,
+        ),
+        home: DietasScreen(finca: finca, repo: repo),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('dietas.crear')));
+    await tester.pumpAndSettle();
+
+    // Al abrirse, ningún campo tomó el foco: no hay teclado tapando nada.
+    expect(find.byType(TecladoEnPantalla), findsNothing);
+    expect(find.byKey(const ValueKey('dietas.guardar')), findsOneWidget);
+
+    // Y con el teclado arriba el botón de guardar se sigue pudiendo tocar.
+    await tester.tap(find.byKey(const ValueKey('dietas.nombre')));
+    await tester.pump(TecladoDelApp.esperaAntesDeMostrar);
+    await tester.pumpAndSettle();
+    expect(find.byType(TecladoEnPantalla), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('dietas.guardar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('dietas.guardar')));
+    await tester.pumpAndSettle();
+
+    await cerrarPantalla(tester);
+  });
 
   testWidgets('el modal calcula ₡/kg × kg y guarda el costo derivado', (
     tester,

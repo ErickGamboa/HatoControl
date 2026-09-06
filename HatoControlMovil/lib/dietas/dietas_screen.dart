@@ -59,7 +59,6 @@ class DietasScreen extends StatelessWidget {
               TextField(
                 key: const ValueKey('dietas.nombre'),
                 controller: nombreCtrl,
-                autofocus: true,
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Nombre',

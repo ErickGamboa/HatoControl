@@ -12,7 +12,6 @@ class QuickNumberField extends StatelessWidget {
     this.suffixText,
     this.textInputAction = TextInputAction.done,
     this.onSubmitted,
-    this.autofocus = false,
   });
 
   final TextEditingController controller;
@@ -21,14 +20,11 @@ class QuickNumberField extends StatelessWidget {
   final String? suffixText;
   final TextInputAction textInputAction;
   final ValueChanged<String>? onSubmitted;
-  final bool autofocus;
-
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
       focusNode: focusNode,
-      autofocus: autofocus,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
       textInputAction: textInputAction,

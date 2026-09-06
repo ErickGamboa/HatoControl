@@ -61,7 +61,19 @@ web on a phone, web on a computer), not just for the APK. Two consequences:
     phone is in — it is used outdoors. Do not add a dark theme without first
     fixing the screens that paint their own background (the login paints white):
     with a dark scheme they got light text on a light background.
-14. The app's own keyboard and the system keyboard must never both be on screen.
+14. No field takes focus on its own. No `autofocus: true`, and no
+    `requestFocus()` when a screen, sheet or dialog opens — a keyboard must
+    only appear after the user taps where they want to write. The two
+    programmatic focus moves that remain are user actions: the reader's Enter
+    and the keyboard's own "Siguiente" key. After saving, screens release focus
+    (`unfocus`) rather than moving it back to the tag field. The reader does not
+    need focus: `LectorDeAretes` (`lib/app/teclado/`) captures it at screen
+    level in Trabajo and Venta.
+15. The app's own keyboard must be **shorter** than the system keyboard (it
+    aims at ~30 % of the screen, always four rows). Screens are laid out for
+    the gap the system keyboard leaves; when the app's was taller, Trabajo's
+    day list and the Dietas dialog overflowed.
+16. The app's own keyboard and the system keyboard must never both be on screen.
     `TecladoDelSistema` answers whether the system will show its keyboard (on
     Android that includes the `show_ime_with_hard_keyboard` setting, not just
     whether a reader is paired), `TecladoDelApp` waits out the system

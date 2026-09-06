@@ -153,12 +153,19 @@ class _TecladoDelAppState extends State<TecladoDelApp>
     _ => 'Listo',
   };
 
+  /// El teclado propio tiene que ser **más bajo que el del sistema**.
+  ///
+  /// Las pantallas de la app están armadas para el hueco que deja el teclado de
+  /// Android/iOS (en un teléfono normal, entre el 35 % y el 40 % de la
+  /// pantalla). Cuando el propio pasaba de eso, la lista del día de Trabajo se
+  /// quedaba sin espacio y los diálogos —el de Dietas, por ejemplo— dejaban
+  /// componentes fuera. Con estas medidas ocupa cerca del 30 %.
   double _altoDelTeclado(BuildContext context) {
-    final filas = filasDe(_disposicion);
     final alto = MediaQuery.sizeOf(context).height;
-    // Teclas grandes, pero nunca tapando media pantalla.
-    final porFila = (alto * 0.44 / filas).clamp(46.0, 68.0);
-    return porFila * filas + 8;
+    // Teclas grandes igual: 46 de mínimo es más que el mínimo que pide
+    // Material para tocar con el dedo.
+    final porFila = (alto * 0.30 / filasDelTeclado).clamp(46.0, 62.0);
+    return porFila * filasDelTeclado + 8;
   }
 
   @override

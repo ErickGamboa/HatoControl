@@ -14,10 +14,11 @@ enum DisposicionTeclado {
   letras,
 }
 
-/// Cuántas filas de teclas tiene cada disposición. Lo necesita quien dibuja el
-/// teclado para saber cuánto alto reservarle *antes* de construirlo.
-int filasDe(DisposicionTeclado disposicion) =>
-    disposicion == DisposicionTeclado.letras ? 4 : 5;
+/// Todas las disposiciones tienen cuatro filas a propósito: el teclado no debe
+/// ser más alto que el del sistema, porque las pantallas de la app están
+/// pensadas para el hueco que deja ese. El pad numérico llevaba cinco y en
+/// Trabajo dejaba la lista del día sin espacio.
+const filasDelTeclado = 4;
 
 /// El teclado que trae la app.
 ///
@@ -99,12 +100,18 @@ class _TecladoEnPantallaState extends State<TecladoEnPantalla> {
 
   // --- Numérico -------------------------------------------------------------
 
+  /// Los dígitos en la cuadrícula de siempre y las teclas de servicio en la
+  /// columna de la derecha, para que quepa en cuatro filas.
   List<List<Widget>> _numerico({required bool conComa}) => [
-    [_digito('1'), _digito('2'), _digito('3')],
-    [_digito('4'), _digito('5'), _digito('6')],
-    [_digito('7'), _digito('8'), _digito('9')],
-    [conComa ? _digito(',') : const _Hueco(), _digito('0'), _borrar()],
-    [_ocultar(), _aceptar(flex: 4)],
+    [_digito('1'), _digito('2'), _digito('3'), _borrar()],
+    [_digito('4'), _digito('5'), _digito('6'), _ocultar()],
+    [
+      _digito('7'),
+      _digito('8'),
+      _digito('9'),
+      conComa ? _digito(',') : const _Hueco(),
+    ],
+    [_digito('0', flex: 3), _aceptar(flex: 5)],
   ];
 
   // --- Letras ---------------------------------------------------------------
@@ -179,8 +186,9 @@ class _TecladoEnPantallaState extends State<TecladoEnPantalla> {
   Widget _tecla(String texto, {int flex = 2}) =>
       _Tecla(etiqueta: texto, flex: flex, alTocar: () => widget.alEscribir(texto));
 
-  Widget _digito(String texto) => _Tecla(
+  Widget _digito(String texto, {int flex = 2}) => _Tecla(
     etiqueta: texto,
+    flex: flex,
     grande: true,
     alTocar: () => widget.alEscribir(texto),
   );

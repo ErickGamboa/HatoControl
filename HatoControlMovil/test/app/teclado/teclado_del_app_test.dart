@@ -386,6 +386,63 @@ void main() {
     });
   });
 
+  testWidgets('nunca sale solo: hace falta que el ganadero toque el campo', (
+    tester,
+  ) async {
+    // Ningun campo de la app pide el foco al aparecer. Si alguien vuelve a
+    // poner un autofocus, este test lo caza: al abrirse la pantalla no debe
+    // haber teclado tapando nada.
+    await montar(
+      tester,
+      detector: detectorEn(true),
+      cuerpo: TextField(controller: TextEditingController()),
+    );
+
+    await tester.pump(TecladoDelApp.esperaAntesDeMostrar);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TecladoEnPantalla), findsNothing);
+  });
+
+  testWidgets('el teclado propio es mas bajo que el del sistema', (
+    tester,
+  ) async {
+    // Las pantallas estan armadas para el hueco que deja el teclado del
+    // sistema (35-40 % en un telefono). Si el propio se pasa, la lista del dia
+    // de Trabajo se queda sin espacio y los dialogos dejan botones afuera.
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    for (final tipo in [
+      TextInputType.number,
+      const TextInputType.numberWithOptions(decimal: true),
+      TextInputType.emailAddress,
+    ]) {
+      final foco = FocusNode();
+      addTearDown(foco.dispose);
+      await montar(
+        tester,
+        detector: detectorEn(true),
+        cuerpo: TextField(
+          focusNode: foco,
+          controller: TextEditingController(),
+          keyboardType: tipo,
+        ),
+      );
+      foco.requestFocus();
+      await esperarAlTeclado(tester);
+
+      final alto = tester.getSize(find.byType(TecladoEnPantalla)).height;
+      final pantalla = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      expect(
+        alto / pantalla,
+        lessThan(0.35),
+        reason: 'el teclado de $tipo ocupa demasiado',
+      );
+    }
+  });
+
   testWidgets('el teclado deja lugar abajo para que el campo no quede tapado', (
     tester,
   ) async {

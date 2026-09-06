@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/teclado/lector_de_aretes.dart';
 import '../app/theme.dart';
 import '../app/widgets/quick_number_field.dart';
 import '../app/widgets/scan_field.dart';
@@ -54,8 +55,31 @@ class _VentaScreenState extends State<VentaScreen>
   final _enCurso = <_ItemVenta>[];
   bool _guardando = false;
 
+  /// Igual que en Trabajo: la lectura entra aunque ningún campo tenga el foco.
+  /// Antes Venta dependía de dejar el campo del arete enfocado, y eso hacía
+  /// saltar el teclado cada vez que se agregaba un animal a la lista.
+  late final _lector = LectorDeAretes(
+    campo: _identCtrl,
+    puedeLeer: () =>
+        mounted &&
+        _tabs.index == 0 &&
+        !_identFocus.hasFocus &&
+        !_pesoFocus.hasFocus &&
+        ModalRoute.of(context)?.isCurrent == true,
+    alTerminarLaLectura: () {
+      if (mounted) _pesoFocus.requestFocus();
+    },
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _lector.escuchar();
+  }
+
   @override
   void dispose() {
+    _lector.soltar();
     _tabs.dispose();
     _identCtrl.dispose();
     _pesoCtrl.dispose();
@@ -86,12 +110,10 @@ class _VentaScreenState extends State<VentaScreen>
     final peso = _parse(_pesoCtrl);
     if (ident.isEmpty) {
       _snack('Escaneá o escribí el identificador.');
-      _identFocus.requestFocus();
       return;
     }
     if (peso == null) {
       _snack('Ingresá los kilos de salida.');
-      _pesoFocus.requestFocus();
       return;
     }
 
@@ -136,7 +158,10 @@ class _VentaScreenState extends State<VentaScreen>
     });
     _identCtrl.clear();
     _pesoCtrl.clear();
-    _identFocus.requestFocus();
+    // Sin foco no sale ningún teclado y el lector sigue entrando por la
+    // pantalla entera, listo para el siguiente animal.
+    _identFocus.unfocus();
+    _pesoFocus.unfocus();
     _snack('${animal.identificador} agregado');
   }
 

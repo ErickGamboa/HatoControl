@@ -30,7 +30,6 @@ class LotesScreen extends StatelessWidget {
             TextField(
               key: const ValueKey('lotes.name'),
               controller: nombreCtrl,
-              autofocus: true,
               textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
                 labelText: 'Nombre del lote',
