@@ -81,8 +81,12 @@ class HatoControlApp extends StatelessWidget {
       title: 'HatoControl',
       debugShowCheckedModeBanner: false,
       theme: HatoTheme.light,
-      darkTheme: HatoTheme.dark,
-      themeMode: ThemeMode.system,
+      // HatoControl es SIEMPRE clara, tenga el telefono el modo que tenga. Se
+      // trabaja al sol y las pantallas y los fondos estan pensados para eso.
+      // Antes decia ThemeMode.system: con el telefono en oscuro, el login
+      // (que pinta su fondo blanco a mano) quedaba con letras claras sobre
+      // blanco y no se leia nada de lo que se escribia.
+      themeMode: ThemeMode.light,
       // Flutter no cierra el teclado al tocar fuera del campo. Los
       // formularios se llenan a una mano en la manga, asi que tocar
       // cualquier espacio vacio debe ocultarlo, en toda la app.

@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'campo_enfocado.dart';
+import 'teclado_del_sistema.dart';
 import 'teclado_en_pantalla.dart';
-import 'teclado_fisico.dart';
 
 /// Envuelve toda la app y le pone el teclado de HatoControl encima cuando el
 /// del sistema no va a salir.
@@ -14,22 +16,42 @@ import 'teclado_fisico.dart';
 /// login— y el ganadero se queda sin poder escribir nada a mano.
 ///
 /// **Cómo funciona.** Se cuelga del [FocusManager]: cuando el foco cae en un
-/// campo de texto y hay un teclado físico conectado, dibuja el teclado propio
-/// y le miente al [MediaQuery] de abajo diciéndole que el teclado del sistema
-/// está arriba (`viewInsets`), que es lo que ya hace subir los `Scaffold`, los
-/// diálogos y los formularios de la app. Ningún campo tuvo que cambiar.
+/// campo de texto y el sistema tiene escondido el suyo, dibuja el teclado
+/// propio y le miente al [MediaQuery] de abajo diciéndole que el teclado del
+/// sistema está arriba (`viewInsets`), que es lo que ya hace subir los
+/// `Scaffold`, los diálogos y los formularios de la app. Ningún campo tuvo que
+/// cambiar.
+///
+/// **Nunca salen los dos teclados.** Tres cosas lo sostienen:
+/// 1. [TecladoDelSistema] contesta si el del sistema va a salir, no solo si hay
+///    lector: en Android eso incluye el ajuste «mostrar teclado en pantalla».
+/// 2. Al enfocar un campo se espera [_esperaAntesDeMostrar] antes de dibujar el
+///    propio, que es lo que tarda el del sistema en subir. Sin esa espera se
+///    verían los dos por un parpadeo en cualquier equipo donde el ajuste esté
+///    prendido o el fabricante lo ignore.
+/// 3. Si aun así el sistema tapa la pantalla desde abajo
+///    ([_umbralTecladoDelSistema]), el propio se quita del medio.
 ///
 /// Cuando **no** hay lector conectado no hace absolutamente nada: sale el
 /// teclado del sistema de siempre, con su dictado, su autocorrector y su
 /// gestor de contraseñas.
 class TecladoDelApp extends StatefulWidget {
-  TecladoDelApp({super.key, required this.child, TecladoFisico? detector})
-    : detector = detector ?? tecladoFisico;
+  TecladoDelApp({super.key, required this.child, TecladoDelSistema? detector})
+    : detector = detector ?? tecladoDelSistema;
 
   final Widget child;
 
   /// Inyectable para los tests.
-  final TecladoFisico detector;
+  final TecladoDelSistema detector;
+
+  /// Lo que se le da al teclado del sistema para asomarse antes de dibujar el
+  /// propio. Es imperceptible al escribir y ahorra el parpadeo de los dos.
+  static const esperaAntesDeMostrar = Duration(milliseconds: 250);
+
+  /// Cuánto tiene que tapar el sistema desde abajo para dar por hecho que ya
+  /// está mostrando *su* teclado. Con teclado físico iOS deja una barrita de
+  /// atajos de unos 50, y Android nada; un teclado de verdad pasa de 200.
+  static const umbralTecladoDelSistema = 120.0;
 
   @override
   State<TecladoDelApp> createState() => _TecladoDelAppState();
@@ -42,18 +64,23 @@ class _TecladoDelAppState extends State<TecladoDelApp>
   /// El ganadero apretó «ocultar»: se respeta hasta que cambie de campo.
   bool _ocultadoAMano = false;
 
+  /// Ya pasó la espera de [TecladoDelApp.esperaAntesDeMostrar] para este campo.
+  bool _pasoLaEspera = false;
+  Timer? _espera;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     FocusManager.instance.addListener(_cambioElFoco);
-    widget.detector.conectado.addListener(_repintar);
+    widget.detector.escondido.addListener(_repintar);
     widget.detector.iniciar();
   }
 
   @override
   void dispose() {
-    widget.detector.conectado.removeListener(_repintar);
+    _espera?.cancel();
+    widget.detector.escondido.removeListener(_repintar);
     FocusManager.instance.removeListener(_cambioElFoco);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -82,14 +109,24 @@ class _TecladoDelAppState extends State<TecladoDelApp>
     final campo = CampoEnfocado.actual();
     // El FocusManager avisa por muchas cosas; solo importa cambiar de campo.
     if (campo?.estado == _campo?.estado) return;
+
+    _espera?.cancel();
     setState(() {
       _campo = campo;
       _ocultadoAMano = false;
+      _pasoLaEspera = false;
+    });
+    if (campo == null) return;
+    _espera = Timer(TecladoDelApp.esperaAntesDeMostrar, () {
+      if (mounted) setState(() => _pasoLaEspera = true);
     });
   }
 
   bool get _seMuestra =>
-      widget.detector.conectado.value && _campo != null && !_ocultadoAMano;
+      widget.detector.escondido.value &&
+      _campo != null &&
+      _pasoLaEspera &&
+      !_ocultadoAMano;
 
   /// El teclado sale del tipo que ya declara cada campo: los aretes piden
   /// `number`, los pesos y precios `numberWithOptions(decimal: true)`, y todo
@@ -124,21 +161,19 @@ class _TecladoDelAppState extends State<TecladoDelApp>
     return porFila * filas + 8;
   }
 
-  /// Cuánto tiene que tapar el sistema desde abajo para dar por hecho que ya
-  /// está mostrando *su* teclado. Con teclado físico iOS deja una barrita de
-  /// atajos de unos 50, y Android nada; un teclado de verdad pasa de 200.
-  static const _umbralTecladoDelSistema = 120.0;
-
   @override
   Widget build(BuildContext context) {
     final medios = MediaQuery.of(context);
     if (!_seMuestra) return widget.child;
 
     // Lo que ya tapa el sistema desde abajo. En Android se puede prender a mano
-    // «mostrar teclado en pantalla» aunque haya teclado físico: si el ganadero
-    // lo hizo, manda el del sistema y este se quita del medio.
+    // «mostrar teclado en pantalla» aunque haya teclado físico, y algún
+    // fabricante podría ignorar el ajuste: si el del sistema está arriba, este
+    // se quita del medio.
     final tapadoPorElSistema = medios.viewInsets.bottom;
-    if (tapadoPorElSistema > _umbralTecladoDelSistema) return widget.child;
+    if (tapadoPorElSistema > TecladoDelApp.umbralTecladoDelSistema) {
+      return widget.child;
+    }
 
     final alto = _altoDelTeclado(context);
 
@@ -158,6 +193,8 @@ class _TecladoDelAppState extends State<TecladoDelApp>
         Positioned(
           left: 0,
           right: 0,
+          // Con teclado físico iOS deja abajo una barrita de atajos («Scan
+          // Text»): el teclado propio va encima de ella, no debajo.
           bottom: tapadoPorElSistema,
           // La app entera cierra el teclado al tocar cualquier espacio vacío
           // (ver el `builder` del MaterialApp). Sin esto, tocar entre dos

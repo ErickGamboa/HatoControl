@@ -13,19 +13,23 @@ abstract final class HatoSpacing {
   static const double xl = 24;
 }
 
-/// Tema visual de HatoControl: mismo esquema de color en claro y oscuro,
-/// generado a partir de los colores de marca.
+/// Tema visual de HatoControl, generado a partir de los colores de marca.
+///
+/// Hay **un solo tema y es claro**, aunque el telefono este en modo oscuro: se
+/// trabaja al sol, en la manga, y las pantallas estan pensadas para eso. No
+/// agregues un tema oscuro sin revisar antes las pantallas que pintan su fondo
+/// a mano (el login pinta blanco): con el esquema oscuro les tocaban letras
+/// claras sobre fondo claro y no se leia lo que se escribia.
 abstract final class HatoTheme {
-  static ThemeData get light => _build(Brightness.light);
-  static ThemeData get dark => _build(Brightness.dark);
+  static ThemeData get light => _build();
 
-  static ThemeData _build(Brightness brightness) {
+  static ThemeData _build() {
     final scheme = ColorScheme.fromSeed(
       seedColor: kVerdeHato,
       primary: kVerdeHato,
       secondary: kAzulHato,
       tertiary: kAzulHato,
-      brightness: brightness,
+      brightness: Brightness.light,
     );
     return ThemeData(
       colorScheme: scheme,

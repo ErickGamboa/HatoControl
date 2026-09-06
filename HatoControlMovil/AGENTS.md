@@ -57,6 +57,16 @@ web on a phone, web on a computer), not just for the APK. Two consequences:
     (`lib/app/permisos_finca.dart`). Sharing a finca always grants `lector`.
 12. The app never calls `auth.signUp`. There is no self-service account creation:
     accounts are opened by the admin when a license is bought, or by invitation.
+13. The app is always light (`themeMode: ThemeMode.light`), whatever mode the
+    phone is in — it is used outdoors. Do not add a dark theme without first
+    fixing the screens that paint their own background (the login paints white):
+    with a dark scheme they got light text on a light background.
+14. The app's own keyboard and the system keyboard must never both be on screen.
+    `TecladoDelSistema` answers whether the system will show its keyboard (on
+    Android that includes the `show_ime_with_hard_keyboard` setting, not just
+    whether a reader is paired), `TecladoDelApp` waits out the system
+    keyboard's slide-in before drawing its own, and it steps aside if
+    `viewInsets.bottom` says the system keyboard is up anyway.
 
 ## Before changing code
 - Read the relevant repository and screen file.

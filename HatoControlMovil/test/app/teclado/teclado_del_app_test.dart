@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hato_control/app/teclado/teclado_del_app.dart';
+import 'package:hato_control/app/teclado/teclado_del_sistema.dart';
 import 'package:hato_control/app/teclado/teclado_en_pantalla.dart';
-import 'package:hato_control/app/teclado/teclado_fisico.dart';
 
 /// Los dibujitos de las teclas de borrar y ocultar, tal como se pintan.
 const teclaBorrar = '⌫';
@@ -12,11 +12,20 @@ const teclaOcultar = '⌄';
 void main() {
   /// Un detector que se puede prender y apagar a mano: en los tests no hay
   /// lector Bluetooth ni canal nativo.
-  TecladoFisico detectorEn(bool conectado) => TecladoFisico.fijo(conectado);
+  TecladoDelSistema detectorEn(bool escondido) =>
+      TecladoDelSistema.fijo(escondido);
+
+  /// El teclado propio se toma un momento antes de dibujarse, para no cruzarse
+  /// con el del sistema si este llegara a subir. Los tests tienen que dejar
+  /// pasar esa espera igual que el ganadero.
+  Future<void> esperarAlTeclado(WidgetTester tester) async {
+    await tester.pump(TecladoDelApp.esperaAntesDeMostrar);
+    await tester.pumpAndSettle();
+  }
 
   Future<void> montar(
     WidgetTester tester, {
-    required TecladoFisico detector,
+    required TecladoDelSistema detector,
     required Widget cuerpo,
   }) async {
     await tester.pumpWidget(
@@ -29,18 +38,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> enfocar(WidgetTester tester) async {
+    await tester.tap(find.byType(TextField).first);
+    await esperarAlTeclado(tester);
+  }
+
   testWidgets('sin lector conectado no se mete: manda el teclado del sistema', (
     tester,
   ) async {
-    final controlador = TextEditingController();
     await montar(
       tester,
       detector: detectorEn(false),
-      cuerpo: TextField(controller: controlador),
+      cuerpo: TextField(controller: TextEditingController()),
     );
 
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
+    await enfocar(tester);
 
     expect(find.byType(TecladoEnPantalla), findsNothing);
   });
@@ -56,8 +68,7 @@ void main() {
 
     expect(find.byType(TecladoEnPantalla), findsNothing);
 
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
+    await enfocar(tester);
 
     expect(find.byType(TecladoEnPantalla), findsOneWidget);
   });
@@ -76,13 +87,12 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
+    await enfocar(tester);
 
     // El pad numerico no trae letras.
     expect(find.text('q'), findsNothing);
     expect(find.text('7'), findsOneWidget);
-    // Sin decimales el campo de arete no muestra la coma.
+    // Sin decimales el campo del arete no muestra la coma.
     expect(find.text(','), findsNothing);
 
     await tester.tap(find.text('7'));
@@ -103,8 +113,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
+    await enfocar(tester);
 
     await tester.tap(find.text('4'));
     await tester.tap(find.text(','));
@@ -125,8 +134,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
+    await enfocar(tester);
 
     await tester.tap(find.text(teclaBorrar));
     await tester.pumpAndSettle();
@@ -147,8 +155,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
+    await enfocar(tester);
 
     expect(find.text('q'), findsOneWidget);
 
@@ -178,8 +185,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
+    await enfocar(tester);
     await tester.tap(find.text('123'));
     await tester.pumpAndSettle();
 
@@ -194,19 +200,17 @@ void main() {
     tester,
   ) async {
     String? enviado;
-    final controlador = TextEditingController(text: '99');
     await montar(
       tester,
       detector: detectorEn(true),
       cuerpo: TextField(
-        controller: controlador,
+        controller: TextEditingController(text: '99'),
         keyboardType: TextInputType.number,
         onSubmitted: (valor) => enviado = valor,
       ),
     );
 
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
+    await enfocar(tester);
 
     expect(find.text('Listo'), findsOneWidget);
     await tester.tap(find.text('Listo'));
@@ -228,8 +232,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
+    await enfocar(tester);
 
     expect(find.text('Siguiente'), findsOneWidget);
   });
@@ -254,7 +257,7 @@ void main() {
     );
 
     primero.requestFocus();
-    await tester.pumpAndSettle();
+    await esperarAlTeclado(tester);
     expect(find.byType(TecladoEnPantalla), findsOneWidget);
 
     await tester.tap(find.text(teclaOcultar));
@@ -262,7 +265,7 @@ void main() {
     expect(find.byType(TecladoEnPantalla), findsNothing);
 
     segundo.requestFocus();
-    await tester.pumpAndSettle();
+    await esperarAlTeclado(tester);
     expect(find.byType(TecladoEnPantalla), findsOneWidget);
   });
 
@@ -277,7 +280,7 @@ void main() {
     );
 
     foco.requestFocus();
-    await tester.pumpAndSettle();
+    await esperarAlTeclado(tester);
     expect(find.byType(TecladoEnPantalla), findsOneWidget);
 
     foco.unfocus();
@@ -299,43 +302,88 @@ void main() {
     );
 
     foco.requestFocus();
-    await tester.pumpAndSettle();
+    await esperarAlTeclado(tester);
     expect(find.byType(TecladoEnPantalla), findsOneWidget);
 
-    detector.conectado.value = false;
+    detector.escondido.value = false;
     await tester.pumpAndSettle();
     expect(find.byType(TecladoEnPantalla), findsNothing);
   });
 
-  testWidgets('si el sistema igual muestra su teclado, el propio se quita', (
-    tester,
-  ) async {
-    final foco = FocusNode();
-    addTearDown(foco.dispose);
+  group('nunca dos teclados', () {
+    testWidgets('si el sistema igual muestra el suyo, el propio se quita', (
+      tester,
+    ) async {
+      final foco = FocusNode();
+      addTearDown(foco.dispose);
 
-    // En Android se puede prender «mostrar teclado en pantalla» aunque haya
-    // teclado fisico: ahi el sistema tapa media pantalla desde abajo.
-    await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(viewInsets: EdgeInsets.only(bottom: 300)),
-        child: MaterialApp(
-          builder: (context, child) =>
-              TecladoDelApp(detector: detectorEn(true), child: child!),
-          home: Scaffold(
-            body: TextField(
-              focusNode: foco,
-              controller: TextEditingController(),
+      // En Android se puede prender «mostrar teclado en pantalla» aunque haya
+      // teclado fisico: ahi el sistema tapa media pantalla desde abajo.
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(viewInsets: EdgeInsets.only(bottom: 300)),
+          child: MaterialApp(
+            builder: (context, child) =>
+                TecladoDelApp(detector: detectorEn(true), child: child!),
+            home: Scaffold(
+              body: TextField(
+                focusNode: foco,
+                controller: TextEditingController(),
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    foco.requestFocus();
-    await tester.pumpAndSettle();
+      foco.requestFocus();
+      await esperarAlTeclado(tester);
 
-    expect(find.byType(TecladoEnPantalla), findsNothing);
+      expect(find.byType(TecladoEnPantalla), findsNothing);
+    });
+
+    testWidgets('mientras sube el del sistema, el propio no se asoma ni un frame', (
+      tester,
+    ) async {
+      final foco = FocusNode();
+      addTearDown(foco.dispose);
+      final tapado = ValueNotifier<double>(0);
+      addTearDown(tapado.dispose);
+
+      await tester.pumpWidget(
+        ValueListenableBuilder<double>(
+          valueListenable: tapado,
+          builder: (context, alto, _) => MediaQuery(
+            data: MediaQueryData(viewInsets: EdgeInsets.only(bottom: alto)),
+            child: MaterialApp(
+              builder: (context, child) =>
+                  TecladoDelApp(detector: detectorEn(true), child: child!),
+              home: Scaffold(
+                body: TextField(
+                  focusNode: foco,
+                  controller: TextEditingController(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      foco.requestFocus();
+      // El teclado del sistema tarda en subir: pasa por alturas chiquitas antes
+      // de tapar la pantalla. El propio no debe verse en ningun momento del
+      // camino, ni siquiera un parpadeo.
+      for (var ms = 0; ms <= 400; ms += 25) {
+        tapado.value = (ms * 1.2).clamp(0, 300).toDouble();
+        await tester.pump(const Duration(milliseconds: 25));
+        expect(
+          find.byType(TecladoEnPantalla),
+          findsNothing,
+          reason: 'se asomo a los $ms ms, con ${tapado.value} tapados',
+        );
+      }
+    });
   });
 
   testWidgets('el teclado deja lugar abajo para que el campo no quede tapado', (
@@ -366,7 +414,7 @@ void main() {
     expect(insetAdentro, 0);
 
     foco.requestFocus();
-    await tester.pumpAndSettle();
+    await esperarAlTeclado(tester);
 
     final alto = tester.getSize(find.byType(TecladoEnPantalla)).height;
     expect(insetAdentro, greaterThan(0));

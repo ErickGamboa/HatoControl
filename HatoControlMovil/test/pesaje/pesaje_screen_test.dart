@@ -8,6 +8,9 @@ import 'package:hato_control/data/repositories/lotes_repository.dart';
 import 'package:hato_control/data/repositories/pesajes_repository.dart';
 import 'package:hato_control/data/repositories/sanidad_repository.dart';
 import 'package:hato_control/data/repositories/ventas_repository.dart';
+import 'package:hato_control/app/teclado/teclado_del_app.dart';
+import 'package:hato_control/app/teclado/teclado_del_sistema.dart';
+import 'package:hato_control/app/teclado/teclado_en_pantalla.dart';
 import 'package:hato_control/pesaje/pesaje_screen.dart';
 
 void main() {
@@ -403,6 +406,76 @@ void main() {
     // Y ese mismo Enter no debe caer en el campo del peso: si cayera, lo
     // tomaría como "listo" y dispararía Registrar con el peso vacío.
     expect(find.text('Ingresá el peso (kg).'), findsNothing);
+
+    await cerrarPantalla(tester);
+  });
+
+  testWidgets('el lector y el teclado propio conviven en la manga', (
+    tester,
+  ) async {
+    // El caso real: lector conectado por Bluetooth, el sistema con su teclado
+    // escondido y el de la app haciendo de teclado. La lectura tiene que
+    // entrar igual aunque no haya foco en el campo del arete.
+    // Con un teclado abajo la pantalla de prueba por defecto (800x600) queda
+    // corta: se usa el tamaño de un teléfono de verdad.
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    final finca = await seedFinca();
+    await seedLote('lote-1', 'Montaña');
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => TecladoDelApp(
+          detector: TecladoDelSistema.fijo(true),
+          child: child!,
+        ),
+        home: PesajeScreen(
+          finca: finca,
+          usuarioId: 'u1',
+          pesajesRepository: PesajesRepository(db),
+          lotesRepository: LotesRepository(db),
+          sanidadRepository: SanidadRepository(db),
+          ventasRepository: VentasRepository(db),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await soltarFoco(tester);
+
+    // Sin foco no hay teclado propio: la pantalla queda entera para la lista.
+    expect(find.byType(TecladoEnPantalla), findsNothing);
+
+    await leerArete(tester, '77');
+    expect(areteEnPantalla(tester), '77');
+    expect(find.byType(TecladoEnPantalla), findsNothing);
+
+    // El Enter del lector pasa al peso, y ahi si aparece el teclado propio,
+    // con la coma decimal porque el peso la lleva.
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump(TecladoDelApp.esperaAntesDeMostrar);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TecladoEnPantalla), findsOneWidget);
+    expect(find.text(','), findsOneWidget);
+
+    // Y el ganadero termina el peso a mano con ese teclado.
+    await tester.tap(find.text('5'));
+    await tester.tap(find.text('0'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.byKey(const ValueKey('pesaje.weight')),
+              matching: find.byType(TextField),
+            ),
+          )
+          .controller!
+          .text,
+      '50',
+    );
 
     await cerrarPantalla(tester);
   });
