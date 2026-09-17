@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hato_control/analisis/analisis_screen.dart';
+import 'package:hato_control/auth/cerrar_sesion_ui.dart';
 import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/dietas/dietas_screen.dart';
 import 'package:hato_control/fincas/compartir_finca_screen.dart';
@@ -190,7 +191,7 @@ class _EscritorioShellState extends State<EscritorioShell> {
                 correo: widget.correo,
                 alElegirSeccion: _irA,
                 alIrAFincas: _volverAFincas,
-                alCerrarSesion: cerrarSesion,
+                alCerrarSesion: () => cerrarSesionConAviso(context),
               ),
             ),
             VerticalDivider(

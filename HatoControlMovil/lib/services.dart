@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/permisos_finca.dart';
+import 'auth/cierre_sesion.dart';
 import 'connectivity/estado_conexion.dart';
 import 'data/local/database.dart';
 import 'data/repositories/cuentas_repository.dart';
@@ -58,24 +59,15 @@ Future<void> sincronizarSiSePuede() async {
   await syncService.sincronizar();
 }
 
-/// Cierra la sesión y, si no quedó nada por subir, deja la copia local limpia
-/// para quien entre después en este aparato.
-///
-/// El borrado es CONDICIONAL a propósito: cerrar sesión sin internet con un
-/// día de campo sin subir no puede costar ese día. Si algo queda pendiente, la
-/// caché se conserva y el reintento la sube cuando ese mismo usuario vuelva a
-/// entrar; si entra otra cuenta, [SesionLocalRepository.guardarUsuarioVerificado]
-/// la limpia de todos modos.
-Future<void> cerrarSesion() async {
-  final quedaPorSubir = await syncService.hayPendientes();
-  await sesionLocalRepo.borrar();
-  if (!quedaPorSubir) {
-    await db.borrarDatosLocales();
-  }
-  try {
-    await supabase.auth.signOut();
-  } catch (_) {
-    // Sin conexión puede fallar el signOut remoto; la sesión local ya quedó
-    // cerrada para este dispositivo.
-  }
+/// Intenta cerrar sesión. Devuelve `0` si cerró, o cuántos registros quedaban
+/// sin subir si NO cerró (y entonces no tocó nada). La lógica —y el porqué—
+/// están en [cerrarSesionEn]; la pantalla usa `cerrarSesionConAviso`.
+Future<int> cerrarSesion({bool descartarPendientes = false}) {
+  return cerrarSesionEn(
+    db: db,
+    sync: syncService,
+    sesiones: sesionLocalRepo,
+    signOut: () => supabase.auth.signOut(),
+    descartarPendientes: descartarPendientes,
+  );
 }

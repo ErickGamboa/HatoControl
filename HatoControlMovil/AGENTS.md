@@ -111,6 +111,7 @@ cd ../HatoControlWeb && flutter analyze && flutter test && flutter build web
 - Manual testing on a device or emulator happens ONLY in the account `erick.yosue@gmail.com`, inside the finca named **`pruebas`**.
 - Every other account and every other finca holds the owner's real production data. Never register, edit, or delete anything there — not even data you plan to undo, because deletes are soft and still sync to Supabase.
 - If the emulator is signed into another account, sign out and switch before touching any write flow.
+- Merely launching the app counts as testing in whatever account is signed in: it runs migrations on that cache and triggers a sync. Check first (`adb exec-out "run-as cr.co.hato_control cat /data/data/cr.co.hato_control/app_flutter/hatocontrol.sqlite" > tmp.sqlite`, then `sqlite3 tmp.sqlite "select email from sesiones_locales;"`). If it is not `erick.yosue@gmail.com`, do not launch it — verify with `flutter test` and `flutter analyze` instead.
 
 ## Testing expectations
 - Repository/domain logic: unit tests with an in-memory Drift database.
@@ -125,4 +126,5 @@ cd ../HatoControlWeb && flutter analyze && flutter test && flutter build web
 - Do not bypass RLS assumptions; client checks are UX only, server constraints/RLS are source of truth.
 - Do not clear `pendiente` until a server upload succeeds.
 - Do not advance sync cursors beyond rows that were successfully applied locally.
+- Never let the local cache outlive the session that filled it: sync cursors belong to the device, so a cache left behind makes the next account inherit them and never download its own older rows (its finca exists in the cloud and never shows up). Signing out uploads everything and wipes the cache, or it does not sign out — see `lib/auth/cierre_sesion.dart`.
 - Avoid globals in new code; introduce constructors/interfaces to make code testable.

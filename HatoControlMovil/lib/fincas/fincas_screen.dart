@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../auth/cerrar_sesion_ui.dart';
 import '../data/local/database.dart';
 import '../data/repositories/fincas_repository.dart';
 import '../data/sync/sync_service.dart';
@@ -159,7 +160,7 @@ class _FincasScreenState extends State<FincasScreen> {
           IconButton(
             tooltip: 'Cerrar sesión',
             icon: const Icon(Icons.logout),
-            onPressed: cerrarSesion,
+            onPressed: () => cerrarSesionConAviso(context),
           ),
         ],
       ),

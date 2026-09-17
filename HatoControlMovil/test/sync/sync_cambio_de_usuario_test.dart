@@ -1,5 +1,7 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hato_control/auth/cierre_sesion.dart';
 import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/data/repositories/fincas_repository.dart';
 import 'package:hato_control/data/repositories/sesion_local_repository.dart';
@@ -210,5 +212,115 @@ void main() {
 
     expect(await fincas.observarFincas('user-a').first, hasLength(1));
     expect(await db.select(db.syncCursores).get(), isNotEmpty);
+  });
+
+  /// El agujero que dejaba la caché huérfana: al salir se borraba la identidad
+  /// pero NO los datos si algo quedaba sin subir, así que la cuenta que
+  /// entraba después no se reconocía como distinta, no se limpiaba nada y
+  /// heredaba los cursores. Ahora no se sale con trabajo pendiente: la copia
+  /// local se borra SIEMPRE al salir, así que nunca queda sin dueño.
+  group('cerrar sesión deja la copia local siempre limpia', () {
+    Future<void> dejarAlgoSinSubir() async {
+      await db
+          .into(db.lotes)
+          .insert(
+            LotesCompanion.insert(
+              id: 'lote-sin-subir',
+              fincaId: 'finca-a',
+              nombre: 'Lote de un día de campo',
+              createdAt: DateTime.utc(2026, 9, 10),
+              updatedAt: DateTime.utc(2026, 9, 10),
+              pendiente: const Value(true),
+            ),
+          );
+    }
+
+    Future<int> cerrar({bool descartarPendientes = false}) => cerrarSesionEn(
+      db: db,
+      sync: sync,
+      sesiones: sesiones,
+      signOut: () async {},
+      descartarPendientes: descartarPendientes,
+    );
+
+    test('con trabajo sin subir NO cierra y no toca nada', () async {
+      datosDeLaPrimeraCuenta();
+      await sesiones.guardarUsuarioVerificado(
+        usuarioId: 'user-a',
+        email: 'user-a@example.com',
+      );
+      await sync.sincronizar();
+      await dejarAlgoSinSubir();
+
+      expect(await cerrar(), 1);
+
+      // Sigue adentro, con su trabajo y su identidad intactos.
+      expect(await sesiones.obtener(), isNotNull);
+      expect(await db.select(db.lotes).get(), hasLength(1));
+      expect(await db.select(db.syncCursores).get(), isNotEmpty);
+    });
+
+    test('sin nada pendiente cierra y borra la caché entera', () async {
+      datosDeLaPrimeraCuenta();
+      await sesiones.guardarUsuarioVerificado(
+        usuarioId: 'user-a',
+        email: 'user-a@example.com',
+      );
+      await sync.sincronizar();
+
+      expect(await cerrar(), 0);
+
+      expect(await sesiones.obtener(), isNull);
+      expect(await db.select(db.fincas).get(), isEmpty);
+      expect(await db.select(db.syncCursores).get(), isEmpty);
+    });
+
+    test(
+      'descartando lo pendiente también borra todo, y la cuenta que entra '
+      'después sí baja sus filas viejas',
+      () async {
+        datosDeLaPrimeraCuenta();
+        await sesiones.guardarUsuarioVerificado(
+          usuarioId: 'user-a',
+          email: 'user-a@example.com',
+        );
+        await sync.sincronizar();
+        await dejarAlgoSinSubir();
+
+        expect(await cerrar(descartarPendientes: true), 0);
+        expect(await db.select(db.syncCursores).get(), isEmpty);
+
+        // Entra la segunda cuenta, con filas MÁS VIEJAS que los cursores que
+        // dejó la primera: sin caché heredada, sí bajan.
+        datosDeLaSegundaCuenta();
+        await sesiones.guardarUsuarioVerificado(
+          usuarioId: 'user-b',
+          email: 'user-b@example.com',
+        );
+        await sync.sincronizar();
+
+        final misFincas = await fincas.observarFincas('user-b').first;
+        expect(misFincas, hasLength(1));
+        expect(misFincas.single.id, 'finca-b');
+      },
+    );
+
+    test('la foto de finca sin subir también cuenta como pendiente', () async {
+      datosDeLaPrimeraCuenta();
+      await sesiones.guardarUsuarioVerificado(
+        usuarioId: 'user-a',
+        email: 'user-a@example.com',
+      );
+      await sync.sincronizar();
+      await (db.update(db.fincas)..where((t) => t.id.equals('finca-a'))).write(
+        const FincasCompanion(
+          fotoLocalPath: Value('/fotos/finca-a.jpg'),
+          fotoPendiente: Value(true),
+        ),
+      );
+
+      expect(await sync.contarPendientes(), 1);
+      expect(await cerrar(), 1);
+    });
   });
 }

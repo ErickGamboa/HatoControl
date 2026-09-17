@@ -353,6 +353,31 @@ class SyncService {
     return false;
   }
 
+  /// Cuánto trabajo quedaría sin subir si se cerrara la sesión ahora: filas
+  /// `pendiente` de todas las tablas más las fotos de finca que no alcanzaron
+  /// a subirse (el archivo solo existe en este aparato).
+  ///
+  /// Es el número que se le muestra al ganadero antes de dejarlo salir: al
+  /// cerrar sesión la copia local se borra entera, así que salir con esto en
+  /// cero es lo único que no cuesta un día de campo.
+  Future<int> contarPendientes() async {
+    var total = 0;
+    for (final spec in _specs) {
+      final subida = spec.subida;
+      if (subida == null) continue;
+      total += (await subida.pendientes()).length;
+    }
+    // Las fincas ya contadas por `pendiente` no se cuentan dos veces.
+    final fotos = await (db.select(db.fincas)..where(
+          (t) =>
+              t.fotoPendiente.equals(true) &
+              t.fotoLocalPath.isNotNull() &
+              t.pendiente.equals(false),
+        ))
+        .get();
+    return total + fotos.length;
+  }
+
   /// Cantidad de filas `pendiente=true` por tabla (solo las que suben algo).
   Future<Map<String, int>> pendientesPorTabla() async {
     final resultado = <String, int>{};
