@@ -23,10 +23,12 @@ class DeudasTab extends StatefulWidget {
   final DeudasRepository deudasRepository;
 
   @override
-  State<DeudasTab> createState() => _DeudasTabState();
+  DeudasTabState createState() => DeudasTabState();
 }
 
-class _DeudasTabState extends State<DeudasTab> {
+/// El estado es público porque `GastosScreen` le pide el PDF desde el botón
+/// de la barra de arriba: el filtro y la búsqueda viven acá, no allá.
+class DeudasTabState extends State<DeudasTab> {
   final _buscarCtrl = TextEditingController();
 
   late final Stream<List<DeudaConSaldo>> _stream = widget.deudasRepository
@@ -90,23 +92,35 @@ class _DeudasTabState extends State<DeudasTab> {
     });
   }
 
-  Future<void> _exportarPdf(
-    List<DeudaConSaldo> visibles,
-    TotalesDeudas totales,
-  ) async {
+  /// Abre el PDF con EXACTAMENTE lo que se está viendo.
+  ///
+  /// Lo llama el botón de la barra de arriba (`GastosScreen`). La lista se
+  /// vuelve a armar con los mismos filtros en vez de guardarla al pintar, para
+  /// que el PDF no pueda salir con algo viejo.
+  Future<void> exportarPdf() async {
+    final visibles = filtrarDeudas(
+      await widget.deudasRepository.deudasDe(widget.finca.id),
+      filtro: _filtro,
+      busqueda: _busqueda,
+      desde: _desde,
+      hasta: _hasta,
+    );
+    if (!mounted) return;
+
     if (visibles.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No hay deudas que exportar.')),
       );
       return;
     }
+
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => DeudasPdfScreen(
           nombreFinca: widget.finca.nombre,
           descripcionFiltro: _descripcionFiltro(),
           deudas: visibles,
-          totales: totales,
+          totales: TotalesDeudas.de(visibles),
           generadoEl: DateTime.now(),
         ),
       ),
@@ -212,10 +226,7 @@ class _DeudasTabState extends State<DeudasTab> {
                         ),
                       ),
               ),
-              _BarraTotales(
-                totales: totales,
-                onExportar: () => _exportarPdf(visibles, totales),
-              ),
+              _BarraTotales(totales: totales),
             ],
           ),
         );
@@ -421,13 +432,12 @@ class _DeudaCard extends StatelessWidget {
   }
 }
 
-/// Totales de lo que se está viendo + el botón de exportar. Fijos abajo: son
-/// la respuesta a "¿cuánto debo?", y no deberían quedar al final de un scroll.
+/// Totales de lo que se está viendo. Fijos abajo: son la respuesta a
+/// "¿cuánto debo?", y no deberían quedar al final de un scroll.
 class _BarraTotales extends StatelessWidget {
-  const _BarraTotales({required this.totales, required this.onExportar});
+  const _BarraTotales({required this.totales});
 
   final TotalesDeudas totales;
-  final VoidCallback onExportar;
 
   @override
   Widget build(BuildContext context) {
@@ -437,18 +447,9 @@ class _BarraTotales extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 6, HatoSpacing.lg, 6),
+          padding: const EdgeInsets.fromLTRB(HatoSpacing.lg, 10, HatoSpacing.lg, 10),
           child: Row(
             children: [
-              // El PDF va a la IZQUIERDA a propósito: a la derecha lo tapaba
-              // el botón flotante de "Deuda" y no se podía ni tocar.
-              IconButton(
-                key: const ValueKey('deudas.exportar'),
-                tooltip: 'Exportar a PDF lo que se está viendo',
-                icon: const Icon(Icons.picture_as_pdf_outlined, size: 30),
-                color: theme.colorScheme.onPrimaryContainer,
-                onPressed: onExportar,
-              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

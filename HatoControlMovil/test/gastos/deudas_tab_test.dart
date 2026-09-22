@@ -146,7 +146,9 @@ void main() {
     await cerrar(tester);
   });
 
-  testWidgets('el botón de PDF está a mano junto al total', (tester) async {
+  testWidgets('el PDF no vive en la pestaña: está arriba, en la barra', (
+    tester,
+  ) async {
     await deudas.crearDeuda(
       fincaId: 'f1',
       acreedor: 'Cooperativa',
@@ -155,7 +157,11 @@ void main() {
     );
 
     await abrir(tester);
-    expect(find.byKey(const ValueKey('deudas.exportar')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('deudas.exportar')),
+      findsNothing,
+      reason: 'el botón lo pone GastosScreen en el AppBar',
+    );
 
     await cerrar(tester);
   });
