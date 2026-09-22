@@ -114,6 +114,17 @@ class Lotes extends Table {
   TextColumn get fincaId => text()();
   TextColumn get nombre => text()();
   IntColumn get numero => integer().nullable()();
+
+  /// Terreno en el que se maneja el lote, SIEMPRE en metros cuadrados.
+  /// null = no se registró. Se guarda en m² (y no en la unidad que digitó el
+  /// ganadero) para poder sumar lotes medidos en unidades distintas: la
+  /// opción "Todos" del análisis suma hectáreas con manzanas sin inventar
+  /// nada. [areaUnidad] recuerda en qué unidad lo escribió, para mostrárselo
+  /// como él lo piensa.
+  RealColumn get areaM2 => real().nullable()();
+
+  /// 'ha' | 'mz' | 'm2' — ver `UnidadArea`. null cuando no hay terreno.
+  TextColumn get areaUnidad => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -474,6 +485,71 @@ class GastoFijoCargos extends Table {
   ];
 }
 
+/// Deuda de la finca: a quién se le debe y cuánto (Módulo Gastos · pestaña
+/// Deudas).
+///
+/// NO entra en la contabilidad del animal: no toca la utilidad, ni la dieta,
+/// ni la sanidad. Es una lista para llevar el control de lo que se debe, con
+/// sus abonos. Por eso vive aparte de `gastos_fijos`, que sí se prorratea.
+@DataClassName('DeudaRow')
+class Deudas extends Table {
+  TextColumn get id => text()();
+  TextColumn get fincaId => text()();
+
+  /// A quién se le debe (persona, casa comercial, banco).
+  TextColumn get acreedor => text()();
+
+  /// Monto total de la deuda. Los abonos se guardan aparte y el saldo es
+  /// `monto - abonos`, así queda el historial de cómo se fue pagando.
+  RealColumn get monto => real()();
+
+  /// Fecha en que se registra/adquiere la deuda.
+  DateTimeColumn get fecha => dateTime()();
+
+  /// Opcional: cuándo hay que pagarla (para filtrar las vencidas).
+  DateTimeColumn get vence => dateTime().nullable()();
+
+  /// 'pendiente' | 'pagada' | 'anulada' — ver `EstadoDeuda`.
+  TextColumn get estado =>
+      text().withDefault(const Constant('pendiente'))();
+  TextColumn get nota => text().nullable()();
+  TextColumn get moneda => text().withDefault(const Constant('CRC'))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    "CHECK (estado IN ('pendiente','pagada','anulada'))",
+    'CHECK (monto >= 0)',
+  ];
+}
+
+/// Abono a una deuda: cuánto se pagó y cuándo. El saldo de la deuda sale de
+/// restarle la suma de sus abonos.
+@DataClassName('DeudaAbonoRow')
+class DeudaAbonos extends Table {
+  TextColumn get id => text()();
+  TextColumn get deudaId => text()();
+  RealColumn get monto => real()();
+  DateTimeColumn get fecha => dateTime()();
+  TextColumn get nota => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pendiente => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => ['CHECK (monto > 0)'];
+}
+
 /// Feature flags por scope (D-15): habilitan/deshabilitan módulos por
 /// finca/cuenta/global. Gestionadas solo por el CLI (`hatoctl`) vía
 /// `service_role`; la app únicamente las lee (RLS solo da SELECT). Por eso
@@ -588,6 +664,8 @@ class SesionesLocales extends Table {
     CostosOtros,
     GastosFijos,
     GastoFijoCargos,
+    Deudas,
+    DeudaAbonos,
     FeatureFlags,
     SyncCursores,
     SyncEstados,
@@ -602,7 +680,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -778,6 +856,15 @@ class AppDatabase extends _$AppDatabase {
         // la v4 nunca tuvo esa columna, y alterTable igual funciona: copia
         // las columnas que existen en las dos.
         await m.alterTable(TableMigration(cuentas));
+      }
+      if (from < 19) {
+        // v19: terreno del lote (en m², con la unidad que digitó el ganadero)
+        // y la pestaña Deudas del módulo Gastos.
+        await _crearTablaSiFalta(m, lotes);
+        await _agregarColumnaSiFalta(m, lotes, lotes.areaM2);
+        await _agregarColumnaSiFalta(m, lotes, lotes.areaUnidad);
+        await _crearTablaSiFalta(m, deudas);
+        await _crearTablaSiFalta(m, deudaAbonos);
       }
     },
   );

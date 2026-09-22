@@ -577,6 +577,50 @@ class PesajesRepository {
     );
   }
 
+  /// Registra un pesaje en la FECHA que elija el usuario: sirve para pasar a
+  /// la app los pesajes que trae anotados en el cuaderno.
+  ///
+  /// Si ese día ya tiene un pesaje, lo CORRIGE en vez de agregar otro (la
+  /// misma regla del pesaje del día: un animal, un peso por día). Devuelve
+  /// true cuando corrigió uno que ya existía, para poder avisarlo.
+  ///
+  /// La hora se fija al mediodía y no a la de este momento: así el día queda
+  /// bien parado aunque el registro viaje entre husos horarios, y un pesaje
+  /// viejo no compite con el de hoy al ordenar por fecha.
+  Future<bool> registrarPesajeEnFecha({
+    required String animalId,
+    required double peso,
+    required DateTime fecha,
+    required String registradoPor,
+  }) async {
+    final existente = await pesajeDeHoy(animalId, dia: fecha);
+    if (existente != null) {
+      await actualizarPesaje(pesajeId: existente.id, peso: peso);
+      return true;
+    }
+
+    final ahora = DateTime.now();
+    final esHoy = diasCalendario(fecha, ahora) == 0;
+    final cuando = esHoy
+        ? ahora
+        : DateTime(fecha.year, fecha.month, fecha.day, 12);
+    await db
+        .into(db.pesajes)
+        .insert(
+          PesajesCompanion.insert(
+            id: _uuid.v4(),
+            animalId: animalId,
+            peso: peso,
+            fecha: cuando,
+            registradoPor: Value(registradoPor),
+            createdAt: ahora,
+            updatedAt: ahora,
+            pendiente: const Value(true),
+          ),
+        );
+    return false;
+  }
+
   /// Registra un pesaje para un animal existente.
   Future<void> agregarPesaje({
     required String animalId,

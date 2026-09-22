@@ -42,6 +42,11 @@ if (Test-Path $destino) {
 New-Item -ItemType Directory -Force -Path (Join-Path $destino 'logo') | Out-Null
 Copy-Item -Recurse (Join-Path $origen 'iconos') (Join-Path $destino 'iconos')
 
+# Las fuentes del PDF de Deudas: el PDF se arma con Roboto empacada, y en la
+# web tiene que estar en los assets del paquete que se ejecuta, igual que las
+# imagenes.
+Copy-Item -Recurse (Join-Path $origen 'fuentes') (Join-Path $destino 'fuentes')
+
 foreach ($logo in $logos) {
     $ruta = Join-Path $origen "logo\$logo"
     if (-not (Test-Path $ruta)) {

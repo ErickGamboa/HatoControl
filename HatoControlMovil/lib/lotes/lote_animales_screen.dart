@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/campo_fecha.dart';
+import '../app/widgets/quick_number_field.dart';
 import '../data/local/database.dart';
 import '../data/repositories/dietas_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
@@ -213,6 +215,27 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
     }
   }
 
+  /// Pesaje con FECHA a mano: para pasar a la app lo que el ganadero trae
+  /// anotado en el cuaderno, sin tener que hacerlo el mismo día.
+  Future<void> _nuevoPesaje(AnimalRow animal) async {
+    final guardado = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => _NuevoPesajeSheet(
+        animal: animal,
+        usuarioId: widget.usuarioId,
+      ),
+    );
+    if (guardado == null) return;
+    sincronizarSiSePuede();
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(guardado)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -276,7 +299,7 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                 encabezado('Animal', 4),
                 encabezado('Peso actual', 3, align: TextAlign.end),
                 if (!soloLectura)
-                  encabezado('Cambiar lote', 3, align: TextAlign.center),
+                  encabezado('Pesaje · Lote', 3, align: TextAlign.center),
               ],
             ),
           ),
@@ -396,15 +419,35 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                                   if (!soloLectura)
                                     Expanded(
                                       flex: 3,
-                                      child: Align(
-                                        alignment: Alignment.center,
-                                        child: IconButton(
-                                          tooltip: 'Cambiar de lote',
-                                          icon: const Icon(Icons.swap_horiz),
-                                          color: theme.colorScheme.primary,
-                                          onPressed: () =>
-                                              _moverAnimal(a.animal),
-                                        ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          IconButton(
+                                            key: ValueKey(
+                                              'lote.nuevoPesaje.'
+                                              '${a.animal.id}',
+                                            ),
+                                            tooltip: 'Nuevo pesaje',
+                                            icon: const Icon(
+                                              Icons.monitor_weight_outlined,
+                                            ),
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            color: theme.colorScheme.primary,
+                                            onPressed: () =>
+                                                _nuevoPesaje(a.animal),
+                                          ),
+                                          IconButton(
+                                            tooltip: 'Cambiar de lote',
+                                            icon: const Icon(Icons.swap_horiz),
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            color: theme.colorScheme.primary,
+                                            onPressed: () =>
+                                                _moverAnimal(a.animal),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                 ],
@@ -525,6 +568,127 @@ class _TarjetaDietaLote extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Formulario de "Nuevo pesaje" con fecha: kilos + el día en que se pesó.
+///
+/// La fecha es el punto de todo esto: el ganadero pesa en la manga con el
+/// cuaderno y pasa los datos a la app en la noche, o el fin de semana. Sin
+/// poder elegir el día, todo le quedaría con fecha de hoy y la ganancia
+/// diaria saldría mal.
+class _NuevoPesajeSheet extends StatefulWidget {
+  const _NuevoPesajeSheet({required this.animal, required this.usuarioId});
+
+  final AnimalRow animal;
+  final String? usuarioId;
+
+  @override
+  State<_NuevoPesajeSheet> createState() => _NuevoPesajeSheetState();
+}
+
+class _NuevoPesajeSheetState extends State<_NuevoPesajeSheet> {
+  final _peso = TextEditingController();
+  DateTime _fecha = DateTime.now();
+  bool _guardando = false;
+
+  @override
+  void dispose() {
+    _peso.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    final peso = double.tryParse(_peso.text.trim().replaceAll(',', '.'));
+    if (peso == null || peso <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Digitá los kilos.')));
+      return;
+    }
+
+    setState(() => _guardando = true);
+    try {
+      final corrigio = await pesajesRepo.registrarPesajeEnFecha(
+        animalId: widget.animal.id,
+        peso: peso,
+        fecha: _fecha,
+        registradoPor: widget.usuarioId ?? '',
+      );
+      if (!mounted) return;
+      Navigator.pop(
+        context,
+        corrigio
+            ? 'Ese día ya tenía pesaje: se corrigió a $peso kg.'
+            : 'Pesaje guardado (${fmtFecha(_fecha)}).',
+      );
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Nuevo pesaje',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              widget.animal.identificador,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            QuickNumberField(
+              key: const ValueKey('lote.nuevoPesaje.peso'),
+              controller: _peso,
+              labelText: 'Kilos',
+              suffixText: 'kg',
+              onSubmitted: (_) => _guardar(),
+            ),
+            const SizedBox(height: 12),
+            CampoFecha(
+              etiqueta: '¿Qué día se pesó?',
+              fecha: _fecha,
+              ultima: DateTime.now(),
+              alCambiar: (f) => setState(() => _fecha = f),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              key: const ValueKey('lote.nuevoPesaje.guardar'),
+              onPressed: _guardando ? null : _guardar,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: Text(_guardando ? 'Guardando…' : 'Guardar pesaje'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Si ese día ya tenía un pesaje, se corrige el que estaba: un '
+              'animal, un peso por día.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

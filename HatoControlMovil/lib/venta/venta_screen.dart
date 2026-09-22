@@ -6,16 +6,22 @@ import '../app/widgets/quick_number_field.dart';
 import '../app/widgets/scan_field.dart';
 import '../data/estadisticas/estadisticas_economicas.dart';
 import '../data/local/database.dart';
+import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
 import '../data/repositories/sanidad_repository.dart';
 import '../data/repositories/ventas_repository.dart';
 import '../services.dart';
 
 class _ItemVenta {
-  _ItemVenta({required this.animal, required this.peso});
+  _ItemVenta({required this.animal, this.peso});
 
   final AnimalRow animal;
-  double peso;
+
+  /// Kilos de salida. null solo cuando el animal entró con el lote completo y
+  /// no tenía ningún pesaje: hay que digitárselos antes de confirmar.
+  double? peso;
+
+  bool get faltaPeso => peso == null;
 }
 
 /// Módulo Venta (D-19): retiro bloquea · el grupo se arma con identificador y
@@ -29,15 +35,18 @@ class VentaScreen extends StatefulWidget {
     PesajesRepository? pesajesRepository,
     VentasRepository? ventasRepository,
     SanidadRepository? sanidadRepository,
+    LotesRepository? lotesRepository,
   }) : pesajesRepository = pesajesRepository ?? pesajesRepo,
        ventasRepository = ventasRepository ?? ventasRepo,
-       sanidadRepository = sanidadRepository ?? sanidadRepo;
+       sanidadRepository = sanidadRepository ?? sanidadRepo,
+       lotesRepository = lotesRepository ?? lotesRepo;
 
   final FincaRow finca;
   final String usuarioId;
   final PesajesRepository pesajesRepository;
   final VentasRepository ventasRepository;
   final SanidadRepository sanidadRepository;
+  final LotesRepository lotesRepository;
 
   @override
   State<VentaScreen> createState() => _VentaScreenState();
@@ -165,8 +174,110 @@ class _VentaScreenState extends State<VentaScreen>
     _snack('${animal.identificador} agregado');
   }
 
+  /// Vende un lote de manejo completo, sin escanear animal por animal.
+  ///
+  /// Cada animal entra con su ÚLTIMO pesaje registrado, que es el peso que el
+  /// ganadero tiene a mano. Los que nunca se pesaron entran igual, marcados,
+  /// para que les digite los kilos: si se quedaran afuera en silencio se
+  /// venderían animales de menos sin que nadie se diera cuenta.
+  Future<void> _agregarLoteCompleto() async {
+    final lotes = await widget.lotesRepository.lotesActivos(widget.finca.id);
+    if (!mounted) return;
+    if (lotes.isEmpty) {
+      _snack('Esta finca todavía no tiene lotes.');
+      return;
+    }
+
+    final loteId = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                '¿Qué lote se vende completo?',
+                style: Theme.of(ctx).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final l in lotes)
+                    ListTile(
+                      key: ValueKey('venta.lote.${l.id}'),
+                      leading: CircleAvatar(
+                        child: Text(l.numero?.toString() ?? '–'),
+                      ),
+                      title: Text(l.nombre),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.pop(ctx, l.id),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (loteId == null) return;
+
+    final animales = await widget.pesajesRepository
+        .observarAnimalesDeLote(loteId)
+        .first;
+
+    final nuevos = <_ItemVenta>[];
+    final enRetiro = <String>[];
+    var yaEstaban = 0;
+    var sinPesaje = 0;
+
+    for (final a in animales) {
+      if (_enCurso.any((e) => e.animal.id == a.animal.id)) {
+        yaEstaban++;
+        continue;
+      }
+      final retiro = await widget.sanidadRepository.retiroHasta(a.animal.id);
+      if (retiro != null) {
+        enRetiro.add(a.animal.identificador);
+        continue;
+      }
+      if (a.pesoActual == null) sinPesaje++;
+      nuevos.add(_ItemVenta(animal: a.animal, peso: a.pesoActual));
+    }
+
+    if (!mounted) return;
+    if (nuevos.isEmpty) {
+      _snack(
+        enRetiro.isEmpty
+            ? 'Ese lote no tiene animales para vender.'
+            : 'Todos los animales de ese lote están en retiro.',
+      );
+      return;
+    }
+
+    setState(() => _enCurso.addAll(nuevos));
+
+    final avisos = <String>['${nuevos.length} agregados con su último pesaje'];
+    if (sinPesaje > 0) {
+      avisos.add('$sinPesaje sin pesaje: digitáles los kilos');
+    }
+    if (enRetiro.isNotEmpty) {
+      avisos.add('${enRetiro.length} en retiro: no se pueden vender');
+    }
+    if (yaEstaban > 0) avisos.add('$yaEstaban ya estaban en la lista');
+    _snack(avisos.join(' · '));
+  }
+
   Future<void> _editarPesoAnimal(_ItemVenta item) async {
-    final ctrl = TextEditingController(text: _fmt(item.peso));
+    final ctrl = TextEditingController(
+      text: item.peso == null ? '' : _fmt(item.peso!),
+    );
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -194,9 +305,20 @@ class _VentaScreenState extends State<VentaScreen>
     setState(() => item.peso = v);
   }
 
+  /// Kilos de los que ya tienen peso digitado.
+  double get _totalKg =>
+      _enCurso.fold<double>(0, (s, i) => s + (i.peso ?? 0));
+
+  /// Cuántos entraron con el lote completo y siguen sin kilos.
+  int get _sinPeso => _enCurso.where((i) => i.faltaPeso).length;
+
   Future<void> _confirmar() async {
     if (_enCurso.isEmpty) return;
-    final totalKg = _enCurso.fold<double>(0, (s, i) => s + i.peso);
+    if (_sinPeso > 0) {
+      _snack('Faltan los kilos de $_sinPeso animal(es).');
+      return;
+    }
+    final totalKg = _totalKg;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -227,7 +349,7 @@ class _VentaScreenState extends State<VentaScreen>
       await widget.ventasRepository.confirmarLoteVenta(
         fincaId: widget.finca.id,
         items: [
-          for (final i in _enCurso) (animalId: i.animal.id, peso: i.peso),
+          for (final i in _enCurso) (animalId: i.animal.id, peso: i.peso!),
         ],
       );
       sincronizarSiSePuede();
@@ -285,7 +407,8 @@ class _VentaScreenState extends State<VentaScreen>
         ),
       );
     }
-    final totalKg = _enCurso.fold<double>(0, (s, i) => s + i.peso);
+    final totalKg = _totalKg;
+    final sinPeso = _sinPeso;
 
     return SafeArea(
       child: Padding(
@@ -321,15 +444,30 @@ class _VentaScreenState extends State<VentaScreen>
                 ),
               ),
             ),
+            const SizedBox(height: HatoSpacing.sm),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                key: const ValueKey('venta.loteCompleto'),
+                onPressed: _agregarLoteCompleto,
+                icon: const Icon(Icons.groups_outlined),
+                label: const Text('Vender un lote completo'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
             const SizedBox(height: HatoSpacing.lg),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 _enCurso.isEmpty
                     ? 'Lista vacía'
-                    : '${_enCurso.length} animal(es) · ${_fmt(totalKg)} kg',
+                    : '${_enCurso.length} animal(es) · ${_fmt(totalKg)} kg'
+                          '${sinPeso > 0 ? ' · faltan $sinPeso pesos' : ''}',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
+                  color: sinPeso > 0 ? theme.colorScheme.error : null,
                 ),
               ),
             ),
@@ -358,7 +496,21 @@ class _VentaScreenState extends State<VentaScreen>
                             item.animal.identificador,
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
-                          subtitle: Text('${_fmt(item.peso)} kg de salida'),
+                          subtitle: item.faltaPeso
+                              ? Text(
+                                  'Falta el peso: tocá el lápiz',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.error,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                )
+                              : Text('${_fmt(item.peso!)} kg de salida'),
+                          leading: item.faltaPeso
+                              ? Icon(
+                                  Icons.error_outline,
+                                  color: theme.colorScheme.error,
+                                )
+                              : null,
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -382,13 +534,19 @@ class _VentaScreenState extends State<VentaScreen>
               width: double.infinity,
               child: FilledButton(
                 key: const ValueKey('venta.confirmar'),
-                onPressed: _enCurso.isEmpty || _guardando ? null : _confirmar,
+                // Con animales sin peso no se confirma: se vendería un animal
+                // sin kilos de salida y la utilidad quedaría coja.
+                onPressed: _enCurso.isEmpty || _guardando || sinPeso > 0
+                    ? null
+                    : _confirmar,
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: Text(
                   _guardando
                       ? 'Confirmando…'
+                      : sinPeso > 0
+                      ? 'Faltan los kilos de $sinPeso'
                       : 'Confirmar venta (${_enCurso.length})',
                 ),
               ),

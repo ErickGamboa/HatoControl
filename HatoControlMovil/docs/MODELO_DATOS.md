@@ -123,7 +123,14 @@ Permisos por rol (RLS, `supabase/migrations/20260821120000_rol_lector_y_plan_pro
 | finca_id | uuid → fincas.id | |
 | nombre | text | |
 | numero | int | |
+| area_m2 | numeric | terreno en el que se maneja el lote, **siempre en m²**; null = sin registrar |
+| area_unidad | text | `ha` \| `mz` \| `m2`: en qué unidad lo digitó el ganadero, solo para mostrarlo |
 | created_at | timestamptz | |
+
+El terreno se guarda en metros cuadrados aunque se digite en hectáreas o
+manzanas: es lo que permite que el análisis de pesos sume en "Todos" lotes
+medidos en unidades distintas. La conversión vive en `UnidadArea`
+(`lib/data/repositories/lotes_repository.dart`); la manzana son 6.988,96 m².
 
 ### animales — inventario
 | Campo | Tipo | Notas |
@@ -309,6 +316,41 @@ Reglas:
 - El prorrateo de un mes descuenta lo ya congelado y reparte el resto entre los animales
   activos por días-animal — así un gasto digitado atrasado lo absorben solo los no vendidos
   y la suma sigue siendo el 100% del gasto.
+
+### deudas — a quién se le debe (módulo Gastos · pestaña Deudas)
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid (PK) | |
+| finca_id | uuid → fincas.id | |
+| acreedor | text | a quién se le debe: persona, casa comercial, banco |
+| monto | numeric | monto total de la deuda |
+| fecha | timestamptz | cuándo se adquirió/registró |
+| vence | timestamptz | opcional; una pendiente con `vence` pasado se muestra **vencida** |
+| estado | text | `pendiente` \| `pagada` \| `anulada` |
+| nota | text | opcional |
+| moneda | text | default `CRC` (D-07) |
+| created_at / updated_at / deleted_at | timestamptz | borrado suave |
+
+### deuda_abonos — cómo se fue pagando
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid (PK) | |
+| deuda_id | uuid → deudas.id | |
+| monto | numeric | > 0 |
+| fecha | timestamptz | día del abono |
+| nota | text | opcional |
+| created_at / updated_at / deleted_at | timestamptz | borrado suave |
+
+Reglas:
+- **Las deudas NO entran en la contabilidad del animal**: no tocan la
+  utilidad, ni las dietas, ni la sanidad, ni el prorrateo de gastos fijos. Son
+  una lista de control. Lo que sí pesa en la utilidad va en `gastos_fijos`.
+- `saldo = monto − suma(abonos activos)`. El estado lo mantiene el repositorio:
+  sin saldo pasa a `pagada` sola, y si se borra un abono vuelve a `pendiente`.
+- `anulada` se muestra en la lista pero no suma en ningún total; es una
+  decisión a mano y los abonos no se la cambian.
+- "Marcar pagada" registra el abono que falta (no solo cambia el estado), para
+  que abonado y saldo sigan cuadrando con el monto.
 
 ## Roles y permisos (resumen)
 - **admin:** todo en su finca + agregar/quitar usuarios y asignarles rol (admin u operario).

@@ -5,7 +5,7 @@ import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/dietas/dietas_screen.dart';
 import 'package:hato_control/fincas/compartir_finca_screen.dart';
 import 'package:hato_control/fincas/editar_finca_flujo.dart';
-import 'package:hato_control/gastos_fijos/gastos_fijos_screen.dart';
+import 'package:hato_control/gastos/gastos_screen.dart';
 import 'package:hato_control/lotes/lotes_screen.dart';
 import 'package:hato_control/pesaje/pesaje_screen.dart';
 import 'package:hato_control/sanidad/sanidad_screen.dart';
@@ -129,7 +129,7 @@ class _EscritorioShellState extends State<EscritorioShell> {
           child: VentaScreen(finca: finca, usuarioId: widget.usuarioId),
         );
       case SeccionEscritorio.gastosFijos:
-        return ContenidoEscritorio(child: GastosFijosScreen(finca: finca));
+        return ContenidoEscritorio(child: GastosScreen(finca: finca));
       case SeccionEscritorio.analisis:
         return ContenidoEscritorio(
           child: AnalisisScreen(finca: finca, usuarioId: widget.usuarioId),

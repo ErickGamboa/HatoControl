@@ -5,6 +5,7 @@ import '../app/theme.dart';
 import '../data/estadisticas/estadisticas_pesajes.dart';
 import '../data/local/database.dart';
 import '../data/repositories/dietas_repository.dart';
+import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
 import '../lotes/animal_ficha_screen.dart';
 import '../services.dart';
@@ -269,6 +270,7 @@ class _ComparativaLotes extends StatelessWidget {
       key: const ValueKey('analisis.lista'),
       padding: const EdgeInsets.only(top: HatoSpacing.md),
       children: [
+        _TerrenoTotal(lotes: lotes),
         _Tarjeta(
           key: const ValueKey('analisis.comparativa'),
           titulo: 'Comparación entre lotes',
@@ -343,6 +345,79 @@ class _ComparativaLotes extends StatelessWidget {
   }
 }
 
+/// Terreno de la finca sumando el de cada lote (opción "Todos").
+///
+/// Los lotes se pueden haber digitado en unidades distintas —uno en
+/// hectáreas, otro en manzanas—, y por eso el terreno se guarda en m²: acá se
+/// suma sin convertir nada al vuelo y se muestra en la unidad que más usa el
+/// ganadero en esta finca.
+class _TerrenoTotal extends StatelessWidget {
+  const _TerrenoTotal({required this.lotes});
+
+  final List<ResumenPesosLote> lotes;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final conTerreno = lotes.where((l) => l.lote.areaM2 != null).toList();
+    if (conTerreno.isEmpty) return const SizedBox.shrink();
+
+    final totalM2 = conTerreno.fold<double>(0, (s, l) => s + l.lote.areaM2!);
+    final sinTerreno = lotes.length - conTerreno.length;
+
+    // La unidad más repetida entre los lotes que sí tienen terreno: es la que
+    // el ganadero piensa cuando habla de su finca.
+    // En empate gana la hectárea (el orden de `UnidadArea.todas`): si no, el
+    // total cambiaría de unidad según el orden en que estén los lotes.
+    final cuenta = <String, int>{};
+    for (final l in conTerreno) {
+      final u = UnidadArea.normalizar(l.lote.areaUnidad);
+      cuenta[u] = (cuenta[u] ?? 0) + 1;
+    }
+    final unidad = UnidadArea.todas
+        .where(cuenta.containsKey)
+        .reduce((a, b) => cuenta[b]! > cuenta[a]! ? b : a);
+
+    return _Tarjeta(
+      key: const ValueKey('analisis.terreno'),
+      titulo: 'Terreno',
+      lectura: sinTerreno == 0
+          ? 'Suma del terreno de los ${lotes.length} lotes.'
+          : 'Suma de los ${conTerreno.length} lotes con terreno registrado. '
+                'Faltan $sinTerreno por registrar (se pone al editar el lote).',
+      hijo: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            UnidadArea.formatear(totalM2, unidad),
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: HatoSpacing.sm),
+          for (final l in conTerreno)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  Expanded(child: Text(l.lote.nombre)),
+                  Text(
+                    UnidadArea.formatear(
+                      l.lote.areaM2!,
+                      UnidadArea.normalizar(l.lote.areaUnidad),
+                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 // ------------------------------------------------------------- detalle lote
 
 class _DetalleLote extends StatelessWidget {
@@ -409,6 +484,27 @@ class _ComoViene extends StatelessWidget {
       hijo: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (resumen.lote.areaM2 != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.landscape_outlined,
+                    size: 18,
+                    color: theme.colorScheme.outline,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Se maneja en '
+                    '${UnidadArea.formatear(resumen.lote.areaM2!, UnidadArea.normalizar(resumen.lote.areaUnidad))}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (ultima != null)
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,

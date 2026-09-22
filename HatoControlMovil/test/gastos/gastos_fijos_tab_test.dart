@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/data/repositories/gastos_fijos_repository.dart';
-import 'package:hato_control/gastos_fijos/gastos_fijos_screen.dart';
+import 'package:hato_control/gastos/gastos_fijos_tab.dart';
 
 void main() {
   late AppDatabase db;
@@ -37,7 +37,7 @@ void main() {
   Future<void> abrir(WidgetTester tester, FincaRow finca) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: GastosFijosScreen(finca: finca, gastosFijosRepository: repo),
+        home: GastosFijosTab(finca: finca, gastosFijosRepository: repo),
       ),
     );
     await tester.pumpAndSettle();

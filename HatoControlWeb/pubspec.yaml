@@ -41,3 +41,7 @@ flutter:
     - assets/logo/hatocontrol_logo.png
     - assets/logo/emblema_sin_fondo.png
     - assets/logo/hatocontrol_logo_sin_fondo.png
+    # La fuente del PDF de Deudas (ver el pubspec de la app móvil).
+    - assets/fuentes/roboto-regular.ttf
+    - assets/fuentes/roboto-bold.ttf
+    - assets/fuentes/roboto_license.txt

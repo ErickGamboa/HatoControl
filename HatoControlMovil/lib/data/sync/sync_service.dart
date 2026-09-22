@@ -518,6 +518,8 @@ class SyncService {
     _ventasSpec,
     _costosOtrosSpec,
     _gastoFijoCargosSpec,
+    _deudasSpec,
+    _deudaAbonosSpec,
     _pesajesSpec,
     _featureFlagsSpec,
   ];
@@ -731,6 +733,8 @@ class SyncService {
                 'finca_id': l.fincaId,
                 'nombre': l.nombre,
                 'numero': l.numero,
+                'area_m2': l.areaM2,
+                'area_unidad': l.areaUnidad,
                 'created_at': l.createdAt.toIso8601String(),
                 'deleted_at': l.deletedAt?.toIso8601String(),
               },
@@ -755,6 +759,8 @@ class SyncService {
               fincaId: r['finca_id'] as String,
               nombre: r['nombre'] as String,
               numero: r['numero'] as int?,
+              areaM2: (r['area_m2'] as num?)?.toDouble(),
+              areaUnidad: r['area_unidad'] as String?,
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null
@@ -1597,6 +1603,129 @@ class SyncService {
   /// CLI (`hatoctl`) vía `service_role`; la app nunca la modifica, así que no
   /// hace falta guard de `tieneCambioLocalPendiente` (no hay filas locales
   /// pendientes que proteger).
+  /// Deudas de la finca (módulo Gastos · pestaña Deudas). Depende de
+  /// `fincas`. No entra en ningún cálculo de utilidad: es una lista aparte.
+  TableSyncSpec get _deudasSpec => TableSyncSpec(
+    tabla: 'deudas',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.deudas,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final d in filas)
+            (
+              d.id,
+              {
+                'id': d.id,
+                'finca_id': d.fincaId,
+                'acreedor': d.acreedor,
+                'monto': d.monto,
+                'fecha': d.fecha.toIso8601String(),
+                'vence': d.vence?.toIso8601String(),
+                'estado': d.estado,
+                'nota': d.nota,
+                'moneda': d.moneda,
+                'created_at': d.createdAt.toIso8601String(),
+                'deleted_at': d.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.deudas)..where((t) => t.id.equals(id))).write(
+            const DeudasCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.deudas,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.deudas)
+          .insertOnConflictUpdate(
+            DeudaRow(
+              id: r['id'] as String,
+              fincaId: r['finca_id'] as String,
+              acreedor: r['acreedor'] as String,
+              monto: (r['monto'] as num).toDouble(),
+              fecha: DateTime.parse(r['fecha'] as String),
+              vence: r['vence'] != null
+                  ? DateTime.parse(r['vence'] as String)
+                  : null,
+              estado: r['estado'] as String,
+              nota: r['nota'] as String?,
+              moneda: (r['moneda'] as String?) ?? 'CRC',
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ).toCompanion(false),
+          ),
+    ),
+  );
+
+  /// Abonos de una deuda. Depende de `deudas`.
+  TableSyncSpec get _deudaAbonosSpec => TableSyncSpec(
+    tabla: 'deuda_abonos',
+    subida: PushSpec(
+      pendientes: () async {
+        final filas = await (db.select(
+          db.deudaAbonos,
+        )..where((t) => t.pendiente.equals(true))).get();
+        return [
+          for (final a in filas)
+            (
+              a.id,
+              {
+                'id': a.id,
+                'deuda_id': a.deudaId,
+                'monto': a.monto,
+                'fecha': a.fecha.toIso8601String(),
+                'nota': a.nota,
+                'created_at': a.createdAt.toIso8601String(),
+                'deleted_at': a.deletedAt?.toIso8601String(),
+              },
+            ),
+        ];
+      },
+      marcarSubida: (id) =>
+          (db.update(db.deudaAbonos)..where((t) => t.id.equals(id))).write(
+            const DeudaAbonosCompanion(pendiente: Value(false)),
+          ),
+    ),
+    bajada: PullSpec(
+      tieneCambioLocalPendiente: (id) async {
+        final fila = await (db.select(
+          db.deudaAbonos,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        return fila?.pendiente ?? false;
+      },
+      aplicar: (r) => db
+          .into(db.deudaAbonos)
+          .insertOnConflictUpdate(
+            DeudaAbonoRow(
+              id: r['id'] as String,
+              deudaId: r['deuda_id'] as String,
+              monto: (r['monto'] as num).toDouble(),
+              fecha: DateTime.parse(r['fecha'] as String),
+              nota: r['nota'] as String?,
+              createdAt: DateTime.parse(r['created_at'] as String),
+              updatedAt: DateTime.parse(r['updated_at'] as String),
+              deletedAt: r['deleted_at'] != null
+                  ? DateTime.parse(r['deleted_at'] as String)
+                  : null,
+              pendiente: false,
+            ).toCompanion(false),
+          ),
+    ),
+  );
+
   TableSyncSpec get _featureFlagsSpec => TableSyncSpec(
     tabla: 'feature_flags',
     bajada: PullSpec(

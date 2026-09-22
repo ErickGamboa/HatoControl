@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/teclado/teclado_del_app.dart';
@@ -87,6 +88,13 @@ class HatoControlApp extends StatelessWidget {
       // (que pinta su fondo blanco a mano) quedaba con letras claras sobre
       // blanco y no se leia nada de lo que se escribia.
       themeMode: ThemeMode.light,
+      // Español de Costa Rica en todo lo que Flutter pone por su cuenta: el
+      // calendario para elegir fechas, los menús de copiar/pegar, el
+      // "cancelar"/"aceptar". Sin esto salían en inglés y en la finca nadie
+      // tiene por qué entender "Select date".
+      locale: const Locale('es'),
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('es'), Locale('en')],
       // Flutter no cierra el teclado al tocar fuera del campo. Los
       // formularios se llenan a una mano en la manga, asi que tocar
       // cualquier espacio vacio debe ocultarlo, en toda la app.

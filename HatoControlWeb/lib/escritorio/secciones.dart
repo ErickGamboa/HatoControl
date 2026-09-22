@@ -17,7 +17,7 @@ enum SeccionEscritorio {
   sanidad(etiqueta: 'Sanidad', asset: 'assets/iconos/sanidad.png'),
   dietas(etiqueta: 'Dietas', asset: 'assets/iconos/dietas.png'),
   venta(etiqueta: 'Venta', asset: 'assets/iconos/venta.png'),
-  gastosFijos(etiqueta: 'Gastos fijos', icono: Icons.receipt_long_outlined),
+  gastosFijos(etiqueta: 'Gastos', icono: Icons.receipt_long_outlined),
   analisis(etiqueta: 'Análisis', icono: Icons.insights_outlined);
 
   const SeccionEscritorio({

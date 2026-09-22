@@ -2561,6 +2561,26 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, LoteRow> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _areaM2Meta = const VerificationMeta('areaM2');
+  @override
+  late final GeneratedColumn<double> areaM2 = GeneratedColumn<double>(
+    'area_m2',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _areaUnidadMeta = const VerificationMeta(
+    'areaUnidad',
+  );
+  @override
+  late final GeneratedColumn<String> areaUnidad = GeneratedColumn<String>(
+    'area_unidad',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2615,6 +2635,8 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, LoteRow> {
     fincaId,
     nombre,
     numero,
+    areaM2,
+    areaUnidad,
     createdAt,
     updatedAt,
     deletedAt,
@@ -2657,6 +2679,18 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, LoteRow> {
       context.handle(
         _numeroMeta,
         numero.isAcceptableOrUnknown(data['numero']!, _numeroMeta),
+      );
+    }
+    if (data.containsKey('area_m2')) {
+      context.handle(
+        _areaM2Meta,
+        areaM2.isAcceptableOrUnknown(data['area_m2']!, _areaM2Meta),
+      );
+    }
+    if (data.containsKey('area_unidad')) {
+      context.handle(
+        _areaUnidadMeta,
+        areaUnidad.isAcceptableOrUnknown(data['area_unidad']!, _areaUnidadMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -2712,6 +2746,14 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, LoteRow> {
         DriftSqlType.int,
         data['${effectivePrefix}numero'],
       ),
+      areaM2: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}area_m2'],
+      ),
+      areaUnidad: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}area_unidad'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2742,6 +2784,17 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
   final String fincaId;
   final String nombre;
   final int? numero;
+
+  /// Terreno en el que se maneja el lote, SIEMPRE en metros cuadrados.
+  /// null = no se registró. Se guarda en m² (y no en la unidad que digitó el
+  /// ganadero) para poder sumar lotes medidos en unidades distintas: la
+  /// opción "Todos" del análisis suma hectáreas con manzanas sin inventar
+  /// nada. [areaUnidad] recuerda en qué unidad lo escribió, para mostrárselo
+  /// como él lo piensa.
+  final double? areaM2;
+
+  /// 'ha' | 'mz' | 'm2' — ver `UnidadArea`. null cuando no hay terreno.
+  final String? areaUnidad;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -2751,6 +2804,8 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
     required this.fincaId,
     required this.nombre,
     this.numero,
+    this.areaM2,
+    this.areaUnidad,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -2764,6 +2819,12 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
     map['nombre'] = Variable<String>(nombre);
     if (!nullToAbsent || numero != null) {
       map['numero'] = Variable<int>(numero);
+    }
+    if (!nullToAbsent || areaM2 != null) {
+      map['area_m2'] = Variable<double>(areaM2);
+    }
+    if (!nullToAbsent || areaUnidad != null) {
+      map['area_unidad'] = Variable<String>(areaUnidad);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -2782,6 +2843,12 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
       numero: numero == null && nullToAbsent
           ? const Value.absent()
           : Value(numero),
+      areaM2: areaM2 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(areaM2),
+      areaUnidad: areaUnidad == null && nullToAbsent
+          ? const Value.absent()
+          : Value(areaUnidad),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -2801,6 +2868,8 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
       fincaId: serializer.fromJson<String>(json['fincaId']),
       nombre: serializer.fromJson<String>(json['nombre']),
       numero: serializer.fromJson<int?>(json['numero']),
+      areaM2: serializer.fromJson<double?>(json['areaM2']),
+      areaUnidad: serializer.fromJson<String?>(json['areaUnidad']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -2815,6 +2884,8 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
       'fincaId': serializer.toJson<String>(fincaId),
       'nombre': serializer.toJson<String>(nombre),
       'numero': serializer.toJson<int?>(numero),
+      'areaM2': serializer.toJson<double?>(areaM2),
+      'areaUnidad': serializer.toJson<String?>(areaUnidad),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -2827,6 +2898,8 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
     String? fincaId,
     String? nombre,
     Value<int?> numero = const Value.absent(),
+    Value<double?> areaM2 = const Value.absent(),
+    Value<String?> areaUnidad = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -2836,6 +2909,8 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
     fincaId: fincaId ?? this.fincaId,
     nombre: nombre ?? this.nombre,
     numero: numero.present ? numero.value : this.numero,
+    areaM2: areaM2.present ? areaM2.value : this.areaM2,
+    areaUnidad: areaUnidad.present ? areaUnidad.value : this.areaUnidad,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -2847,6 +2922,10 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
       fincaId: data.fincaId.present ? data.fincaId.value : this.fincaId,
       nombre: data.nombre.present ? data.nombre.value : this.nombre,
       numero: data.numero.present ? data.numero.value : this.numero,
+      areaM2: data.areaM2.present ? data.areaM2.value : this.areaM2,
+      areaUnidad: data.areaUnidad.present
+          ? data.areaUnidad.value
+          : this.areaUnidad,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -2861,6 +2940,8 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
           ..write('fincaId: $fincaId, ')
           ..write('nombre: $nombre, ')
           ..write('numero: $numero, ')
+          ..write('areaM2: $areaM2, ')
+          ..write('areaUnidad: $areaUnidad, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -2875,6 +2956,8 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
     fincaId,
     nombre,
     numero,
+    areaM2,
+    areaUnidad,
     createdAt,
     updatedAt,
     deletedAt,
@@ -2888,6 +2971,8 @@ class LoteRow extends DataClass implements Insertable<LoteRow> {
           other.fincaId == this.fincaId &&
           other.nombre == this.nombre &&
           other.numero == this.numero &&
+          other.areaM2 == this.areaM2 &&
+          other.areaUnidad == this.areaUnidad &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -2899,6 +2984,8 @@ class LotesCompanion extends UpdateCompanion<LoteRow> {
   final Value<String> fincaId;
   final Value<String> nombre;
   final Value<int?> numero;
+  final Value<double?> areaM2;
+  final Value<String?> areaUnidad;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -2909,6 +2996,8 @@ class LotesCompanion extends UpdateCompanion<LoteRow> {
     this.fincaId = const Value.absent(),
     this.nombre = const Value.absent(),
     this.numero = const Value.absent(),
+    this.areaM2 = const Value.absent(),
+    this.areaUnidad = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -2920,6 +3009,8 @@ class LotesCompanion extends UpdateCompanion<LoteRow> {
     required String fincaId,
     required String nombre,
     this.numero = const Value.absent(),
+    this.areaM2 = const Value.absent(),
+    this.areaUnidad = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -2935,6 +3026,8 @@ class LotesCompanion extends UpdateCompanion<LoteRow> {
     Expression<String>? fincaId,
     Expression<String>? nombre,
     Expression<int>? numero,
+    Expression<double>? areaM2,
+    Expression<String>? areaUnidad,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -2946,6 +3039,8 @@ class LotesCompanion extends UpdateCompanion<LoteRow> {
       if (fincaId != null) 'finca_id': fincaId,
       if (nombre != null) 'nombre': nombre,
       if (numero != null) 'numero': numero,
+      if (areaM2 != null) 'area_m2': areaM2,
+      if (areaUnidad != null) 'area_unidad': areaUnidad,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -2959,6 +3054,8 @@ class LotesCompanion extends UpdateCompanion<LoteRow> {
     Value<String>? fincaId,
     Value<String>? nombre,
     Value<int?>? numero,
+    Value<double?>? areaM2,
+    Value<String?>? areaUnidad,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -2970,6 +3067,8 @@ class LotesCompanion extends UpdateCompanion<LoteRow> {
       fincaId: fincaId ?? this.fincaId,
       nombre: nombre ?? this.nombre,
       numero: numero ?? this.numero,
+      areaM2: areaM2 ?? this.areaM2,
+      areaUnidad: areaUnidad ?? this.areaUnidad,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -2992,6 +3091,12 @@ class LotesCompanion extends UpdateCompanion<LoteRow> {
     }
     if (numero.present) {
       map['numero'] = Variable<int>(numero.value);
+    }
+    if (areaM2.present) {
+      map['area_m2'] = Variable<double>(areaM2.value);
+    }
+    if (areaUnidad.present) {
+      map['area_unidad'] = Variable<String>(areaUnidad.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -3018,6 +3123,8 @@ class LotesCompanion extends UpdateCompanion<LoteRow> {
           ..write('fincaId: $fincaId, ')
           ..write('nombre: $nombre, ')
           ..write('numero: $numero, ')
+          ..write('areaM2: $areaM2, ')
+          ..write('areaUnidad: $areaUnidad, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -12067,6 +12174,1309 @@ class GastoFijoCargosCompanion extends UpdateCompanion<GastoFijoCargoRow> {
   }
 }
 
+class $DeudasTable extends Deudas with TableInfo<$DeudasTable, DeudaRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DeudasTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fincaIdMeta = const VerificationMeta(
+    'fincaId',
+  );
+  @override
+  late final GeneratedColumn<String> fincaId = GeneratedColumn<String>(
+    'finca_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _acreedorMeta = const VerificationMeta(
+    'acreedor',
+  );
+  @override
+  late final GeneratedColumn<String> acreedor = GeneratedColumn<String>(
+    'acreedor',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montoMeta = const VerificationMeta('monto');
+  @override
+  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+    'monto',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fechaMeta = const VerificationMeta('fecha');
+  @override
+  late final GeneratedColumn<DateTime> fecha = GeneratedColumn<DateTime>(
+    'fecha',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _venceMeta = const VerificationMeta('vence');
+  @override
+  late final GeneratedColumn<DateTime> vence = GeneratedColumn<DateTime>(
+    'vence',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _estadoMeta = const VerificationMeta('estado');
+  @override
+  late final GeneratedColumn<String> estado = GeneratedColumn<String>(
+    'estado',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pendiente'),
+  );
+  static const VerificationMeta _notaMeta = const VerificationMeta('nota');
+  @override
+  late final GeneratedColumn<String> nota = GeneratedColumn<String>(
+    'nota',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _monedaMeta = const VerificationMeta('moneda');
+  @override
+  late final GeneratedColumn<String> moneda = GeneratedColumn<String>(
+    'moneda',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('CRC'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    fincaId,
+    acreedor,
+    monto,
+    fecha,
+    vence,
+    estado,
+    nota,
+    moneda,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'deudas';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DeudaRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('finca_id')) {
+      context.handle(
+        _fincaIdMeta,
+        fincaId.isAcceptableOrUnknown(data['finca_id']!, _fincaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fincaIdMeta);
+    }
+    if (data.containsKey('acreedor')) {
+      context.handle(
+        _acreedorMeta,
+        acreedor.isAcceptableOrUnknown(data['acreedor']!, _acreedorMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_acreedorMeta);
+    }
+    if (data.containsKey('monto')) {
+      context.handle(
+        _montoMeta,
+        monto.isAcceptableOrUnknown(data['monto']!, _montoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_montoMeta);
+    }
+    if (data.containsKey('fecha')) {
+      context.handle(
+        _fechaMeta,
+        fecha.isAcceptableOrUnknown(data['fecha']!, _fechaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fechaMeta);
+    }
+    if (data.containsKey('vence')) {
+      context.handle(
+        _venceMeta,
+        vence.isAcceptableOrUnknown(data['vence']!, _venceMeta),
+      );
+    }
+    if (data.containsKey('estado')) {
+      context.handle(
+        _estadoMeta,
+        estado.isAcceptableOrUnknown(data['estado']!, _estadoMeta),
+      );
+    }
+    if (data.containsKey('nota')) {
+      context.handle(
+        _notaMeta,
+        nota.isAcceptableOrUnknown(data['nota']!, _notaMeta),
+      );
+    }
+    if (data.containsKey('moneda')) {
+      context.handle(
+        _monedaMeta,
+        moneda.isAcceptableOrUnknown(data['moneda']!, _monedaMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DeudaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DeudaRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      fincaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}finca_id'],
+      )!,
+      acreedor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}acreedor'],
+      )!,
+      monto: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monto'],
+      )!,
+      fecha: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha'],
+      )!,
+      vence: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}vence'],
+      ),
+      estado: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}estado'],
+      )!,
+      nota: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nota'],
+      ),
+      moneda: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}moneda'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $DeudasTable createAlias(String alias) {
+    return $DeudasTable(attachedDatabase, alias);
+  }
+}
+
+class DeudaRow extends DataClass implements Insertable<DeudaRow> {
+  final String id;
+  final String fincaId;
+
+  /// A quién se le debe (persona, casa comercial, banco).
+  final String acreedor;
+
+  /// Monto total de la deuda. Los abonos se guardan aparte y el saldo es
+  /// `monto - abonos`, así queda el historial de cómo se fue pagando.
+  final double monto;
+
+  /// Fecha en que se registra/adquiere la deuda.
+  final DateTime fecha;
+
+  /// Opcional: cuándo hay que pagarla (para filtrar las vencidas).
+  final DateTime? vence;
+
+  /// 'pendiente' | 'pagada' | 'anulada' — ver `EstadoDeuda`.
+  final String estado;
+  final String? nota;
+  final String moneda;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const DeudaRow({
+    required this.id,
+    required this.fincaId,
+    required this.acreedor,
+    required this.monto,
+    required this.fecha,
+    this.vence,
+    required this.estado,
+    this.nota,
+    required this.moneda,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['finca_id'] = Variable<String>(fincaId);
+    map['acreedor'] = Variable<String>(acreedor);
+    map['monto'] = Variable<double>(monto);
+    map['fecha'] = Variable<DateTime>(fecha);
+    if (!nullToAbsent || vence != null) {
+      map['vence'] = Variable<DateTime>(vence);
+    }
+    map['estado'] = Variable<String>(estado);
+    if (!nullToAbsent || nota != null) {
+      map['nota'] = Variable<String>(nota);
+    }
+    map['moneda'] = Variable<String>(moneda);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  DeudasCompanion toCompanion(bool nullToAbsent) {
+    return DeudasCompanion(
+      id: Value(id),
+      fincaId: Value(fincaId),
+      acreedor: Value(acreedor),
+      monto: Value(monto),
+      fecha: Value(fecha),
+      vence: vence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(vence),
+      estado: Value(estado),
+      nota: nota == null && nullToAbsent ? const Value.absent() : Value(nota),
+      moneda: Value(moneda),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory DeudaRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DeudaRow(
+      id: serializer.fromJson<String>(json['id']),
+      fincaId: serializer.fromJson<String>(json['fincaId']),
+      acreedor: serializer.fromJson<String>(json['acreedor']),
+      monto: serializer.fromJson<double>(json['monto']),
+      fecha: serializer.fromJson<DateTime>(json['fecha']),
+      vence: serializer.fromJson<DateTime?>(json['vence']),
+      estado: serializer.fromJson<String>(json['estado']),
+      nota: serializer.fromJson<String?>(json['nota']),
+      moneda: serializer.fromJson<String>(json['moneda']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'fincaId': serializer.toJson<String>(fincaId),
+      'acreedor': serializer.toJson<String>(acreedor),
+      'monto': serializer.toJson<double>(monto),
+      'fecha': serializer.toJson<DateTime>(fecha),
+      'vence': serializer.toJson<DateTime?>(vence),
+      'estado': serializer.toJson<String>(estado),
+      'nota': serializer.toJson<String?>(nota),
+      'moneda': serializer.toJson<String>(moneda),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  DeudaRow copyWith({
+    String? id,
+    String? fincaId,
+    String? acreedor,
+    double? monto,
+    DateTime? fecha,
+    Value<DateTime?> vence = const Value.absent(),
+    String? estado,
+    Value<String?> nota = const Value.absent(),
+    String? moneda,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => DeudaRow(
+    id: id ?? this.id,
+    fincaId: fincaId ?? this.fincaId,
+    acreedor: acreedor ?? this.acreedor,
+    monto: monto ?? this.monto,
+    fecha: fecha ?? this.fecha,
+    vence: vence.present ? vence.value : this.vence,
+    estado: estado ?? this.estado,
+    nota: nota.present ? nota.value : this.nota,
+    moneda: moneda ?? this.moneda,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  DeudaRow copyWithCompanion(DeudasCompanion data) {
+    return DeudaRow(
+      id: data.id.present ? data.id.value : this.id,
+      fincaId: data.fincaId.present ? data.fincaId.value : this.fincaId,
+      acreedor: data.acreedor.present ? data.acreedor.value : this.acreedor,
+      monto: data.monto.present ? data.monto.value : this.monto,
+      fecha: data.fecha.present ? data.fecha.value : this.fecha,
+      vence: data.vence.present ? data.vence.value : this.vence,
+      estado: data.estado.present ? data.estado.value : this.estado,
+      nota: data.nota.present ? data.nota.value : this.nota,
+      moneda: data.moneda.present ? data.moneda.value : this.moneda,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DeudaRow(')
+          ..write('id: $id, ')
+          ..write('fincaId: $fincaId, ')
+          ..write('acreedor: $acreedor, ')
+          ..write('monto: $monto, ')
+          ..write('fecha: $fecha, ')
+          ..write('vence: $vence, ')
+          ..write('estado: $estado, ')
+          ..write('nota: $nota, ')
+          ..write('moneda: $moneda, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    fincaId,
+    acreedor,
+    monto,
+    fecha,
+    vence,
+    estado,
+    nota,
+    moneda,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DeudaRow &&
+          other.id == this.id &&
+          other.fincaId == this.fincaId &&
+          other.acreedor == this.acreedor &&
+          other.monto == this.monto &&
+          other.fecha == this.fecha &&
+          other.vence == this.vence &&
+          other.estado == this.estado &&
+          other.nota == this.nota &&
+          other.moneda == this.moneda &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class DeudasCompanion extends UpdateCompanion<DeudaRow> {
+  final Value<String> id;
+  final Value<String> fincaId;
+  final Value<String> acreedor;
+  final Value<double> monto;
+  final Value<DateTime> fecha;
+  final Value<DateTime?> vence;
+  final Value<String> estado;
+  final Value<String?> nota;
+  final Value<String> moneda;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const DeudasCompanion({
+    this.id = const Value.absent(),
+    this.fincaId = const Value.absent(),
+    this.acreedor = const Value.absent(),
+    this.monto = const Value.absent(),
+    this.fecha = const Value.absent(),
+    this.vence = const Value.absent(),
+    this.estado = const Value.absent(),
+    this.nota = const Value.absent(),
+    this.moneda = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DeudasCompanion.insert({
+    required String id,
+    required String fincaId,
+    required String acreedor,
+    required double monto,
+    required DateTime fecha,
+    this.vence = const Value.absent(),
+    this.estado = const Value.absent(),
+    this.nota = const Value.absent(),
+    this.moneda = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       fincaId = Value(fincaId),
+       acreedor = Value(acreedor),
+       monto = Value(monto),
+       fecha = Value(fecha),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<DeudaRow> custom({
+    Expression<String>? id,
+    Expression<String>? fincaId,
+    Expression<String>? acreedor,
+    Expression<double>? monto,
+    Expression<DateTime>? fecha,
+    Expression<DateTime>? vence,
+    Expression<String>? estado,
+    Expression<String>? nota,
+    Expression<String>? moneda,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fincaId != null) 'finca_id': fincaId,
+      if (acreedor != null) 'acreedor': acreedor,
+      if (monto != null) 'monto': monto,
+      if (fecha != null) 'fecha': fecha,
+      if (vence != null) 'vence': vence,
+      if (estado != null) 'estado': estado,
+      if (nota != null) 'nota': nota,
+      if (moneda != null) 'moneda': moneda,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DeudasCompanion copyWith({
+    Value<String>? id,
+    Value<String>? fincaId,
+    Value<String>? acreedor,
+    Value<double>? monto,
+    Value<DateTime>? fecha,
+    Value<DateTime?>? vence,
+    Value<String>? estado,
+    Value<String?>? nota,
+    Value<String>? moneda,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return DeudasCompanion(
+      id: id ?? this.id,
+      fincaId: fincaId ?? this.fincaId,
+      acreedor: acreedor ?? this.acreedor,
+      monto: monto ?? this.monto,
+      fecha: fecha ?? this.fecha,
+      vence: vence ?? this.vence,
+      estado: estado ?? this.estado,
+      nota: nota ?? this.nota,
+      moneda: moneda ?? this.moneda,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (fincaId.present) {
+      map['finca_id'] = Variable<String>(fincaId.value);
+    }
+    if (acreedor.present) {
+      map['acreedor'] = Variable<String>(acreedor.value);
+    }
+    if (monto.present) {
+      map['monto'] = Variable<double>(monto.value);
+    }
+    if (fecha.present) {
+      map['fecha'] = Variable<DateTime>(fecha.value);
+    }
+    if (vence.present) {
+      map['vence'] = Variable<DateTime>(vence.value);
+    }
+    if (estado.present) {
+      map['estado'] = Variable<String>(estado.value);
+    }
+    if (nota.present) {
+      map['nota'] = Variable<String>(nota.value);
+    }
+    if (moneda.present) {
+      map['moneda'] = Variable<String>(moneda.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DeudasCompanion(')
+          ..write('id: $id, ')
+          ..write('fincaId: $fincaId, ')
+          ..write('acreedor: $acreedor, ')
+          ..write('monto: $monto, ')
+          ..write('fecha: $fecha, ')
+          ..write('vence: $vence, ')
+          ..write('estado: $estado, ')
+          ..write('nota: $nota, ')
+          ..write('moneda: $moneda, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DeudaAbonosTable extends DeudaAbonos
+    with TableInfo<$DeudaAbonosTable, DeudaAbonoRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DeudaAbonosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deudaIdMeta = const VerificationMeta(
+    'deudaId',
+  );
+  @override
+  late final GeneratedColumn<String> deudaId = GeneratedColumn<String>(
+    'deuda_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montoMeta = const VerificationMeta('monto');
+  @override
+  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+    'monto',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fechaMeta = const VerificationMeta('fecha');
+  @override
+  late final GeneratedColumn<DateTime> fecha = GeneratedColumn<DateTime>(
+    'fecha',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notaMeta = const VerificationMeta('nota');
+  @override
+  late final GeneratedColumn<String> nota = GeneratedColumn<String>(
+    'nota',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendienteMeta = const VerificationMeta(
+    'pendiente',
+  );
+  @override
+  late final GeneratedColumn<bool> pendiente = GeneratedColumn<bool>(
+    'pendiente',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pendiente" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    deudaId,
+    monto,
+    fecha,
+    nota,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'deuda_abonos';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DeudaAbonoRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('deuda_id')) {
+      context.handle(
+        _deudaIdMeta,
+        deudaId.isAcceptableOrUnknown(data['deuda_id']!, _deudaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deudaIdMeta);
+    }
+    if (data.containsKey('monto')) {
+      context.handle(
+        _montoMeta,
+        monto.isAcceptableOrUnknown(data['monto']!, _montoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_montoMeta);
+    }
+    if (data.containsKey('fecha')) {
+      context.handle(
+        _fechaMeta,
+        fecha.isAcceptableOrUnknown(data['fecha']!, _fechaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fechaMeta);
+    }
+    if (data.containsKey('nota')) {
+      context.handle(
+        _notaMeta,
+        nota.isAcceptableOrUnknown(data['nota']!, _notaMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pendiente')) {
+      context.handle(
+        _pendienteMeta,
+        pendiente.isAcceptableOrUnknown(data['pendiente']!, _pendienteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DeudaAbonoRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DeudaAbonoRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      deudaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}deuda_id'],
+      )!,
+      monto: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monto'],
+      )!,
+      fecha: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha'],
+      )!,
+      nota: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nota'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pendiente: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pendiente'],
+      )!,
+    );
+  }
+
+  @override
+  $DeudaAbonosTable createAlias(String alias) {
+    return $DeudaAbonosTable(attachedDatabase, alias);
+  }
+}
+
+class DeudaAbonoRow extends DataClass implements Insertable<DeudaAbonoRow> {
+  final String id;
+  final String deudaId;
+  final double monto;
+  final DateTime fecha;
+  final String? nota;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendiente;
+  const DeudaAbonoRow({
+    required this.id,
+    required this.deudaId,
+    required this.monto,
+    required this.fecha,
+    this.nota,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pendiente,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['deuda_id'] = Variable<String>(deudaId);
+    map['monto'] = Variable<double>(monto);
+    map['fecha'] = Variable<DateTime>(fecha);
+    if (!nullToAbsent || nota != null) {
+      map['nota'] = Variable<String>(nota);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pendiente'] = Variable<bool>(pendiente);
+    return map;
+  }
+
+  DeudaAbonosCompanion toCompanion(bool nullToAbsent) {
+    return DeudaAbonosCompanion(
+      id: Value(id),
+      deudaId: Value(deudaId),
+      monto: Value(monto),
+      fecha: Value(fecha),
+      nota: nota == null && nullToAbsent ? const Value.absent() : Value(nota),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pendiente: Value(pendiente),
+    );
+  }
+
+  factory DeudaAbonoRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DeudaAbonoRow(
+      id: serializer.fromJson<String>(json['id']),
+      deudaId: serializer.fromJson<String>(json['deudaId']),
+      monto: serializer.fromJson<double>(json['monto']),
+      fecha: serializer.fromJson<DateTime>(json['fecha']),
+      nota: serializer.fromJson<String?>(json['nota']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pendiente: serializer.fromJson<bool>(json['pendiente']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'deudaId': serializer.toJson<String>(deudaId),
+      'monto': serializer.toJson<double>(monto),
+      'fecha': serializer.toJson<DateTime>(fecha),
+      'nota': serializer.toJson<String?>(nota),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pendiente': serializer.toJson<bool>(pendiente),
+    };
+  }
+
+  DeudaAbonoRow copyWith({
+    String? id,
+    String? deudaId,
+    double? monto,
+    DateTime? fecha,
+    Value<String?> nota = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pendiente,
+  }) => DeudaAbonoRow(
+    id: id ?? this.id,
+    deudaId: deudaId ?? this.deudaId,
+    monto: monto ?? this.monto,
+    fecha: fecha ?? this.fecha,
+    nota: nota.present ? nota.value : this.nota,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pendiente: pendiente ?? this.pendiente,
+  );
+  DeudaAbonoRow copyWithCompanion(DeudaAbonosCompanion data) {
+    return DeudaAbonoRow(
+      id: data.id.present ? data.id.value : this.id,
+      deudaId: data.deudaId.present ? data.deudaId.value : this.deudaId,
+      monto: data.monto.present ? data.monto.value : this.monto,
+      fecha: data.fecha.present ? data.fecha.value : this.fecha,
+      nota: data.nota.present ? data.nota.value : this.nota,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pendiente: data.pendiente.present ? data.pendiente.value : this.pendiente,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DeudaAbonoRow(')
+          ..write('id: $id, ')
+          ..write('deudaId: $deudaId, ')
+          ..write('monto: $monto, ')
+          ..write('fecha: $fecha, ')
+          ..write('nota: $nota, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    deudaId,
+    monto,
+    fecha,
+    nota,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pendiente,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DeudaAbonoRow &&
+          other.id == this.id &&
+          other.deudaId == this.deudaId &&
+          other.monto == this.monto &&
+          other.fecha == this.fecha &&
+          other.nota == this.nota &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pendiente == this.pendiente);
+}
+
+class DeudaAbonosCompanion extends UpdateCompanion<DeudaAbonoRow> {
+  final Value<String> id;
+  final Value<String> deudaId;
+  final Value<double> monto;
+  final Value<DateTime> fecha;
+  final Value<String?> nota;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pendiente;
+  final Value<int> rowid;
+  const DeudaAbonosCompanion({
+    this.id = const Value.absent(),
+    this.deudaId = const Value.absent(),
+    this.monto = const Value.absent(),
+    this.fecha = const Value.absent(),
+    this.nota = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DeudaAbonosCompanion.insert({
+    required String id,
+    required String deudaId,
+    required double monto,
+    required DateTime fecha,
+    this.nota = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pendiente = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       deudaId = Value(deudaId),
+       monto = Value(monto),
+       fecha = Value(fecha),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<DeudaAbonoRow> custom({
+    Expression<String>? id,
+    Expression<String>? deudaId,
+    Expression<double>? monto,
+    Expression<DateTime>? fecha,
+    Expression<String>? nota,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pendiente,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (deudaId != null) 'deuda_id': deudaId,
+      if (monto != null) 'monto': monto,
+      if (fecha != null) 'fecha': fecha,
+      if (nota != null) 'nota': nota,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pendiente != null) 'pendiente': pendiente,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DeudaAbonosCompanion copyWith({
+    Value<String>? id,
+    Value<String>? deudaId,
+    Value<double>? monto,
+    Value<DateTime>? fecha,
+    Value<String?>? nota,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pendiente,
+    Value<int>? rowid,
+  }) {
+    return DeudaAbonosCompanion(
+      id: id ?? this.id,
+      deudaId: deudaId ?? this.deudaId,
+      monto: monto ?? this.monto,
+      fecha: fecha ?? this.fecha,
+      nota: nota ?? this.nota,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendiente: pendiente ?? this.pendiente,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (deudaId.present) {
+      map['deuda_id'] = Variable<String>(deudaId.value);
+    }
+    if (monto.present) {
+      map['monto'] = Variable<double>(monto.value);
+    }
+    if (fecha.present) {
+      map['fecha'] = Variable<DateTime>(fecha.value);
+    }
+    if (nota.present) {
+      map['nota'] = Variable<String>(nota.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pendiente.present) {
+      map['pendiente'] = Variable<bool>(pendiente.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DeudaAbonosCompanion(')
+          ..write('id: $id, ')
+          ..write('deudaId: $deudaId, ')
+          ..write('monto: $monto, ')
+          ..write('fecha: $fecha, ')
+          ..write('nota: $nota, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pendiente: $pendiente, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $FeatureFlagsTable extends FeatureFlags
     with TableInfo<$FeatureFlagsTable, FeatureFlagRow> {
   @override
@@ -13714,6 +15124,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GastoFijoCargosTable gastoFijoCargos = $GastoFijoCargosTable(
     this,
   );
+  late final $DeudasTable deudas = $DeudasTable(this);
+  late final $DeudaAbonosTable deudaAbonos = $DeudaAbonosTable(this);
   late final $FeatureFlagsTable featureFlags = $FeatureFlagsTable(this);
   late final $SyncCursoresTable syncCursores = $SyncCursoresTable(this);
   late final $SyncEstadosTable syncEstados = $SyncEstadosTable(this);
@@ -13744,6 +15156,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     costosOtros,
     gastosFijos,
     gastoFijoCargos,
+    deudas,
+    deudaAbonos,
     featureFlags,
     syncCursores,
     syncEstados,
@@ -15011,6 +16425,8 @@ typedef $$LotesTableCreateCompanionBuilder =
       required String fincaId,
       required String nombre,
       Value<int?> numero,
+      Value<double?> areaM2,
+      Value<String?> areaUnidad,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
@@ -15023,6 +16439,8 @@ typedef $$LotesTableUpdateCompanionBuilder =
       Value<String> fincaId,
       Value<String> nombre,
       Value<int?> numero,
+      Value<double?> areaM2,
+      Value<String?> areaUnidad,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -15055,6 +16473,16 @@ class $$LotesTableFilterComposer extends Composer<_$AppDatabase, $LotesTable> {
 
   ColumnFilters<int> get numero => $composableBuilder(
     column: $table.numero,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get areaM2 => $composableBuilder(
+    column: $table.areaM2,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get areaUnidad => $composableBuilder(
+    column: $table.areaUnidad,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15108,6 +16536,16 @@ class $$LotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get areaM2 => $composableBuilder(
+    column: $table.areaM2,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get areaUnidad => $composableBuilder(
+    column: $table.areaUnidad,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -15149,6 +16587,14 @@ class $$LotesTableAnnotationComposer
 
   GeneratedColumn<int> get numero =>
       $composableBuilder(column: $table.numero, builder: (column) => column);
+
+  GeneratedColumn<double> get areaM2 =>
+      $composableBuilder(column: $table.areaM2, builder: (column) => column);
+
+  GeneratedColumn<String> get areaUnidad => $composableBuilder(
+    column: $table.areaUnidad,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -15195,6 +16641,8 @@ class $$LotesTableTableManager
                 Value<String> fincaId = const Value.absent(),
                 Value<String> nombre = const Value.absent(),
                 Value<int?> numero = const Value.absent(),
+                Value<double?> areaM2 = const Value.absent(),
+                Value<String?> areaUnidad = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -15205,6 +16653,8 @@ class $$LotesTableTableManager
                 fincaId: fincaId,
                 nombre: nombre,
                 numero: numero,
+                areaM2: areaM2,
+                areaUnidad: areaUnidad,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -15217,6 +16667,8 @@ class $$LotesTableTableManager
                 required String fincaId,
                 required String nombre,
                 Value<int?> numero = const Value.absent(),
+                Value<double?> areaM2 = const Value.absent(),
+                Value<String?> areaUnidad = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -15227,6 +16679,8 @@ class $$LotesTableTableManager
                 fincaId: fincaId,
                 nombre: nombre,
                 numero: numero,
+                areaM2: areaM2,
+                areaUnidad: areaUnidad,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -19531,6 +20985,628 @@ typedef $$GastoFijoCargosTableProcessedTableManager =
       GastoFijoCargoRow,
       PrefetchHooks Function()
     >;
+typedef $$DeudasTableCreateCompanionBuilder =
+    DeudasCompanion Function({
+      required String id,
+      required String fincaId,
+      required String acreedor,
+      required double monto,
+      required DateTime fecha,
+      Value<DateTime?> vence,
+      Value<String> estado,
+      Value<String?> nota,
+      Value<String> moneda,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$DeudasTableUpdateCompanionBuilder =
+    DeudasCompanion Function({
+      Value<String> id,
+      Value<String> fincaId,
+      Value<String> acreedor,
+      Value<double> monto,
+      Value<DateTime> fecha,
+      Value<DateTime?> vence,
+      Value<String> estado,
+      Value<String?> nota,
+      Value<String> moneda,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$DeudasTableFilterComposer
+    extends Composer<_$AppDatabase, $DeudasTable> {
+  $$DeudasTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fincaId => $composableBuilder(
+    column: $table.fincaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get acreedor => $composableBuilder(
+    column: $table.acreedor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get vence => $composableBuilder(
+    column: $table.vence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get estado => $composableBuilder(
+    column: $table.estado,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nota => $composableBuilder(
+    column: $table.nota,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get moneda => $composableBuilder(
+    column: $table.moneda,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DeudasTableOrderingComposer
+    extends Composer<_$AppDatabase, $DeudasTable> {
+  $$DeudasTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fincaId => $composableBuilder(
+    column: $table.fincaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get acreedor => $composableBuilder(
+    column: $table.acreedor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get vence => $composableBuilder(
+    column: $table.vence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get estado => $composableBuilder(
+    column: $table.estado,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nota => $composableBuilder(
+    column: $table.nota,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get moneda => $composableBuilder(
+    column: $table.moneda,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DeudasTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DeudasTable> {
+  $$DeudasTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fincaId =>
+      $composableBuilder(column: $table.fincaId, builder: (column) => column);
+
+  GeneratedColumn<String> get acreedor =>
+      $composableBuilder(column: $table.acreedor, builder: (column) => column);
+
+  GeneratedColumn<double> get monto =>
+      $composableBuilder(column: $table.monto, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fecha =>
+      $composableBuilder(column: $table.fecha, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get vence =>
+      $composableBuilder(column: $table.vence, builder: (column) => column);
+
+  GeneratedColumn<String> get estado =>
+      $composableBuilder(column: $table.estado, builder: (column) => column);
+
+  GeneratedColumn<String> get nota =>
+      $composableBuilder(column: $table.nota, builder: (column) => column);
+
+  GeneratedColumn<String> get moneda =>
+      $composableBuilder(column: $table.moneda, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$DeudasTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DeudasTable,
+          DeudaRow,
+          $$DeudasTableFilterComposer,
+          $$DeudasTableOrderingComposer,
+          $$DeudasTableAnnotationComposer,
+          $$DeudasTableCreateCompanionBuilder,
+          $$DeudasTableUpdateCompanionBuilder,
+          (DeudaRow, BaseReferences<_$AppDatabase, $DeudasTable, DeudaRow>),
+          DeudaRow,
+          PrefetchHooks Function()
+        > {
+  $$DeudasTableTableManager(_$AppDatabase db, $DeudasTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DeudasTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DeudasTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DeudasTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> fincaId = const Value.absent(),
+                Value<String> acreedor = const Value.absent(),
+                Value<double> monto = const Value.absent(),
+                Value<DateTime> fecha = const Value.absent(),
+                Value<DateTime?> vence = const Value.absent(),
+                Value<String> estado = const Value.absent(),
+                Value<String?> nota = const Value.absent(),
+                Value<String> moneda = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DeudasCompanion(
+                id: id,
+                fincaId: fincaId,
+                acreedor: acreedor,
+                monto: monto,
+                fecha: fecha,
+                vence: vence,
+                estado: estado,
+                nota: nota,
+                moneda: moneda,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String fincaId,
+                required String acreedor,
+                required double monto,
+                required DateTime fecha,
+                Value<DateTime?> vence = const Value.absent(),
+                Value<String> estado = const Value.absent(),
+                Value<String?> nota = const Value.absent(),
+                Value<String> moneda = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DeudasCompanion.insert(
+                id: id,
+                fincaId: fincaId,
+                acreedor: acreedor,
+                monto: monto,
+                fecha: fecha,
+                vence: vence,
+                estado: estado,
+                nota: nota,
+                moneda: moneda,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DeudasTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DeudasTable,
+      DeudaRow,
+      $$DeudasTableFilterComposer,
+      $$DeudasTableOrderingComposer,
+      $$DeudasTableAnnotationComposer,
+      $$DeudasTableCreateCompanionBuilder,
+      $$DeudasTableUpdateCompanionBuilder,
+      (DeudaRow, BaseReferences<_$AppDatabase, $DeudasTable, DeudaRow>),
+      DeudaRow,
+      PrefetchHooks Function()
+    >;
+typedef $$DeudaAbonosTableCreateCompanionBuilder =
+    DeudaAbonosCompanion Function({
+      required String id,
+      required String deudaId,
+      required double monto,
+      required DateTime fecha,
+      Value<String?> nota,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+typedef $$DeudaAbonosTableUpdateCompanionBuilder =
+    DeudaAbonosCompanion Function({
+      Value<String> id,
+      Value<String> deudaId,
+      Value<double> monto,
+      Value<DateTime> fecha,
+      Value<String?> nota,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pendiente,
+      Value<int> rowid,
+    });
+
+class $$DeudaAbonosTableFilterComposer
+    extends Composer<_$AppDatabase, $DeudaAbonosTable> {
+  $$DeudaAbonosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deudaId => $composableBuilder(
+    column: $table.deudaId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nota => $composableBuilder(
+    column: $table.nota,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DeudaAbonosTableOrderingComposer
+    extends Composer<_$AppDatabase, $DeudaAbonosTable> {
+  $$DeudaAbonosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deudaId => $composableBuilder(
+    column: $table.deudaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nota => $composableBuilder(
+    column: $table.nota,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pendiente => $composableBuilder(
+    column: $table.pendiente,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DeudaAbonosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DeudaAbonosTable> {
+  $$DeudaAbonosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get deudaId =>
+      $composableBuilder(column: $table.deudaId, builder: (column) => column);
+
+  GeneratedColumn<double> get monto =>
+      $composableBuilder(column: $table.monto, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fecha =>
+      $composableBuilder(column: $table.fecha, builder: (column) => column);
+
+  GeneratedColumn<String> get nota =>
+      $composableBuilder(column: $table.nota, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendiente =>
+      $composableBuilder(column: $table.pendiente, builder: (column) => column);
+}
+
+class $$DeudaAbonosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DeudaAbonosTable,
+          DeudaAbonoRow,
+          $$DeudaAbonosTableFilterComposer,
+          $$DeudaAbonosTableOrderingComposer,
+          $$DeudaAbonosTableAnnotationComposer,
+          $$DeudaAbonosTableCreateCompanionBuilder,
+          $$DeudaAbonosTableUpdateCompanionBuilder,
+          (
+            DeudaAbonoRow,
+            BaseReferences<_$AppDatabase, $DeudaAbonosTable, DeudaAbonoRow>,
+          ),
+          DeudaAbonoRow,
+          PrefetchHooks Function()
+        > {
+  $$DeudaAbonosTableTableManager(_$AppDatabase db, $DeudaAbonosTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DeudaAbonosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DeudaAbonosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DeudaAbonosTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> deudaId = const Value.absent(),
+                Value<double> monto = const Value.absent(),
+                Value<DateTime> fecha = const Value.absent(),
+                Value<String?> nota = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DeudaAbonosCompanion(
+                id: id,
+                deudaId: deudaId,
+                monto: monto,
+                fecha: fecha,
+                nota: nota,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String deudaId,
+                required double monto,
+                required DateTime fecha,
+                Value<String?> nota = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pendiente = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DeudaAbonosCompanion.insert(
+                id: id,
+                deudaId: deudaId,
+                monto: monto,
+                fecha: fecha,
+                nota: nota,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pendiente: pendiente,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DeudaAbonosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DeudaAbonosTable,
+      DeudaAbonoRow,
+      $$DeudaAbonosTableFilterComposer,
+      $$DeudaAbonosTableOrderingComposer,
+      $$DeudaAbonosTableAnnotationComposer,
+      $$DeudaAbonosTableCreateCompanionBuilder,
+      $$DeudaAbonosTableUpdateCompanionBuilder,
+      (
+        DeudaAbonoRow,
+        BaseReferences<_$AppDatabase, $DeudaAbonosTable, DeudaAbonoRow>,
+      ),
+      DeudaAbonoRow,
+      PrefetchHooks Function()
+    >;
 typedef $$FeatureFlagsTableCreateCompanionBuilder =
     FeatureFlagsCompanion Function({
       required String id,
@@ -20433,6 +22509,10 @@ class $AppDatabaseManager {
       $$GastosFijosTableTableManager(_db, _db.gastosFijos);
   $$GastoFijoCargosTableTableManager get gastoFijoCargos =>
       $$GastoFijoCargosTableTableManager(_db, _db.gastoFijoCargos);
+  $$DeudasTableTableManager get deudas =>
+      $$DeudasTableTableManager(_db, _db.deudas);
+  $$DeudaAbonosTableTableManager get deudaAbonos =>
+      $$DeudaAbonosTableTableManager(_db, _db.deudaAbonos);
   $$FeatureFlagsTableTableManager get featureFlags =>
       $$FeatureFlagsTableTableManager(_db, _db.featureFlags);
   $$SyncCursoresTableTableManager get syncCursores =>

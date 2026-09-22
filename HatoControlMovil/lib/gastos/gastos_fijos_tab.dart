@@ -34,10 +34,15 @@ String fmtColones(double monto) {
 
 String _mesAno(DateTime f) => '${_meses[f.month - 1]} ${f.year}';
 
-/// Gastos fijos de la finca (Módulo 7): peón, luz, agua. Se reparten entre los
-/// animales según los días que estuvo cada uno (prorrateo por días-animal).
-class GastosFijosScreen extends StatelessWidget {
-  GastosFijosScreen({
+/// Pestaña Gastos del módulo Gastos (Módulo 7): peón, luz, agua. Se
+/// reparten entre los animales según los días que estuvo cada uno (prorrateo
+/// por días-animal), así que SÍ pesan en la utilidad — al revés que las
+/// deudas, que son solo una lista (ver [DeudasTab]).
+///
+/// Trae su propio Scaffold sin AppBar: el título y las pestañas los pone
+/// [GastosScreen], y cada pestaña se queda con su botón de agregar.
+class GastosFijosTab extends StatelessWidget {
+  GastosFijosTab({
     super.key,
     required this.finca,
     GastosFijosRepository? gastosFijosRepository,
@@ -116,7 +121,6 @@ class GastosFijosScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final soloLectura = permisosFinca.esSoloLectura;
     return Scaffold(
-      appBar: AppBar(title: const Text('Gastos fijos')),
       floatingActionButton: soloLectura
           ? null
           : FloatingActionButton.extended(

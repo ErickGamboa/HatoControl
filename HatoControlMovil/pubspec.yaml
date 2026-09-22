@@ -39,6 +39,10 @@ dependencies:
   drift_flutter: ^0.3.0
   uuid: ^4.5.3
   connectivity_plus: ^7.1.1
+  flutter_localizations:
+    sdk: flutter
+  pdf: ^3.12.0
+  printing: ^5.14.3
   image_picker: ^1.2.2
   path_provider: ^2.1.6
   fl_chart: ^1.2.0
@@ -88,6 +92,12 @@ flutter:
   assets:
     - assets/iconos/
     - assets/logo/hatocontrol_logo.png
+    # Roboto (Apache 2.0, la que trae el SDK de Flutter) para los PDF: la
+    # fuente que usa por defecto el paquete `pdf` no tiene el símbolo del
+    # colón y los montos salían con un cuadrito en lugar del signo.
+    - assets/fuentes/roboto-regular.ttf
+    - assets/fuentes/roboto-bold.ttf
+    - assets/fuentes/roboto_license.txt
 
   # To add assets to your application, add an assets section, like this:
   # assets:

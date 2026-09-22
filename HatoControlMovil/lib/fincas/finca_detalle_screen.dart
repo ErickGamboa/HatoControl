@@ -8,7 +8,7 @@ import '../data/repositories/fincas_repository.dart';
 import '../data/repositories/lotes_repository.dart';
 import '../dietas/dietas_screen.dart';
 import '../analisis/analisis_screen.dart';
-import '../gastos_fijos/gastos_fijos_screen.dart';
+import '../gastos/gastos_screen.dart';
 import '../lotes/lotes_screen.dart';
 import '../pesaje/pesaje_screen.dart';
 import '../sanidad/sanidad_screen.dart';
@@ -18,7 +18,7 @@ import 'compartir_finca_screen.dart';
 import 'editar_finca_flujo.dart';
 
 /// Home de la finca según el documento oro: Trabajo (Pesaje) como acción
-/// principal, y módulos Sanidad · Lotes · Dietas · Venta · Gastos fijos.
+/// principal, y módulos Sanidad · Lotes · Dietas · Venta · Gastos.
 class FincaDetalleScreen extends StatefulWidget {
   FincaDetalleScreen({
     super.key,
@@ -230,9 +230,9 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
                           _BotonOpcion(
                             key: const ValueKey('fincaDetail.gastosFijos'),
                             icono: Icons.receipt_long_outlined,
-                            label: 'Gastos fijos',
+                            label: 'Gastos',
                             onTap: () =>
-                                _abrir(GastosFijosScreen(finca: finca)),
+                                _abrir(GastosScreen(finca: finca)),
                           ),
                           _BotonOpcion(
                             key: const ValueKey('fincaDetail.analisis'),
