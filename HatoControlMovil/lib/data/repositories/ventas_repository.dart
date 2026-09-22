@@ -149,10 +149,14 @@ class VentasRepository {
   /// Economía de cada animal de la finca (en pie y ya vendidos), con los kilos
   /// que ganó. El módulo Análisis agrupa esto por lote y lo suma.
   ///
-  /// Reusa `_resumenDesdeAnimal`, el mismo cálculo que muestra la ficha del
-  /// animal: así Análisis y ficha nunca dicen números distintos. Cuesta varias
-  /// consultas por animal, por eso es un Future con indicador de carga y no un
-  /// stream que se recalcula solo.
+  /// Trae todos los datos de la finca en un puñado de consultas y calcula en
+  /// memoria con [_resumenCon], el mismo cálculo que muestra la ficha del
+  /// animal: Análisis y ficha nunca dicen números distintos.
+  ///
+  /// Antes se calculaba animal por animal, y como el prorrateo de gastos
+  /// fijos de un animal repasa a TODOS los animales de la finca, el costo
+  /// crecía al cuadrado: 200 animales eran ~80.000 consultas y 14 segundos de
+  /// espera. Ahora el prorrateo se hace una sola vez y se reparte.
   Future<List<AnimalFinanciero>> financieroDeFinca(String fincaId) async {
     final animales =
         await (db.select(db.animales)
@@ -164,33 +168,90 @@ class VentasRepository {
               )
               ..orderBy([(t) => OrderingTerm.asc(t.identificador)]))
             .get();
+    if (animales.isEmpty) return const [];
 
-    // Primer y último peso de cada animal, en una sola pasada.
+    // Primer y último peso de cada animal (solo los de ESTA finca).
     final pesajes =
-        await (db.select(db.pesajes)
-              ..where((t) => t.deletedAt.isNull())
-              ..orderBy([(t) => OrderingTerm.asc(t.fecha)]))
+        await (db.select(db.pesajes).join([
+              innerJoin(db.animales, db.animales.id.equalsExp(db.pesajes.animalId)),
+            ])
+              ..where(
+                db.animales.fincaId.equals(fincaId) &
+                    db.pesajes.deletedAt.isNull(),
+              )
+              ..orderBy([OrderingTerm.asc(db.pesajes.fecha)]))
             .get();
     final primero = <String, double>{};
     final ultimo = <String, double>{};
-    for (final p in pesajes) {
+    for (final f in pesajes) {
+      final p = f.readTable(db.pesajes);
       primero.putIfAbsent(p.animalId, () => p.peso);
       ultimo[p.animalId] = p.peso;
     }
 
-    final resultado = <AnimalFinanciero>[];
-    for (final a in animales) {
-      final desde = primero[a.id];
-      final hasta = ultimo[a.id];
-      resultado.add(
+    // Sanidad de la finca, agrupada por animal.
+    final eventos =
+        await (db.select(db.eventosSanitarios).join([
+              innerJoin(
+                db.animales,
+                db.animales.id.equalsExp(db.eventosSanitarios.animalId),
+              ),
+            ])..where(
+              db.animales.fincaId.equals(fincaId) &
+                  db.eventosSanitarios.deletedAt.isNull(),
+            ))
+            .get();
+    final costosSanitarios = <String, List<double?>>{};
+    for (final f in eventos) {
+      final e = f.readTable(db.eventosSanitarios);
+      (costosSanitarios[e.animalId] ??= []).add(e.costo);
+    }
+
+    // Última venta de cada animal (la más reciente manda, igual que antes).
+    final ventasFilas =
+        await (db.select(db.ventas).join([
+              innerJoin(db.animales, db.animales.id.equalsExp(db.ventas.animalId)),
+            ])
+              ..where(
+                db.animales.fincaId.equals(fincaId) &
+                    db.ventas.deletedAt.isNull(),
+              )
+              ..orderBy([OrderingTerm.desc(db.ventas.fecha)]))
+            .get();
+    final ultimaVenta = <String, VentaRow>{};
+    for (final f in ventasFilas) {
+      final v = f.readTable(db.ventas);
+      ultimaVenta.putIfAbsent(v.animalId, () => v);
+    }
+
+    final dietasPorAnimal = await _dietasRepository.dietasRecibidasDeFinca(
+      fincaId,
+    );
+    // El prorrateo de gastos fijos, UNA sola vez para toda la finca.
+    final prorrateo = await _gastosFijosRepository.prorrateoDeFinca(fincaId);
+    final congeladosPorAnimal = await _gastosFijosRepository
+        .cargosPorAnimalDeFinca(fincaId);
+
+    return [
+      for (final a in animales)
         AnimalFinanciero(
           animal: a,
-          resumen: await _resumenDesdeAnimal(a),
-          kilosGanados: (desde == null || hasta == null) ? 0 : hasta - desde,
+          resumen: _resumenCon(
+            animal: a,
+            dietas: dietasPorAnimal[a.id] ?? const [],
+            costosSanitarios: costosSanitarios[a.id] ?? const [],
+            venta: ultimaVenta[a.id],
+            gastosFijos: GastosFijosRepository.gastoFijoCon(
+              a,
+              congelados: congeladosPorAnimal[a.id] ?? const [],
+              prorrateo: prorrateo,
+            ),
+          ),
+          kilosGanados: (primero[a.id] == null || ultimo[a.id] == null)
+              ? 0
+              : ultimo[a.id]! - primero[a.id]!,
         ),
-      );
-    }
-    return resultado;
+    ];
   }
 
   Stream<List<ResumenLoteVenta>> observarLotesVenta(String fincaId) {
@@ -505,15 +566,6 @@ class VentasRepository {
     final dietas = await _dietasRepository
         .observarDietasRecibidas(animal.id)
         .first;
-    final periodos = dietas
-        .map(
-          (d) => PeriodoAlimentacion(
-            desde: d.desde,
-            hasta: d.hasta,
-            costoAnimalDia: d.costoAnimalDia,
-          ),
-        )
-        .toList();
 
     final eventos = await (db.select(
       db.eventosSanitarios,
@@ -527,14 +579,46 @@ class VentasRepository {
               ..limit(1))
             .getSingleOrNull();
 
+    // Gasto fijo prorrateado: congelado si ya salió, en vivo si está activo.
+    final gastosFijos = await _gastosFijosRepository.gastoFijoDeAnimal(animal);
+
+    return _resumenCon(
+      animal: animal,
+      dietas: dietas,
+      costosSanitarios: eventos.map((e) => e.costo).toList(),
+      venta: venta,
+      gastosFijos: gastosFijos,
+    );
+  }
+
+  /// La economía de un animal a partir de datos YA cargados. **Función pura.**
+  ///
+  /// Es el único lugar donde se arma el resumen: lo llaman la ficha del animal
+  /// (que trae sus datos con consultas propias) y Análisis financiero (que
+  /// trae los de toda la finca de una sola pasada). Así las dos pantallas no
+  /// pueden decir números distintos; lo cuida
+  /// `test/repositories/financiero_finca_consistencia_test.dart`.
+  ResumenEconomicoAnimal _resumenCon({
+    required AnimalRow animal,
+    required List<DietaRecibidaAnimal> dietas,
+    required List<double?> costosSanitarios,
+    required VentaRow? venta,
+    required double gastosFijos,
+  }) {
+    final periodos = dietas
+        .map(
+          (d) => PeriodoAlimentacion(
+            desde: d.desde,
+            hasta: d.hasta,
+            costoAnimalDia: d.costoAnimalDia,
+          ),
+        )
+        .toList();
+
     // Dieta se corta en la fecha de venta (o muerte); no sigue corriendo.
     final corte = venta?.fecha;
     final alimentacion = costoAlimentacionDesdePeriodos(periodos, hasta: corte);
-    final sanitario = costoSanitarioDesdeEventos(
-      eventos.map((e) => e.costo).toList(),
-    );
-    // Gasto fijo prorrateado: congelado si ya salió, en vivo si está activo.
-    final gastosFijos = await _gastosFijosRepository.gastoFijoDeAnimal(animal);
+    final sanitario = costoSanitarioDesdeEventos(costosSanitarios);
     // La utilidad sale del **dinero recibido** (D-19). Mientras la planta no
     // haya liquidado, queda null → la pantalla muestra “—”, nunca ₡0.
     final utilidad = utilidadOro(

@@ -155,15 +155,82 @@ class GastosFijosRepository {
   /// se usa `updatedAt`, que es cuando se marcó el estado.
   Future<EstanciaAnimal> estanciaDe(AnimalRow animal) async {
     final venta = await _ultimaVenta(animal.id);
-
     final ingreso = await _pesajes.fechaIngreso(animal);
-    final salida =
-        venta?.fecha ?? (animal.estado == 'activo' ? null : animal.updatedAt);
-    return EstanciaAnimal(
-      animalId: animal.id,
-      ingreso: ingreso,
-      salida: salida,
-    );
+    return estanciaCon(animal, ingreso: ingreso, ultimaVenta: venta?.fecha);
+  }
+
+  /// La misma regla de [estanciaDe] con los datos ya a mano. **Pura.**
+  /// La usan los cálculos de finca entera, que traen las ventas y los
+  /// movimientos de todos los animales de una sola vez.
+  static EstanciaAnimal estanciaCon(
+    AnimalRow animal, {
+    required DateTime ingreso,
+    DateTime? ultimaVenta,
+  }) => EstanciaAnimal(
+    animalId: animal.id,
+    ingreso: ingreso,
+    salida:
+        ultimaVenta ?? (animal.estado == 'activo' ? null : animal.updatedAt),
+  );
+
+  /// Estancia de varios animales en DOS consultas (las ventas y los primeros
+  /// movimientos de la finca), en vez de dos por animal.
+  ///
+  /// Antes, prorratear una finca de 100 animales costaba 200 consultas, y
+  /// Análisis financiero lo repetía por cada animal: 20.000 consultas para
+  /// una pantalla. El resultado es el mismo, ver [estanciaCon].
+  Future<Map<String, EstanciaAnimal>> estanciasDeFinca(
+    String fincaId,
+    List<AnimalRow> animales,
+  ) async {
+    if (animales.isEmpty) return const {};
+
+    final ventas =
+        await (db.select(db.ventas).join([
+              innerJoin(db.animales, db.animales.id.equalsExp(db.ventas.animalId)),
+            ])
+              ..where(
+                db.animales.fincaId.equals(fincaId) &
+                    db.ventas.deletedAt.isNull(),
+              )
+              ..orderBy([OrderingTerm.desc(db.ventas.fecha)]))
+            .get();
+    final ultimaVenta = <String, DateTime>{};
+    for (final f in ventas) {
+      final v = f.readTable(db.ventas);
+      ultimaVenta.putIfAbsent(v.animalId, () => v.fecha);
+    }
+
+    final movimientos =
+        await (db.select(db.movimientosLote).join([
+              innerJoin(
+                db.animales,
+                db.animales.id.equalsExp(db.movimientosLote.animalId),
+              ),
+            ])
+              ..where(
+                db.animales.fincaId.equals(fincaId) &
+                    db.movimientosLote.deletedAt.isNull(),
+              )
+              ..orderBy([OrderingTerm.asc(db.movimientosLote.fecha)]))
+            .get();
+    final primerMovimiento = <String, DateTime>{};
+    for (final f in movimientos) {
+      final m = f.readTable(db.movimientosLote);
+      primerMovimiento.putIfAbsent(m.animalId, () => m.fecha);
+    }
+
+    return {
+      for (final a in animales)
+        a.id: estanciaCon(
+          a,
+          ingreso: PesajesRepository.fechaIngresoCon(
+            a,
+            primerMovimiento[a.id],
+          ),
+          ultimaVenta: ultimaVenta[a.id],
+        ),
+    };
   }
 
   Future<VentaRow?> _ultimaVenta(String animalId) {
@@ -234,7 +301,7 @@ class GastosFijosRepository {
   Future<double> gastoFijoDeAnimal(AnimalRow animal, {DateTime? hoy}) async {
     final congeladosPropios = await cargosDe(animal.id);
     if (congeladosPropios.isNotEmpty) {
-      return congeladosPropios.fold<double>(0, (s, c) => s + c.monto);
+      return gastoFijoCon(animal, congelados: congeladosPropios, prorrateo: const []);
     }
     if (animal.estado != 'activo') {
       // Salió de la finca antes de que existiera el módulo: sin cargos que
@@ -243,7 +310,43 @@ class GastosFijosRepository {
     }
 
     final partes = await _prorratearFinca(animal.fincaId, hoy: hoy);
-    return totalDeAnimal(partes, animal.id);
+    return gastoFijoCon(animal, congelados: const [], prorrateo: partes);
+  }
+
+  /// La misma regla de [gastoFijoDeAnimal] con los datos ya a mano. **Pura.**
+  ///
+  /// Si el animal tiene cargos congelados manda lo congelado (su utilidad no
+  /// vuelve a cambiar); si ya no está activo y no tiene cargos, no se le
+  /// reclama nada; y si está activo, le toca su parte del prorrateo.
+  static double gastoFijoCon(
+    AnimalRow animal, {
+    required List<GastoFijoCargoRow> congelados,
+    required List<ParteGastoMes> prorrateo,
+  }) {
+    if (congelados.isNotEmpty) {
+      return congelados.fold<double>(0, (s, c) => s + c.monto);
+    }
+    if (animal.estado != 'activo') return 0;
+    return totalDeAnimal(prorrateo, animal.id);
+  }
+
+  /// El prorrateo de la finca, para calcularlo UNA vez y repartirlo entre
+  /// todos sus animales (ver [gastoFijoCon]).
+  Future<List<ParteGastoMes>> prorrateoDeFinca(
+    String fincaId, {
+    DateTime? hoy,
+  }) => _prorratearFinca(fincaId, hoy: hoy);
+
+  /// Cargos congelados de la finca, agrupados por animal.
+  Future<Map<String, List<GastoFijoCargoRow>>> cargosPorAnimalDeFinca(
+    String fincaId,
+  ) async {
+    final cargos = await _cargosDeFinca(fincaId);
+    final porAnimal = <String, List<GastoFijoCargoRow>>{};
+    for (final c in cargos) {
+      (porAnimal[c.animalId] ??= []).add(c);
+    }
+    return porAnimal;
   }
 
   /// Reparte los gastos de la finca entre sus animales activos.
@@ -258,16 +361,17 @@ class GastosFijosRepository {
     if (gastos.isEmpty) return const [];
 
     final activos = await _animalesActivos(fincaId);
+    final base = await estanciasDeFinca(fincaId, activos);
     final estancias = <EstanciaAnimal>[];
     for (final a in activos) {
-      final base = await estanciaDe(a);
+      final estancia = base[a.id]!;
       final salida = salidas[a.id];
       estancias.add(
         salida == null
-            ? base
+            ? estancia
             : EstanciaAnimal(
-                animalId: base.animalId,
-                ingreso: base.ingreso,
+                animalId: estancia.animalId,
+                ingreso: estancia.ingreso,
                 salida: salida,
               ),
       );
@@ -294,10 +398,13 @@ class GastosFijosRepository {
   }) async {
     if (animalIds.isEmpty) return;
 
-    final aCongelar = <String>[];
-    for (final id in animalIds) {
-      if ((await cargosDe(id)).isEmpty) aCongelar.add(id);
-    }
+    // Una sola consulta para saber quién ya tiene cargos, no una por animal:
+    // un grupo de venta puede traer el lote entero.
+    final yaCongelados = (await cargosPorAnimalDeFinca(fincaId)).keys.toSet();
+    final aCongelar = [
+      for (final id in animalIds)
+        if (!yaCongelados.contains(id)) id,
+    ];
     if (aCongelar.isEmpty) return;
 
     final partes = await _prorratearFinca(
@@ -346,9 +453,10 @@ class GastosFijosRepository {
     }
 
     final activos = await _animalesActivos(fincaId);
+    final estancias = await estanciasDeFinca(fincaId, activos);
     var diasAnimal = 0;
     for (final a in activos) {
-      diasAnimal += diasEnMes(await estanciaDe(a), mes, hoy: ahora);
+      diasAnimal += diasEnMes(estancias[a.id]!, mes, hoy: ahora);
     }
 
     return ResumenGastosMes(

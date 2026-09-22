@@ -470,8 +470,20 @@ class PesajesRepository {
               ..orderBy([(t) => OrderingTerm.asc(t.fecha)])
               ..limit(1))
             .getSingleOrNull();
-    return primerMovimiento?.fecha ?? animal.createdAt;
+    return fechaIngresoCon(animal, primerMovimiento?.fecha);
   }
+
+  /// La MISMA regla de [fechaIngreso], pero cuando el primer movimiento ya
+  /// se tiene a mano. La usan los cálculos de finca entera (Análisis
+  /// financiero, prorrateo de gastos fijos), que traen los movimientos de
+  /// todos los animales de una sola vez en vez de uno por uno.
+  ///
+  /// Existe para que esos cálculos no copien la regla: si algún día cambia,
+  /// cambia acá y cambia en todo lado.
+  static DateTime fechaIngresoCon(
+    AnimalRow animal,
+    DateTime? primerMovimiento,
+  ) => animal.fechaCompra ?? primerMovimiento ?? animal.createdAt;
 
   /// Peso del PRIMER pesaje del animal (el de entrada). Sirve como peso de
   /// compra cuando el ganadero le pone precio a un animal que se había
