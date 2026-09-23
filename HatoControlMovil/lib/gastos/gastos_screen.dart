@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/boton_sincronizar.dart';
 import '../data/local/database.dart';
 import '../data/repositories/deudas_repository.dart';
 import '../data/repositories/gastos_fijos_repository.dart';
@@ -87,6 +88,7 @@ class _GastosScreenState extends State<GastosScreen>
                     )
                   : const Icon(Icons.picture_as_pdf_outlined),
             ),
+          const BotonSincronizar(),
         ],
         bottom: TabBar(
           controller: _tabs,

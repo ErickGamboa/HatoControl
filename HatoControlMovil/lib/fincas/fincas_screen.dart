@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/boton_sincronizar.dart';
+
 import '../auth/cerrar_sesion_ui.dart';
 import '../data/local/database.dart';
 import '../data/repositories/fincas_repository.dart';
-import '../data/sync/sync_service.dart';
 import '../services.dart';
 import 'crear_finca_flujo.dart';
 import 'finca_detalle_screen.dart';
@@ -98,54 +99,10 @@ class _FincasScreenState extends State<FincasScreen> {
       appBar: AppBar(
         title: const Text('Mis fincas'),
         actions: [
-          ValueListenableBuilder<bool>(
-            valueListenable: estadoConexion.hayConexion,
-            builder: (context, hayConexion, _) {
-              return ValueListenableBuilder<bool>(
-                valueListenable: syncService.sincronizando,
-                builder: (context, sincronizando, _) {
-                  if (sincronizando) {
-                    // Mostramos cuánto va subido: una ruedita sin números
-                    // parece trabada y hace que uno apriete el botón de más.
-                    return ValueListenableBuilder<SyncProgreso>(
-                      valueListenable: syncService.progreso,
-                      builder: (context, avance, _) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            if (avance.activo) ...[
-                              const SizedBox(width: 8),
-                              Text(
-                                '${avance.hechas}/${avance.total}',
-                                style: Theme.of(context).textTheme.labelLarge,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  final puedeSincronizar =
-                      hayConexion && supabase.auth.currentSession != null;
-                  return IconButton(
-                    tooltip: puedeSincronizar
-                        ? 'Sincronizar'
-                        : 'Sin conexión para sincronizar',
-                    icon: const Icon(Icons.sync),
-                    onPressed: puedeSincronizar
-                        ? () => sincronizarSiSePuede()
-                        : null,
-                  );
-                },
-              );
-            },
-          ),
+          // El mismo botón que llevan todas las pantallas (ver
+          // `BotonSincronizar`): antes vivía suelto acá, y por eso había que
+          // devolverse a esta pantalla para traer lo que anotó el mayordomo.
+          const BotonSincronizar(),
           if (_hayAlgoQueMostrarEnSync)
             IconButton(
               key: const ValueKey('fincas.syncStatus'),

@@ -50,6 +50,13 @@ SupabaseClient? get _supabaseClientOrNull {
   }
 }
 
+/// Si hay sesión de Supabase de verdad. Contesta `false` —en vez de reventar—
+/// cuando Supabase ni siquiera está inicializado, que es lo que pasa en los
+/// tests de pantalla: el botón de sincronizar vive en todas las barras y no
+/// puede exigir que la app esté levantada entera para poder dibujarse.
+bool get haySesionSupabase =>
+    _supabaseClientOrNull?.auth.currentSession != null;
+
 Future<void> sincronizarSiSePuede() async {
   if (!estadoConexion.hayConexion.value) {
     return;

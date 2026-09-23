@@ -187,8 +187,11 @@ class GastosFijosRepository {
 
     final ventas =
         await (db.select(db.ventas).join([
-              innerJoin(db.animales, db.animales.id.equalsExp(db.ventas.animalId)),
-            ])
+                innerJoin(
+                  db.animales,
+                  db.animales.id.equalsExp(db.ventas.animalId),
+                ),
+              ])
               ..where(
                 db.animales.fincaId.equals(fincaId) &
                     db.ventas.deletedAt.isNull(),
@@ -203,11 +206,11 @@ class GastosFijosRepository {
 
     final movimientos =
         await (db.select(db.movimientosLote).join([
-              innerJoin(
-                db.animales,
-                db.animales.id.equalsExp(db.movimientosLote.animalId),
-              ),
-            ])
+                innerJoin(
+                  db.animales,
+                  db.animales.id.equalsExp(db.movimientosLote.animalId),
+                ),
+              ])
               ..where(
                 db.animales.fincaId.equals(fincaId) &
                     db.movimientosLote.deletedAt.isNull(),
@@ -224,10 +227,7 @@ class GastosFijosRepository {
       for (final a in animales)
         a.id: estanciaCon(
           a,
-          ingreso: PesajesRepository.fechaIngresoCon(
-            a,
-            primerMovimiento[a.id],
-          ),
+          ingreso: PesajesRepository.fechaIngresoCon(a, primerMovimiento[a.id]),
           ultimaVenta: ultimaVenta[a.id],
         ),
     };
@@ -301,7 +301,11 @@ class GastosFijosRepository {
   Future<double> gastoFijoDeAnimal(AnimalRow animal, {DateTime? hoy}) async {
     final congeladosPropios = await cargosDe(animal.id);
     if (congeladosPropios.isNotEmpty) {
-      return gastoFijoCon(animal, congelados: congeladosPropios, prorrateo: const []);
+      return gastoFijoCon(
+        animal,
+        congelados: congeladosPropios,
+        prorrateo: const [],
+      );
     }
     if (animal.estado != 'activo') {
       // Salió de la finca antes de que existiera el módulo: sin cargos que

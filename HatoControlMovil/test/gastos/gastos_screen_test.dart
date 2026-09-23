@@ -71,6 +71,16 @@ void main() {
     expect(find.byKey(const ValueKey('gastos.tab.gastos')), findsOneWidget);
     expect(find.byKey(const ValueKey('gastos.tab.deudas')), findsOneWidget);
 
+    // El botón de sincronizar va en la barra de TODAS las pantallas, para no
+    // tener que devolverse a "Mis fincas" a traer datos nuevos.
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byKey(const ValueKey('app.sincronizar')),
+      ),
+      findsOneWidget,
+    );
+
     await cerrar(tester);
   });
 

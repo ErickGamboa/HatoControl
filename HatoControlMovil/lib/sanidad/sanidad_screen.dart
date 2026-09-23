@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../app/widgets/boton_sincronizar.dart';
 import 'package:flutter/services.dart';
 
 import '../app/theme.dart';
@@ -76,7 +78,10 @@ class SanidadScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final soloLectura = permisosFinca.esSoloLectura;
     return Scaffold(
-      appBar: AppBar(title: const Text('Sanidad')),
+      appBar: AppBar(
+        title: const Text('Sanidad'),
+        actions: const [BotonSincronizar()],
+      ),
       floatingActionButton: soloLectura
           ? null
           : FloatingActionButton.extended(

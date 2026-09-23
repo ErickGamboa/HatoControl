@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/boton_sincronizar.dart';
 import '../app/theme.dart';
 import '../data/estadisticas/estadisticas_financieras.dart';
 import '../data/local/database.dart';
@@ -40,6 +41,28 @@ class _AnalisisFinancieroScreenState extends State<AnalisisFinancieroScreen> {
 
   late Future<_Datos> _datos = _cargar();
 
+  @override
+  void initState() {
+    super.initState();
+    // Esta pantalla calcula con un Future, así que no se entera sola de lo que
+    // baja la sincronización (las que leen streams sí). Al terminar de
+    // sincronizar vuelve a calcular: si no, el botón de arriba traería datos
+    // nuevos y la pantalla seguiría mostrando los de antes.
+    syncService.sincronizando.addListener(_alCambiarSync);
+  }
+
+  @override
+  void dispose() {
+    syncService.sincronizando.removeListener(_alCambiarSync);
+    super.dispose();
+  }
+
+  void _alCambiarSync() {
+    if (!syncService.sincronizando.value && mounted) {
+      setState(() => _datos = _cargar());
+    }
+  }
+
   Future<_Datos> _cargar() async {
     final animales = await widget.ventasRepository.financieroDeFinca(
       widget.finca.id,
@@ -60,6 +83,7 @@ class _AnalisisFinancieroScreenState extends State<AnalisisFinancieroScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: () => setState(() => _datos = _cargar()),
           ),
+          const BotonSincronizar(),
         ],
       ),
       body: SafeArea(

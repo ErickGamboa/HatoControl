@@ -118,11 +118,24 @@ class SyncService {
     this.db, {
     SyncRemoteGateway? remote,
     List<Duration>? esperasReintento,
-  }) : _remote = remote ?? SupabaseSyncRemoteGateway(),
+  }) : _remoteInyectado = remote,
        _esperasReintento = esperasReintento ?? esperasReintentoPorDefecto;
 
   final AppDatabase db;
-  final SyncRemoteGateway _remote;
+
+  final SyncRemoteGateway? _remoteInyectado;
+  SyncRemoteGateway? _remoteCreado;
+
+  /// La frontera con Supabase se crea la PRIMERA VEZ que se va a usar, no al
+  /// construir el servicio.
+  ///
+  /// Hace falta porque `SupabaseSyncRemoteGateway` pide
+  /// `Supabase.instance`, y eso revienta si Supabase todavía no se inicializó.
+  /// El botón de sincronizar vive en todas las pantallas y solo lee
+  /// [sincronizando]: con la creación perezosa, dibujarlo no obliga a tener
+  /// Supabase arriba (y los tests de pantalla no necesitan levantarlo).
+  SyncRemoteGateway get _remote =>
+      _remoteInyectado ?? (_remoteCreado ??= SupabaseSyncRemoteGateway());
 
   /// Cuánto esperar antes de cada reintento, cuando una vuelta de subida no
   /// logró subir ni una fila. Se agotan y el resto queda pendiente para el

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../local/cambios_en_tablas.dart';
 import '../local/database.dart';
 
 /// Estados de una deuda.
@@ -129,11 +130,7 @@ class DeudasRepository {
     // agregar o editar una deuda como al registrar un abono (ahí cambia el
     // saldo, aunque la fila de la deuda no se haya tocado).
     return db
-        .customSelect(
-          'SELECT 1',
-          readsFrom: {db.deudas, db.deudaAbonos},
-        )
-        .watch()
+        .cambiosEn('deudas_con_saldo', {db.deudas, db.deudaAbonos})
         .asyncMap((_) => _conSaldo(consulta.get()));
   }
 

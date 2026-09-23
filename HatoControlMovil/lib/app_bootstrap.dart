@@ -18,6 +18,20 @@ export 'app/theme.dart' show kAzulHato, kVerdeHato;
 /// Cada cuánto se reintenta solo la sincronización si quedó algo pendiente.
 const kReintentoSyncCada = Duration(minutes: 2);
 
+/// Sincroniza cada vez que la app vuelve del segundo plano.
+///
+/// En el teléfono la app casi nunca arranca en frío: se retoma. El arranque y
+/// el inicio de sesión sí sincronizaban, pero volver a abrirla desde el
+/// multitarea no disparaba nada, así que el ganadero se encontraba el hato
+/// como lo había dejado el día anterior y no tenía cómo saber que le faltaban
+/// datos. Con esto, abrir la app ya trae lo nuevo.
+class _SincronizarAlVolver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState estado) {
+    if (estado == AppLifecycleState.resumed) sincronizarSiSePuede();
+  }
+}
+
 /// Initializes Supabase, local session, connectivity, and optional demo seed.
 Future<void> bootstrapHatoControl() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +59,7 @@ Future<void> bootstrapHatoControl() async {
   }
 
   sincronizarSiSePuede();
+  WidgetsBinding.instance.addObserver(_SincronizarAlVolver());
 
   // Red de seguridad: si algo quedó sin subir (la red se cayó a mitad, el
   // servidor no respondió), se reintenta solo cada dos minutos. El usuario no

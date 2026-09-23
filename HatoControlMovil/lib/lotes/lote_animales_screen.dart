@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/boton_sincronizar.dart';
 import '../app/widgets/campo_fecha.dart';
 import '../app/widgets/quick_number_field.dart';
 import '../data/local/database.dart';
@@ -257,7 +258,10 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.lote.nombre)),
+      appBar: AppBar(
+        title: Text(widget.lote.nombre),
+        actions: const [BotonSincronizar()],
+      ),
       body: Column(
         children: [
           _TarjetaDietaLote(

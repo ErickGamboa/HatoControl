@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../app/widgets/boton_sincronizar.dart';
 import 'package:flutter/services.dart';
 
 import '../data/local/database.dart';
@@ -45,7 +47,10 @@ class LotesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final soloLectura = permisosFinca.esSoloLectura;
     return Scaffold(
-      appBar: AppBar(title: const Text('Lotes')),
+      appBar: AppBar(
+        title: const Text('Lotes'),
+        actions: const [BotonSincronizar()],
+      ),
       floatingActionButton: soloLectura
           ? null
           : FloatingActionButton.extended(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/boton_sincronizar.dart';
 import '../app/teclado/lector_de_aretes.dart';
 import '../app/theme.dart';
 import '../app/widgets/quick_number_field.dart';
@@ -370,6 +371,7 @@ class _VentaScreenState extends State<VentaScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Venta'),
+        actions: const [BotonSincronizar()],
         bottom: TabBar(
           controller: _tabs,
           tabs: const [

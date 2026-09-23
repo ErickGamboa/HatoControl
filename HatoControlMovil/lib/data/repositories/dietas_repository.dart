@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../local/cambios_en_tablas.dart';
 import '../local/database.dart';
 
 /// Dieta vigente de un lote con su nombre y costo congelado al asignar.
@@ -258,15 +259,20 @@ class DietasRepository {
             t.loteId.equals(loteId) & t.hasta.isNull() & t.deletedAt.isNull(),
       );
 
-    return consulta.watch().asyncMap((filas) async {
-      if (filas.isEmpty) return null;
-      final asignacion = filas.first;
-      final dieta = await (db.select(
-        db.dietas,
-      )..where((t) => t.id.equals(asignacion.dietaId))).getSingleOrNull();
-      if (dieta == null || dieta.deletedAt != null) return null;
-      return DietaVigenteLote(asignacion: asignacion, dieta: dieta);
-    });
+    // También se escucha `dietas`: el nombre y el costo salen de ahí, y si
+    // solo se mirara la asignación, editar la dieta no movería la tarjeta.
+    return db
+        .cambiosEn('dieta_vigente', {db.loteDietas, db.dietas})
+        .asyncMap((_) => consulta.get())
+        .asyncMap((filas) async {
+          if (filas.isEmpty) return null;
+          final asignacion = filas.first;
+          final dieta = await (db.select(
+            db.dietas,
+          )..where((t) => t.id.equals(asignacion.dietaId))).getSingleOrNull();
+          if (dieta == null || dieta.deletedAt != null) return null;
+          return DietaVigenteLote(asignacion: asignacion, dieta: dieta);
+        });
   }
 
   /// Historial de asignaciones de dieta de un lote (más reciente primero).
@@ -284,17 +290,28 @@ class DietasRepository {
       ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
       ..orderBy([(t) => OrderingTerm.asc(t.fecha)]);
 
-    return movimientos.watch().asyncMap((movs) async {
-      if (movs.isEmpty) return const <DietaRecibidaAnimal>[];
-      final catalogo = await _catalogoDeLotes(
-        movs.map((m) => m.loteDestino).toSet(),
-      );
-      return dietasRecibidasCon(
-        movimientos: movs,
-        catalogo: catalogo,
-        ahora: DateTime.now(),
-      );
-    });
+    // Los cuatro ingredientes del cálculo: por dónde pasó el animal, qué
+    // dieta tenía cada lote, y cómo se llaman dieta y lote. Si cambia
+    // cualquiera, la ficha del animal tiene que mostrarlo.
+    return db
+        .cambiosEn('dietas_recibidas', {
+          db.movimientosLote,
+          db.loteDietas,
+          db.dietas,
+          db.lotes,
+        })
+        .asyncMap((_) => movimientos.get())
+        .asyncMap((movs) async {
+          if (movs.isEmpty) return const <DietaRecibidaAnimal>[];
+          final catalogo = await _catalogoDeLotes(
+            movs.map((m) => m.loteDestino).toSet(),
+          );
+          return dietasRecibidasCon(
+            movimientos: movs,
+            catalogo: catalogo,
+            ahora: DateTime.now(),
+          );
+        });
   }
 
   /// Lo mismo que [observarDietasRecibidas] pero para TODOS los animales de
@@ -310,11 +327,11 @@ class DietasRepository {
   }) async {
     final filas =
         await (db.select(db.movimientosLote).join([
-              innerJoin(
-                db.animales,
-                db.animales.id.equalsExp(db.movimientosLote.animalId),
-              ),
-            ])
+                innerJoin(
+                  db.animales,
+                  db.animales.id.equalsExp(db.movimientosLote.animalId),
+                ),
+              ])
               ..where(
                 db.animales.fincaId.equals(fincaId) &
                     db.movimientosLote.deletedAt.isNull(),
@@ -351,10 +368,9 @@ class DietasRepository {
     if (loteIds.isEmpty) return const CatalogoDietasLotes.vacio();
     final ids = loteIds.toList();
 
-    final asignaciones =
-        await (db.select(db.loteDietas)
-              ..where((t) => t.loteId.isIn(ids) & t.deletedAt.isNull()))
-            .get();
+    final asignaciones = await (db.select(
+      db.loteDietas,
+    )..where((t) => t.loteId.isIn(ids) & t.deletedAt.isNull())).get();
 
     final dietasFilas =
         await (db.select(db.dietas)..where(
@@ -379,7 +395,6 @@ class DietasRepository {
       lotesPorId: {for (final l in lotesFilas) l.id: l},
     );
   }
-
 }
 
 /// Asignaciones de dieta, dietas y lotes ya cargados, para calcular las dietas
@@ -428,7 +443,8 @@ List<DietaRecibidaAnimal> dietasRecibidasCon({
         : null;
     final hasta = periodoFin ?? ahora;
 
-    final asignaciones = catalogo.asignacionesPorLote[mov.loteDestino] ?? const [];
+    final asignaciones =
+        catalogo.asignacionesPorLote[mov.loteDestino] ?? const [];
     for (final asig in asignaciones) {
       if (asig.desde.isAfter(hasta)) continue;
 

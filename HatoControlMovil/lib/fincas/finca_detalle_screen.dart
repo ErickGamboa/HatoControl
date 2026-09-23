@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/boton_sincronizar.dart';
 import '../app/permisos_finca.dart';
 import '../app/theme.dart';
 import '../data/estadisticas/estadisticas_finca.dart';
@@ -131,10 +132,13 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
           builder: (context, soloLectura, _) => Scaffold(
             appBar: AppBar(
               title: Text(finca.nombre),
-              // Un invitado no comparte ni edita la finca: solo la ve.
+              // Sincronizar lo puede hacer cualquiera, hasta el invitado de
+              // solo lectura: traer datos nuevos no es escribir nada.
+              // Compartir y editar la finca, no: eso es solo del dueño.
               actions: soloLectura
-                  ? const []
+                  ? const [BotonSincronizar()]
                   : [
+                      const BotonSincronizar(),
                       IconButton(
                         tooltip: 'Compartir finca',
                         icon: const Icon(Icons.person_add_alt_1),

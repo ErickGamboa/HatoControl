@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../app/widgets/boton_sincronizar.dart';
 import 'package:flutter/services.dart';
 
 import '../app/teclado/lector_de_aretes.dart';
@@ -424,7 +426,10 @@ class _PesajeScreenState extends State<PesajeScreen> {
     // alguno llega acá (por historial de navegación) no ve la manga.
     if (permisosFinca.esSoloLectura) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Trabajo')),
+        appBar: AppBar(
+          title: const Text('Trabajo'),
+          actions: const [BotonSincronizar()],
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(HatoSpacing.xl),
@@ -444,6 +449,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Trabajo'),
+        actions: const [BotonSincronizar()],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(28),
           child: Padding(

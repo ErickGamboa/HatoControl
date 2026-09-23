@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/boton_sincronizar.dart';
+
 import '../data/local/database.dart';
 import '../data/repositories/pesajes_repository.dart';
 import '../services.dart';
@@ -20,7 +22,10 @@ class AnimalHistorialScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Animal ${animal.identificador}')),
+      appBar: AppBar(
+        title: Text('Animal ${animal.identificador}'),
+        actions: const [BotonSincronizar()],
+      ),
       body: AnimalPesajesTab(animal: animal, repo: repo),
     );
   }

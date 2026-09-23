@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/boton_sincronizar.dart';
+
 import '../data/local/database.dart';
 import '../data/repositories/dietas_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
@@ -41,6 +43,7 @@ class AnimalFichaScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text('Hoja de vida · ${animal.identificador}'),
+          actions: const [BotonSincronizar()],
           bottom: const TabBar(
             isScrollable: true,
             tabs: [

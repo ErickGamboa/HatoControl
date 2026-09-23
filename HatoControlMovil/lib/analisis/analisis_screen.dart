@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/widgets/boton_sincronizar.dart';
 import '../app/theme.dart';
 import '../data/local/database.dart';
 import 'analisis_financiero_screen.dart';
@@ -23,7 +24,10 @@ class AnalisisScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Análisis')),
+      appBar: AppBar(
+        title: const Text('Análisis'),
+        actions: const [BotonSincronizar()],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(HatoSpacing.lg),

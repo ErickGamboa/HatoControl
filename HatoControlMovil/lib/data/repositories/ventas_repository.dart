@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../estadisticas/estadisticas_economicas.dart';
 import '../estadisticas/estadisticas_financieras.dart';
 import '../estadisticas/estadisticas_sanidad.dart';
+import '../local/cambios_en_tablas.dart';
 import '../local/database.dart';
 import 'dietas_repository.dart';
 import 'gastos_fijos_repository.dart';
@@ -136,7 +137,24 @@ class VentasRepository {
   Stream<ResumenEconomicoAnimal> observarResumen(String animalId) {
     final query = db.select(db.animales)
       ..where((t) => t.id.equals(animalId) & t.deletedAt.isNull());
-    return query.watchSingle().asyncMap(_resumenDesdeAnimal);
+
+    // La economía del animal se arma con media base: compra, dietas por las
+    // que pasó, sanidad, venta y gastos fijos. Mirando solo `animales`, la
+    // ficha no se movía al registrarle un evento sanitario o al bajar su
+    // venta del servidor: había que salir y volver a entrar.
+    return db
+        .cambiosEn('resumen_del_animal', {
+          db.animales,
+          db.movimientosLote,
+          db.loteDietas,
+          db.dietas,
+          db.eventosSanitarios,
+          db.ventas,
+          db.gastosFijos,
+          db.gastoFijoCargos,
+        })
+        .asyncMap((_) => query.getSingle())
+        .asyncMap(_resumenDesdeAnimal);
   }
 
   Future<ResumenEconomicoAnimal> resumenDe(String animalId) async {
@@ -173,8 +191,11 @@ class VentasRepository {
     // Primer y último peso de cada animal (solo los de ESTA finca).
     final pesajes =
         await (db.select(db.pesajes).join([
-              innerJoin(db.animales, db.animales.id.equalsExp(db.pesajes.animalId)),
-            ])
+                innerJoin(
+                  db.animales,
+                  db.animales.id.equalsExp(db.pesajes.animalId),
+                ),
+              ])
               ..where(
                 db.animales.fincaId.equals(fincaId) &
                     db.pesajes.deletedAt.isNull(),
@@ -210,8 +231,11 @@ class VentasRepository {
     // Última venta de cada animal (la más reciente manda, igual que antes).
     final ventasFilas =
         await (db.select(db.ventas).join([
-              innerJoin(db.animales, db.animales.id.equalsExp(db.ventas.animalId)),
-            ])
+                innerJoin(
+                  db.animales,
+                  db.animales.id.equalsExp(db.ventas.animalId),
+                ),
+              ])
               ..where(
                 db.animales.fincaId.equals(fincaId) &
                     db.ventas.deletedAt.isNull(),
@@ -259,11 +283,7 @@ class VentasRepository {
     // registran ahí después de crear el grupo), así que hay que re-emitir
     // cuando cambie cualquiera de las tablas, no solo `lotes_venta`.
     return db
-        .customSelect(
-          'SELECT 1',
-          readsFrom: {db.lotesVenta, db.ventas, db.animales},
-        )
-        .watch()
+        .cambiosEn('lotes_de_venta', {db.lotesVenta, db.ventas, db.animales})
         .asyncMap((_) => _lotesVentaDe(fincaId));
   }
 

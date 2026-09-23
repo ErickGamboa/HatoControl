@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../app/widgets/boton_sincronizar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/local/database.dart';
@@ -130,7 +132,10 @@ class _CompartirFincaScreenState extends State<CompartirFincaScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Compartir finca')),
+      appBar: AppBar(
+        title: const Text('Compartir finca'),
+        actions: const [BotonSincronizar()],
+      ),
       body: Column(
         children: [
           Padding(

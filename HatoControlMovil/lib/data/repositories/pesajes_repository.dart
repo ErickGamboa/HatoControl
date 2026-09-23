@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../estadisticas/estadisticas_pesajes.dart';
+import '../local/cambios_en_tablas.dart';
 import '../local/database.dart';
 import 'ventas_repository.dart';
 
@@ -132,35 +133,65 @@ class PesajesRepository {
       )
       ..orderBy([(t) => OrderingTerm.asc(t.identificador)]);
 
-    return consulta.watch().asyncMap((animales) async {
-      final resultado = <AnimalConPeso>[];
-      for (final a in animales) {
-        // Los dos pesajes más recientes del animal.
-        final ultimos =
-            await (db.select(db.pesajes)
-                  ..where((t) => t.animalId.equals(a.id) & t.deletedAt.isNull())
-                  ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
-                  ..limit(2))
-                .get();
+    // Los pesajes vivos del lote entero, del más nuevo al más viejo. De acá
+    // salen, en memoria, el peso actual y la ganancia de cada animal.
+    final pesajesDelLote =
+        db.select(db.pesajes).join([
+            innerJoin(
+              db.animales,
+              db.animales.id.equalsExp(db.pesajes.animalId),
+            ),
+          ])
+          ..where(
+            db.animales.loteId.equals(loteId) & db.pesajes.deletedAt.isNull(),
+          )
+          ..orderBy([OrderingTerm.desc(db.pesajes.fecha)]);
 
-        final pesoActual = ultimos.isNotEmpty ? ultimos.first.peso : null;
-        double? gananciaDiaria;
-        if (ultimos.length == 2) {
-          final dias = _diasCalendario(ultimos[1].fecha, ultimos[0].fecha);
-          if (dias >= 1) {
-            gananciaDiaria = (ultimos[0].peso - ultimos[1].peso) / dias;
+    // Se escuchan las DOS tablas: el peso sale de `pesajes`, así que mirando
+    // solo `animales` la lista no se movía al entrar un pesaje nuevo — al
+    // sincronizar, el inventario seguía con el peso viejo hasta salir y
+    // volver a entrar.
+    //
+    // Y se resuelve en DOS consultas, no en una por animal. Con 91 animales
+    // eran 92 consultas por refresco: tardaba tanto que los avisos de cambio
+    // que llegaban mientras tanto se perdían, y la pantalla se quedaba
+    // mostrando datos viejos aunque la base ya estuviera al día.
+    return db
+        .cambiosEn('animales_del_lote', {db.animales, db.pesajes})
+        .asyncMap((_) async {
+          final animales = await consulta.get();
+          if (animales.isEmpty) return const <AnimalConPeso>[];
+
+          final porAnimal = <String, List<PesajeRow>>{};
+          for (final fila in await pesajesDelLote.get()) {
+            final p = fila.readTable(db.pesajes);
+            final suyos = porAnimal.putIfAbsent(p.animalId, () => []);
+            // Solo hacen falta los dos más recientes de cada uno.
+            if (suyos.length < 2) suyos.add(p);
           }
-        }
-        resultado.add(
-          AnimalConPeso(
-            animal: a,
-            pesoActual: pesoActual,
-            gananciaDiaria: gananciaDiaria,
-          ),
-        );
+
+          return [
+            for (final a in animales)
+              _conPeso(a, porAnimal[a.id] ?? const <PesajeRow>[]),
+          ];
+        });
+  }
+
+  /// Peso actual y ganancia diaria de un animal a partir de sus dos pesajes
+  /// más recientes (el primero de la lista es el más nuevo).
+  static AnimalConPeso _conPeso(AnimalRow animal, List<PesajeRow> ultimos) {
+    double? gananciaDiaria;
+    if (ultimos.length == 2) {
+      final dias = _diasCalendario(ultimos[1].fecha, ultimos[0].fecha);
+      if (dias >= 1) {
+        gananciaDiaria = (ultimos[0].peso - ultimos[1].peso) / dias;
       }
-      return resultado;
-    });
+    }
+    return AnimalConPeso(
+      animal: animal,
+      pesoActual: ultimos.isNotEmpty ? ultimos.first.peso : null,
+      gananciaDiaria: gananciaDiaria,
+    );
   }
 
   /// Stream de animales vendidos de la finca (historial de ventas).

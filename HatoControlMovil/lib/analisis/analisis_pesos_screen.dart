@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../app/widgets/boton_sincronizar.dart';
 import '../app/theme.dart';
 import '../data/estadisticas/estadisticas_pesajes.dart';
 import '../data/local/database.dart';
@@ -44,7 +45,10 @@ class _AnalisisPesosScreenState extends State<AnalisisPesosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Análisis de pesos')),
+      appBar: AppBar(
+        title: const Text('Análisis de pesos'),
+        actions: const [BotonSincronizar()],
+      ),
       body: SafeArea(
         child: StreamBuilder<List<ResumenPesosLote>>(
           stream: _resumen,

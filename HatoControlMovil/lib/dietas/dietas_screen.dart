@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../app/widgets/boton_sincronizar.dart';
 import 'package:flutter/services.dart';
 
 import '../data/local/database.dart';
@@ -195,7 +197,10 @@ class DietasScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final soloLectura = permisosFinca.esSoloLectura;
     return Scaffold(
-      appBar: AppBar(title: const Text('Dietas')),
+      appBar: AppBar(
+        title: const Text('Dietas'),
+        actions: const [BotonSincronizar()],
+      ),
       floatingActionButton: soloLectura
           ? null
           : FloatingActionButton.extended(
