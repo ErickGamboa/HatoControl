@@ -436,13 +436,20 @@ class _VentaScreenState extends State<VentaScreen>
             const SizedBox(height: HatoSpacing.md),
             SizedBox(
               width: double.infinity,
-              child: FilledButton.tonalIcon(
+              child: FilledButton.icon(
                 key: const ValueKey('venta.agregar'),
                 onPressed: _agregarALista,
                 icon: const Icon(Icons.add),
                 label: const Text('Agregar a la venta'),
+                // Sólido y del mismo tamaño que el de Pesaje: es la acción
+                // principal de la pantalla. En "tonal" el verde queda tan
+                // pálido que parece un botón apagado.
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  textStyle: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
