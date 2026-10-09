@@ -81,7 +81,7 @@ void main() {
     await pesajes.registrarPesajeEnFecha(
       animalId: a.id,
       peso: 257,
-      fecha: hoy.add(const Duration(days: 1)),
+      fecha: DateTime.now(),
       registradoPor: 'u1',
     );
 
@@ -233,7 +233,7 @@ void main() {
     await pesajes.registrarPesajeEnFecha(
       animalId: a.id,
       peso: 311,
-      fecha: hoy.add(const Duration(days: 2)),
+      fecha: DateTime.now(),
       registradoPor: 'u1',
     );
 

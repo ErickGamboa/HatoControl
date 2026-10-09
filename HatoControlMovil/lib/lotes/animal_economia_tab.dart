@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../app/widgets/campo_fecha.dart';
+import '../app/widgets/quick_number_field.dart';
 import '../data/estadisticas/estadisticas_economicas.dart';
 import '../data/local/database.dart';
+import '../data/repositories/reglas_de_fechas.dart';
 import '../data/repositories/ventas_repository.dart';
 import '../services.dart';
 
@@ -45,6 +47,9 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
     if (r.pesoCompra != null && r.precioKgCompra != null) {
       return '${r.pesoCompra!.round()} kg × ₡${r.precioKgCompra!.round()}/kg';
     }
+    if (r.precioCompra != null && r.pesoCompra == null) {
+      return 'monto total · el ₡/kg sale con el primer pesaje';
+    }
     return '';
   }
 
@@ -65,92 +70,49 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
     return partes.join(' · ');
   }
 
+  /// Corrige la compra y la fecha de ingreso. Antes guardaba la compra con
+  /// fecha de HOY: eso corría el ingreso del animal y le borraba los días de
+  /// gastos fijos que ya llevaba. Ahora la fecha se respeta, y si de verdad
+  /// estaba mal se corrige a mano.
   Future<void> _editarCompra() async {
-    final pesoCtrl = TextEditingController(
-      text: widget.animal.pesoCompra?.round().toString() ?? '',
-    );
-    final precioKgCtrl = TextEditingController(
-      text: widget.animal.precioKgCompra?.round().toString() ?? '',
-    );
-    var nacio = widget.animal.precioKgCompra == 0;
+    // La fila fresca: la que trae la pantalla puede ser de antes de editar.
+    final animal = await (db.select(
+      db.animales,
+    )..where((t) => t.id.equals(widget.animal.id))).getSingle();
+    final ingreso = await pesajesRepo.fechaIngreso(animal);
+    if (!mounted) return;
 
-    final ok = await showDialog<bool>(
+    final r = await showModalBottomSheet<_CompraEditada>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Compra'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Nació en la finca'),
-                value: nacio,
-                onChanged: (v) => setLocal(() => nacio = v),
-              ),
-              if (!nacio) ...[
-                TextField(
-                  controller: pesoCtrl,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Peso de compra',
-                    suffixText: 'kg',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: precioKgCtrl,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Precio por kilo',
-                    suffixText: '₡/kg',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => _EditarCompraSheet(animal: animal, ingreso: ingreso),
     );
-    if (ok != true) return;
+    if (r == null) return;
 
-    if (nacio) {
+    try {
+      if (!mismoDia(r.ingreso, ingreso)) {
+        await pesajesRepo.cambiarFechaIngreso(
+          animalId: animal.id,
+          fecha: r.ingreso,
+        );
+      }
+      final actualizado = await (db.select(
+        db.animales,
+      )..where((t) => t.id.equals(animal.id))).getSingle();
+      // La fecha de compra es la de ingreso: la que ya tenía (o la recién
+      // corregida). Nunca hoy por guardar.
+      final fechaCompra = actualizado.fechaCompra ?? momentoDe(r.ingreso);
       await widget.ventasRepository.actualizarCompra(
-        animalId: widget.animal.id,
-        pesoCompra: null,
-        precioKgCompra: 0,
-        precioCompra: 0,
-        fechaCompra: null,
+        animalId: animal.id,
+        pesoCompra: r.pesoCompra,
+        precioKgCompra: r.precioKgCompra,
+        precioCompra: r.precioCompra,
+        fechaCompra: fechaCompra,
       );
-    } else {
-      final peso = double.tryParse(pesoCtrl.text.trim().replaceAll(',', '.'));
-      final kg = double.tryParse(precioKgCtrl.text.trim().replaceAll(',', '.'));
-      if (peso == null || kg == null || peso <= 0 || kg < 0) return;
-      await widget.ventasRepository.actualizarCompra(
-        animalId: widget.animal.id,
-        pesoCompra: peso,
-        precioKgCompra: kg,
-        precioCompra: peso * kg,
-        fechaCompra: DateTime.now(),
-      );
+    } on FechaInvalidaException catch (e) {
+      if (mounted) await avisarFechaInvalida(context, e.mensaje);
+      return;
     }
     sincronizarSiSePuede();
     await _recargar();
@@ -309,6 +271,214 @@ class _AnimalEconomiaTabState extends State<AnimalEconomiaTab> {
             label: const Text('Editar compra'),
           ),
       ],
+    );
+  }
+}
+
+/// Lo que se corrigió de la compra. Igual que al dar de alta en Trabajo:
+/// por kilo, monto total o nació en la finca.
+class _CompraEditada {
+  const _CompraEditada({
+    required this.ingreso,
+    this.pesoCompra,
+    this.precioKgCompra,
+    this.precioCompra,
+  });
+
+  final DateTime ingreso;
+  final double? pesoCompra;
+  final double? precioKgCompra; // 0 = nació en la finca
+  final double? precioCompra;
+}
+
+enum _Modo { porKilo, montoTotal, nacio }
+
+class _EditarCompraSheet extends StatefulWidget {
+  const _EditarCompraSheet({required this.animal, required this.ingreso});
+
+  final AnimalRow animal;
+  final DateTime ingreso;
+
+  @override
+  State<_EditarCompraSheet> createState() => _EditarCompraSheetState();
+}
+
+class _EditarCompraSheetState extends State<_EditarCompraSheet> {
+  late _Modo _modo = widget.animal.precioKgCompra == 0
+      ? _Modo.nacio
+      : (widget.animal.precioKgCompra == null &&
+            widget.animal.precioCompra != null)
+      ? _Modo.montoTotal
+      : _Modo.porKilo;
+  late final _peso = TextEditingController(
+    text: _num(widget.animal.pesoCompra),
+  );
+  late final _precioKg = TextEditingController(
+    text: widget.animal.precioKgCompra == 0
+        ? ''
+        : _num(widget.animal.precioKgCompra),
+  );
+  late final _monto = TextEditingController(
+    text: widget.animal.precioKgCompra == 0
+        ? ''
+        : _num(widget.animal.precioCompra),
+  );
+  late DateTime _ingreso = widget.ingreso;
+
+  static String _num(double? v) {
+    if (v == null) return '';
+    return v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(2);
+  }
+
+  @override
+  void dispose() {
+    _peso.dispose();
+    _precioKg.dispose();
+    _monto.dispose();
+    super.dispose();
+  }
+
+  double? _leer(TextEditingController c) =>
+      double.tryParse(c.text.trim().replaceAll(',', '.'));
+
+  void _avisar(String texto) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  }
+
+  void _guardar() {
+    FocusScope.of(context).unfocus();
+    final peso = _peso.text.trim().isEmpty ? null : _leer(_peso);
+    if (_peso.text.trim().isNotEmpty && (peso == null || peso <= 0)) {
+      _avisar('Peso de compra inválido');
+      return;
+    }
+    switch (_modo) {
+      case _Modo.nacio:
+        Navigator.pop(
+          context,
+          _CompraEditada(ingreso: _ingreso, precioKgCompra: 0, precioCompra: 0),
+        );
+      case _Modo.porKilo:
+        final kg = _leer(_precioKg);
+        if (peso == null) {
+          _avisar('Por kilo hace falta el peso de compra');
+          return;
+        }
+        if (kg == null || kg < 0) {
+          _avisar('Digitá el precio por kilo');
+          return;
+        }
+        Navigator.pop(
+          context,
+          _CompraEditada(
+            ingreso: _ingreso,
+            pesoCompra: peso,
+            precioKgCompra: kg,
+            precioCompra: peso * kg,
+          ),
+        );
+      case _Modo.montoTotal:
+        final monto = _leer(_monto);
+        if (monto == null || monto <= 0) {
+          _avisar('Digitá cuánto costó el animal');
+          return;
+        }
+        Navigator.pop(
+          context,
+          _CompraEditada(
+            ingreso: _ingreso,
+            pesoCompra: peso,
+            precioCompra: monto,
+          ),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Compra · ${widget.animal.identificador}',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            CampoFecha(
+              key: const ValueKey('compra.ingreso'),
+              etiqueta: 'Fecha de ingreso',
+              fecha: _ingreso,
+              ultima: DateTime.now(),
+              alCambiar: (f) => setState(() => _ingreso = f),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Desde ese día se le cobran la dieta y los gastos fijos.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SegmentedButton<_Modo>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: _Modo.porKilo, label: Text('Por kilo')),
+                ButtonSegment(
+                  value: _Modo.montoTotal,
+                  label: Text('Monto total'),
+                ),
+                ButtonSegment(value: _Modo.nacio, label: Text('Nació')),
+              ],
+              selected: {_modo},
+              onSelectionChanged: (s) => setState(() => _modo = s.first),
+            ),
+            if (_modo != _Modo.nacio) ...[
+              const SizedBox(height: 16),
+              QuickNumberField(
+                key: const ValueKey('compra.peso'),
+                controller: _peso,
+                labelText: 'Peso de compra',
+                suffixText: 'kg',
+              ),
+            ],
+            if (_modo == _Modo.porKilo) ...[
+              const SizedBox(height: 12),
+              QuickNumberField(
+                key: const ValueKey('compra.precioKg'),
+                controller: _precioKg,
+                labelText: 'Precio por kilo',
+                suffixText: '₡/kg',
+              ),
+            ],
+            if (_modo == _Modo.montoTotal) ...[
+              const SizedBox(height: 12),
+              QuickNumberField(
+                key: const ValueKey('compra.monto'),
+                controller: _monto,
+                labelText: 'Cuánto costó el animal',
+                suffixText: '₡',
+              ),
+            ],
+            const SizedBox(height: 20),
+            FilledButton(
+              key: const ValueKey('compra.guardar'),
+              onPressed: _guardar,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

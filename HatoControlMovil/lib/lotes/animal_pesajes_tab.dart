@@ -1,9 +1,13 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../app/widgets/campo_fecha.dart';
+import '../app/widgets/quick_number_field.dart';
 import '../data/estadisticas/estadisticas_pesajes.dart';
 import '../data/local/database.dart';
 import '../data/repositories/pesajes_repository.dart';
+import '../data/repositories/reglas_de_fechas.dart';
+import '../services.dart';
 
 /// Pestaña de historial de pesajes (reutilizable en ficha del animal).
 class AnimalPesajesTab extends StatelessWidget {
@@ -25,9 +29,32 @@ class AnimalPesajesTab extends StatelessWidget {
   String _fecha(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
+  /// Tocar un pesaje → corregir el peso o el día, o borrarlo.
+  Future<void> _corregir(
+    BuildContext context,
+    PesajeHistorial p, {
+    required bool esEntrada,
+  }) async {
+    final mensaje = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) =>
+          _CorregirPesajeSheet(pesaje: p, repo: repo, esEntrada: esEntrada),
+    );
+    if (mensaje == null) return;
+    sincronizarSiSePuede();
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(mensaje)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final soloLectura = permisosFinca.esSoloLectura;
     return StreamBuilder<List<PesajeHistorial>>(
       stream: repo.observarHistorial(animal.id),
       builder: (context, snapshot) {
@@ -82,55 +109,81 @@ class AnimalPesajesTab extends StatelessWidget {
                 separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (context, i) {
                   final p = filas[i];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 4,
-                          child: Text(
-                            _fecha(p.fecha),
-                            style: const TextStyle(fontSize: 15),
+                  final digitado = p.digitadoEl;
+                  return InkWell(
+                    key: ValueKey('ficha.pesaje.${p.id}'),
+                    onTap: soloLectura
+                        ? null
+                        : () => _corregir(
+                            context,
+                            p,
+                            esEntrada: i == filas.length - 1,
                           ),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Text(
-                            '${_fmt(p.peso)} kg',
-                            textAlign: TextAlign.end,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _fecha(p.fecha),
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                                // Pesado un día y pasado a la app otro: el
+                                // dueño tiene que saber qué se digitó tarde.
+                                if (digitado != null)
+                                  Text(
+                                    'digitado el ${_fecha(digitado)}'
+                                    '${p.digitadoPor == null ? '' : ' por ${p.digitadoPor}'}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.tertiary,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            p.dias?.toString() ?? '—',
-                            textAlign: TextAlign.end,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: theme.colorScheme.outline,
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              '${_fmt(p.peso)} kg',
+                              textAlign: TextAlign.end,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: _Valor(valor: p.ganancia, entrada: true),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: _Valor(
-                            valor: p.gananciaDiaria,
-                            entrada: false,
-                            decimales: 2,
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              p.dias?.toString() ?? '—',
+                              textAlign: TextAlign.end,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                          Expanded(
+                            flex: 3,
+                            child: _Valor(valor: p.ganancia, entrada: true),
+                          ),
+                          Expanded(
+                            flex: 3,
+                            child: _Valor(
+                              valor: p.gananciaDiaria,
+                              entrada: false,
+                              decimales: 2,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -139,6 +192,152 @@ class AnimalPesajesTab extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Corregir un pesaje ya guardado: los kilos, el día, o borrarlo.
+class _CorregirPesajeSheet extends StatefulWidget {
+  const _CorregirPesajeSheet({
+    required this.pesaje,
+    required this.repo,
+    required this.esEntrada,
+  });
+
+  final PesajeHistorial pesaje;
+  final PesajesRepository repo;
+  final bool esEntrada;
+
+  @override
+  State<_CorregirPesajeSheet> createState() => _CorregirPesajeSheetState();
+}
+
+class _CorregirPesajeSheetState extends State<_CorregirPesajeSheet> {
+  late final _peso = TextEditingController(text: _kg(widget.pesaje.peso));
+  late DateTime _fecha = widget.pesaje.fecha;
+  bool _guardando = false;
+
+  static String _kg(double p) =>
+      p == p.roundToDouble() ? p.toInt().toString() : p.toString();
+
+  @override
+  void dispose() {
+    _peso.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    final peso = double.tryParse(_peso.text.trim().replaceAll(',', '.'));
+    if (peso == null || peso <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Digitá los kilos.')));
+      return;
+    }
+    setState(() => _guardando = true);
+    try {
+      await widget.repo.editarPesaje(
+        pesajeId: widget.pesaje.id,
+        peso: peso,
+        fecha: _fecha,
+      );
+      if (mounted) {
+        Navigator.pop(context, 'Pesaje corregido (${fmtFecha(_fecha)}).');
+      }
+    } on FechaInvalidaException catch (e) {
+      if (mounted) await avisarFechaInvalida(context, e.mensaje);
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  Future<void> _borrar() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Borrar el pesaje?'),
+        content: Text(
+          widget.esEntrada
+              ? 'Es el primer pesaje (el de entrada). Si lo borrás, el '
+                    'siguiente pasa a ser el de entrada.'
+              : 'Se borra el pesaje del ${fmtFecha(widget.pesaje.fecha)} '
+                    '(${_kg(widget.pesaje.peso)} kg).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const ValueKey('ficha.pesaje.borrar.confirmar'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Borrar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await widget.repo.eliminarPesaje(widget.pesaje.id);
+    if (mounted) Navigator.pop(context, 'Pesaje borrado.');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Corregir pesaje',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            QuickNumberField(
+              key: const ValueKey('ficha.pesaje.peso'),
+              controller: _peso,
+              labelText: 'Kilos',
+              suffixText: 'kg',
+            ),
+            const SizedBox(height: 12),
+            CampoFecha(
+              key: const ValueKey('ficha.pesaje.fecha'),
+              etiqueta: '¿Qué día se pesó?',
+              fecha: _fecha,
+              ultima: DateTime.now(),
+              alCambiar: (f) => setState(() => _fecha = f),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              key: const ValueKey('ficha.pesaje.guardar'),
+              onPressed: _guardando ? null : _guardar,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: Text(_guardando ? 'Guardando…' : 'Guardar'),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              key: const ValueKey('ficha.pesaje.borrar'),
+              onPressed: _guardando ? null : _borrar,
+              icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+              label: Text(
+                'Borrar pesaje',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -90,6 +90,7 @@ void main() {
         pesoCompra: 100,
         precioKgCompra: 1000,
         precioCompra: 100000,
+        fecha: DateTime(2025, 1, 1),
       );
       final animal = await pesajes.buscarAnimal('f1', 'R1-100');
       expect(animal!.precioCompra, 100000);

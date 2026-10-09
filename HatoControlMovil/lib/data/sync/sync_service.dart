@@ -381,13 +381,14 @@ class SyncService {
       total += (await subida.pendientes()).length;
     }
     // Las fincas ya contadas por `pendiente` no se cuentan dos veces.
-    final fotos = await (db.select(db.fincas)..where(
-          (t) =>
-              t.fotoPendiente.equals(true) &
-              t.fotoLocalPath.isNotNull() &
-              t.pendiente.equals(false),
-        ))
-        .get();
+    final fotos =
+        await (db.select(db.fincas)..where(
+              (t) =>
+                  t.fotoPendiente.equals(true) &
+                  t.fotoLocalPath.isNotNull() &
+                  t.pendiente.equals(false),
+            ))
+            .get();
     return total + fotos.length;
   }
 
@@ -989,6 +990,10 @@ class SyncService {
                 'peso_compra': a.pesoCompra,
                 'precio_kg_compra': a.precioKgCompra,
                 'fecha_compra': a.fechaCompra?.toIso8601String(),
+                // Solo cuando murió: así un servidor que todavía no tenga la
+                // columna sigue aceptando los animales vivos.
+                if (a.fechaMuerte != null)
+                  'fecha_muerte': a.fechaMuerte!.toIso8601String(),
                 'created_at': a.createdAt.toIso8601String(),
                 'deleted_at': a.deletedAt?.toIso8601String(),
               },
@@ -1027,6 +1032,9 @@ class SyncService {
                   : null,
               fechaCompra: r['fecha_compra'] != null
                   ? DateTime.parse(r['fecha_compra'] as String)
+                  : null,
+              fechaMuerte: r['fecha_muerte'] != null
+                  ? DateTime.parse(r['fecha_muerte'] as String)
                   : null,
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),

@@ -139,13 +139,40 @@ medidos en unidades distintas. La conversión vive en `UnidadArea`
 | finca_id | uuid → fincas.id | |
 | lote_id | uuid → lotes.id | **obligatorio** (todo animal está en un lote) |
 | identificador | text | el número/arete que digita el usuario |
-| created_at | timestamptz | fecha de ingreso del animal |
+| estado | text | `activo` \| `vendido` \| `muerto` |
+| precio_compra | numeric | ₡ total de la compra (0 = nació en la finca) |
+| peso_compra | numeric | kilos de entrada; null = nació o entró sin pesar |
+| precio_kg_compra | numeric | ₡/kg; 0 = nació; null = compra por monto total aún sin pesar |
+| fecha_compra | timestamptz | **fecha de ingreso** cuando se compró (ver abajo) |
+| fecha_muerte | timestamptz | día en que murió; corta dieta y gastos fijos. null = no ha muerto |
+| created_at | timestamptz | cuándo se **digitó** la fila (no es la fecha de ingreso) |
 
 Reglas:
 - Restricción única `(finca_id, identificador)` — el arete no se repite dentro de una finca.
-- **Mover de lote** = cambiar `lote_id`.
+- **Mover de lote** = cambiar `lote_id` + fila en `movimientos_lote` con el día real.
 - Al **crear un animal** se registra también su **peso de entrada** como el primer `pesaje`
-  (ver abajo).
+  (ver abajo), salvo que entre **sin pesar**: entonces no hay pesaje y el primero que se
+  le haga pasa a ser el de entrada.
+- **Compra por monto total:** se guarda `precio_compra` sin `precio_kg_compra`. Con el
+  primer pesaje se completan `peso_compra` y `precio_kg_compra = precio_compra ÷ peso`.
+- **Fecha de ingreso** (una sola): `fecha_compra` si se compró, si no el primer
+  `movimientos_lote`, y de último recurso `created_at` (`PesajesRepository.fechaIngreso`).
+  Al dar de alta con fecha de jornada, compra, primer movimiento y pesaje de entrada
+  quedan en ese día; al corregir el ingreso se mueven compra y primer movimiento juntos.
+- `fecha_muerte` (migración `20261008120000_fecha_muerte_animales.sql`): la app solo
+  la manda en la subida cuando el animal murió, así un servidor sin la columna sigue
+  aceptando los vivos. **Aplicarla antes de publicar** la versión que registra muertes.
+
+### Fechas del hecho vs. fecha de digitado
+
+Todo registro con fecha (`pesajes.fecha`, `eventos_sanitarios.fecha`,
+`movimientos_lote.fecha`, `lote_dietas.desde/hasta`, `ventas.fecha`,
+`animales.fecha_compra/fecha_muerte`) guarda el **día en que pasó**; `created_at` guarda
+cuándo se digitó. Un día que no es hoy se guarda al **mediodía** (`momentoDe`). Las
+fechas imposibles (futuras, antes del ingreso, venta/muerte antes del último pesaje,
+movimiento antes del último movimiento, dieta antes de la anterior) las bloquea
+`ReglasDeFechas` (`lib/data/repositories/reglas_de_fechas.dart`) con
+`FechaInvalidaException`.
 
 ### pesajes — historial de pesos
 | Campo | Tipo | Notas |

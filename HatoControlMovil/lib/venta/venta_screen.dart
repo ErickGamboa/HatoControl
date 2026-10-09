@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../app/widgets/boton_sincronizar.dart';
 import '../app/teclado/lector_de_aretes.dart';
 import '../app/theme.dart';
+import '../app/widgets/campo_fecha.dart';
 import '../app/widgets/quick_number_field.dart';
 import '../app/widgets/scan_field.dart';
 import '../data/estadisticas/estadisticas_economicas.dart';
 import '../data/local/database.dart';
 import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
+import '../data/repositories/reglas_de_fechas.dart';
 import '../data/repositories/sanidad_repository.dart';
 import '../data/repositories/ventas_repository.dart';
 import '../services.dart';
@@ -307,8 +309,7 @@ class _VentaScreenState extends State<VentaScreen>
   }
 
   /// Kilos de los que ya tienen peso digitado.
-  double get _totalKg =>
-      _enCurso.fold<double>(0, (s, i) => s + (i.peso ?? 0));
+  double get _totalKg => _enCurso.fold<double>(0, (s, i) => s + (i.peso ?? 0));
 
   /// Cuántos entraron con el lote completo y siguen sin kilos.
   int get _sinPeso => _enCurso.where((i) => i.faltaPeso).length;
@@ -320,27 +321,48 @@ class _VentaScreenState extends State<VentaScreen>
       return;
     }
     final totalKg = _totalKg;
+    // El día en que salieron. Si se digita la venta días después, la dieta
+    // y los gastos se cortan el día real, no el de hoy.
+    var fecha = DateTime.now();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar venta'),
-        content: Text(
-          'Se venden ${_enCurso.length} animal(es).\n'
-          '${_fmt(totalKg)} kg de salida.\n\n'
-          'Salen del lote de manejo y quedan en el historial.\n'
-          'Ahí registrás, por animal, el peso en pie, el peso en canal y el '
-          'dinero recibido.',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Confirmar venta'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Se venden ${_enCurso.length} animal(es).\n'
+                  '${_fmt(totalKg)} kg de salida.\n\n'
+                  'Salen del lote de manejo y quedan en el historial.\n'
+                  'Ahí registrás, por animal, el peso en pie, el peso en '
+                  'canal y el dinero recibido.',
+                ),
+                const SizedBox(height: 16),
+                CampoFecha(
+                  key: const ValueKey('venta.fecha'),
+                  etiqueta: '¿Qué día salieron?',
+                  fecha: fecha,
+                  ultima: DateTime.now(),
+                  alCambiar: (f) => setLocal(() => fecha = f),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Confirmar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmar'),
-          ),
-        ],
       ),
     );
     if (ok != true) return;
@@ -352,6 +374,7 @@ class _VentaScreenState extends State<VentaScreen>
         items: [
           for (final i in _enCurso) (animalId: i.animal.id, peso: i.peso!),
         ],
+        fecha: fecha,
       );
       sincronizarSiSePuede();
       if (!mounted) return;
@@ -360,6 +383,8 @@ class _VentaScreenState extends State<VentaScreen>
       _tabs.animateTo(1);
     } on AnimalEnRetiroException catch (e) {
       _snack('Retiro activo hasta ${_fecha(e.retiroHasta)}');
+    } on FechaInvalidaException catch (e) {
+      if (mounted) await avisarFechaInvalida(context, e.mensaje);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }

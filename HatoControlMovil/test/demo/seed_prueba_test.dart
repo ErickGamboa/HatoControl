@@ -103,9 +103,10 @@ void main() {
     expect(await db.select(db.lotes).get(), hasLength(1));
     expect(await db.select(db.dietas).get(), hasLength(1));
     expect(await db.select(db.animales).get(), hasLength(3));
-    // Dos pesajes por animal (entrada + hoy) y uno extra: confirmar la venta
-    // guarda los kilos de salida como pesaje del animal vendido.
-    expect(await db.select(db.pesajes).get(), hasLength(7));
+    // Dos pesajes por animal (entrada + hoy). El vendido sale hoy y ya se
+    // había pesado hoy: los kilos de salida corrigen ese pesaje en vez de
+    // agregar otro (un animal, un peso por día).
+    expect(await db.select(db.pesajes).get(), hasLength(6));
     expect(await db.select(db.medicamentos).get(), hasLength(1));
     expect(await db.select(db.eventosSanitarios).get(), hasLength(3));
     expect(await db.select(db.gastosFijos).get(), hasLength(1));
@@ -198,7 +199,7 @@ void main() {
 
     expect(await db.select(db.fincas).get(), hasLength(1));
     expect(await db.select(db.animales).get(), hasLength(3));
-    expect(await db.select(db.pesajes).get(), hasLength(7));
+    expect(await db.select(db.pesajes).get(), hasLength(6));
   });
 
   test('siembra dentro de una finca que ya existía y está vacía', () async {

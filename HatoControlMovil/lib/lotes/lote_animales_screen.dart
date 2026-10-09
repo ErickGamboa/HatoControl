@@ -6,6 +6,7 @@ import '../app/widgets/quick_number_field.dart';
 import '../data/local/database.dart';
 import '../data/repositories/dietas_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
+import '../data/repositories/reglas_de_fechas.dart';
 import '../services.dart';
 import 'animal_ficha_screen.dart';
 
@@ -62,14 +63,28 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
   String _fmt(double p) =>
       p == p.roundToDouble() ? p.toInt().toString() : p.toStringAsFixed(1);
 
-  /// Selector de dieta para este lote (incluye opción Sin dieta).
+  /// Muestra por qué no se pudo guardar con esa fecha.
+  Future<T?> _conFecha<T>(Future<T> Function() accion) async {
+    try {
+      return await accion();
+    } on FechaInvalidaException catch (e) {
+      if (mounted) await avisarFechaInvalida(context, e.mensaje);
+      return null;
+    }
+  }
+
+  /// Selector de dieta para este lote (incluye opción Sin dieta), con el día
+  /// desde el que el lote la come: si se asigna tarde, se cobra desde el día
+  /// real.
   Future<void> _asignarDieta() async {
     final dietas = await dietasRepo.observarDietas(widget.lote.fincaId).first;
     if (!mounted) return;
 
+    var desde = DateTime.now();
     final dietaId = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -80,6 +95,18 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                 'Dieta de "${widget.lote.nombre}"',
                 style: Theme.of(ctx).textTheme.titleMedium,
                 textAlign: TextAlign.center,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: StatefulBuilder(
+                builder: (ctx, setLocal) => CampoFecha(
+                  key: const ValueKey('lote.dieta.desde'),
+                  etiqueta: '¿Desde qué día la comen?',
+                  fecha: desde,
+                  ultima: DateTime.now(),
+                  alCambiar: (f) => setLocal(() => desde = f),
+                ),
               ),
             ),
             const Divider(height: 1),
@@ -121,13 +148,18 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
 
     if (dietaId == null) return;
     if (dietaId.isEmpty) {
-      await _quitarDieta();
+      await _quitarDieta(hasta: desde);
       return;
     }
-    await dietasRepo.asignarDietaALote(
-      loteId: widget.lote.id,
-      dietaId: dietaId,
-    );
+    final ok = await _conFecha(() async {
+      await dietasRepo.asignarDietaALote(
+        loteId: widget.lote.id,
+        dietaId: dietaId,
+        desde: desde,
+      );
+      return true;
+    });
+    if (ok != true) return;
     sincronizarSiSePuede();
     if (mounted) {
       ScaffoldMessenger.of(
@@ -136,8 +168,23 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
     }
   }
 
-  Future<void> _quitarDieta() async {
-    await dietasRepo.quitarDietaDeLote(widget.lote.id);
+  /// Quita la dieta del lote. Desde el botón de la tarjeta pregunta el día;
+  /// desde el selector ("Sin dieta") ya viene con el día escogido ahí.
+  Future<void> _quitarDieta({DateTime? hasta}) async {
+    final dia =
+        hasta ??
+        await pedirFecha(
+          context,
+          titulo: 'Quitar la dieta',
+          etiqueta: '¿Desde qué día ya no la comen?',
+          confirmar: 'Quitar',
+        );
+    if (dia == null) return;
+    final ok = await _conFecha(() async {
+      await dietasRepo.quitarDietaDeLote(widget.lote.id, hasta: dia);
+      return true;
+    });
+    if (ok != true) return;
     sincronizarSiSePuede();
     if (mounted) {
       ScaffoldMessenger.of(
@@ -163,9 +210,11 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
       return;
     }
 
+    var fecha = DateTime.now();
     final destino = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -176,6 +225,18 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                 'Mover "${animal.identificador}" a:',
                 style: Theme.of(ctx).textTheme.titleMedium,
                 textAlign: TextAlign.center,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: StatefulBuilder(
+                builder: (ctx, setLocal) => CampoFecha(
+                  key: const ValueKey('lote.mover.fecha'),
+                  etiqueta: '¿Qué día se movió?',
+                  fecha: fecha,
+                  ultima: DateTime.now(),
+                  alCambiar: (f) => setLocal(() => fecha = f),
+                ),
               ),
             ),
             const Divider(height: 1),
@@ -202,10 +263,15 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
     );
 
     if (destino == null) return;
-    await pesajesRepo.moverAnimalDeLote(
-      animalId: animal.id,
-      nuevoLoteId: destino,
-    );
+    final ok = await _conFecha(() async {
+      await pesajesRepo.moverAnimalDeLote(
+        animalId: animal.id,
+        nuevoLoteId: destino,
+        fecha: fecha,
+      );
+      return true;
+    });
+    if (ok != true) return;
     sincronizarSiSePuede();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -223,10 +289,8 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (ctx) => _NuevoPesajeSheet(
-        animal: animal,
-        usuarioId: widget.usuarioId,
-      ),
+      builder: (ctx) =>
+          _NuevoPesajeSheet(animal: animal, usuarioId: widget.usuarioId),
     );
     if (guardado == null) return;
     sincronizarSiSePuede();
@@ -627,6 +691,8 @@ class _NuevoPesajeSheetState extends State<_NuevoPesajeSheet> {
             ? 'Ese día ya tenía pesaje: se corrigió a $peso kg.'
             : 'Pesaje guardado (${fmtFecha(_fecha)}).',
       );
+    } on FechaInvalidaException catch (e) {
+      if (mounted) await avisarFechaInvalida(context, e.mensaje);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }

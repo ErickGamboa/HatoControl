@@ -68,6 +68,7 @@ void main() {
       pesoCompra: 100,
       precioKgCompra: 1000,
       precioCompra: 100000,
+      fecha: DateTime(2025, 1, 1),
     );
     final animal = await pesajes.buscarAnimal('f1', 'X-1');
     expect(animal!.precioCompra, 100000);
@@ -171,6 +172,7 @@ void main() {
       registradoPor: 'u1',
       pesoCompra: 100,
       precioKgCompra: 1000,
+      fecha: DateTime(2026, 1, 1),
     );
     final animal = await pesajes.buscarAnimal('f1', 'Y-1');
     final desde = DateTime(2026, 1, 1);

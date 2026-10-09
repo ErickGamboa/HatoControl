@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../local/cambios_en_tablas.dart';
 import '../local/database.dart';
+import 'reglas_de_fechas.dart';
 
 /// Dieta vigente de un lote con su nombre y costo congelado al asignar.
 class DietaVigenteLote {
@@ -178,9 +179,12 @@ class DietasRepository {
     );
   }
 
-  /// Cierra la dieta vigente del lote (queda sin dieta). El historial se conserva.
-  Future<void> quitarDietaDeLote(String loteId) async {
+  /// Cierra la dieta vigente del lote (queda sin dieta) el día [hasta] (hoy
+  /// si no se dice). El historial se conserva.
+  Future<void> quitarDietaDeLote(String loteId, {DateTime? hasta}) async {
     final ahora = DateTime.now();
+    final dia = hasta ?? ahora;
+    ReglasDeFechas(db).noFutura(dia, hoy: ahora);
     final vigente =
         await (db.select(db.loteDietas)..where(
               (t) =>
@@ -190,44 +194,86 @@ class DietasRepository {
             ))
             .getSingleOrNull();
     if (vigente == null) return;
+    if (soloDia(dia).isBefore(soloDia(vigente.desde))) {
+      throw FechaInvalidaException(
+        'La dieta actual empezó el ${fechaCorta(vigente.desde)}: no se puede '
+        'quitar antes de esa fecha.',
+      );
+    }
+    final cuando = momentoDe(dia, ahora: ahora);
     await (db.update(
       db.loteDietas,
     )..where((t) => t.id.equals(vigente.id))).write(
       LoteDietasCompanion(
-        hasta: Value(ahora),
+        hasta: Value(cuando.isBefore(vigente.desde) ? vigente.desde : cuando),
         updatedAt: Value(ahora),
         pendiente: const Value(true),
       ),
     );
   }
 
-  /// Asigna una dieta a un lote: cierra la vigente anterior (si hay) y abre
-  /// una nueva con el costo congelado (D-02). Todo en una transacción.
+  /// Asigna una dieta a un lote desde el día [desde] (hoy si no se dice):
+  /// cierra la anterior ese mismo día y abre una nueva con el costo congelado
+  /// (D-02). Todo en una transacción.
+  ///
+  /// Sirve para pasar a la app una dieta que el lote ya venía comiendo: se
+  /// le cobra desde el día real. No se permite ir más atrás que el inicio de
+  /// la dieta anterior, porque esa ya cobró esos días.
   Future<void> asignarDietaALote({
     required String loteId,
     required String dietaId,
+    DateTime? desde,
   }) async {
     final dieta = await (db.select(
       db.dietas,
     )..where((t) => t.id.equals(dietaId) & t.deletedAt.isNull())).getSingle();
     final ahora = DateTime.now();
+    final dia = desde ?? ahora;
+    ReglasDeFechas(db).noFutura(dia, hoy: ahora);
 
     await db.transaction(() async {
-      final vigente =
-          await (db.select(db.loteDietas)..where(
-                (t) =>
-                    t.loteId.equals(loteId) &
-                    t.hasta.isNull() &
-                    t.deletedAt.isNull(),
-              ))
+      // La asignación más reciente del lote, esté abierta o ya cerrada.
+      final ultima =
+          await (db.select(db.loteDietas)
+                ..where((t) => t.loteId.equals(loteId) & t.deletedAt.isNull())
+                ..orderBy([(t) => OrderingTerm.desc(t.desde)])
+                ..limit(1))
               .getSingleOrNull();
-      if (vigente != null) {
-        if (vigente.dietaId == dietaId) return;
+      // La misma dieta que ya tiene, pero desde antes: se corrige el inicio
+      // de la que está (se asignó hoy y en realidad la comen desde hace días).
+      if (ultima != null &&
+          ultima.hasta == null &&
+          ultima.dietaId == dietaId &&
+          soloDia(dia).isBefore(soloDia(ultima.desde))) {
+        await _adelantarInicio(ultima, dia, ahora);
+        return;
+      }
+      if (ultima != null && soloDia(dia).isBefore(soloDia(ultima.desde))) {
+        final nombre = await (db.select(
+          db.dietas,
+        )..where((t) => t.id.equals(ultima.dietaId))).getSingleOrNull();
+        throw FechaInvalidaException(
+          'La dieta "${nombre?.nombre ?? 'anterior'}" empezó el '
+          '${fechaCorta(ultima.desde)}: la nueva no puede empezar antes.',
+        );
+      }
+      if (ultima != null && ultima.hasta == null && ultima.dietaId == dietaId) {
+        return;
+      }
+
+      var cuando = momentoDe(dia, ahora: ahora);
+      if (ultima != null && cuando.isBefore(ultima.desde)) {
+        cuando = ultima.desde;
+      }
+      // La anterior termina el día en que empieza la nueva: abierta, o
+      // cerrada después de esa fecha (se había quitado más tarde).
+      if (ultima != null &&
+          (ultima.hasta == null || ultima.hasta!.isAfter(cuando))) {
         await (db.update(
           db.loteDietas,
-        )..where((t) => t.id.equals(vigente.id))).write(
+        )..where((t) => t.id.equals(ultima.id))).write(
           LoteDietasCompanion(
-            hasta: Value(ahora),
+            hasta: Value(cuando),
             updatedAt: Value(ahora),
             pendiente: const Value(true),
           ),
@@ -241,7 +287,7 @@ class DietasRepository {
               id: _uuid.v4(),
               loteId: loteId,
               dietaId: dietaId,
-              desde: ahora,
+              desde: cuando,
               costoAnimalDiaSnapshot: dieta.costoAnimalDia,
               createdAt: ahora,
               updatedAt: ahora,
@@ -249,6 +295,59 @@ class DietasRepository {
             ),
           );
     });
+  }
+
+  /// Mueve hacia atrás el inicio de la asignación [actual] al día [dia]. La
+  /// asignación anterior del lote, si la hay, termina ese mismo día; si
+  /// empezó después de [dia], no se puede (esos días ya los cobró ella).
+  Future<void> _adelantarInicio(
+    LoteDietaRow actual,
+    DateTime dia,
+    DateTime ahora,
+  ) async {
+    final anterior =
+        await (db.select(db.loteDietas)
+              ..where(
+                (t) =>
+                    t.loteId.equals(actual.loteId) &
+                    t.deletedAt.isNull() &
+                    t.id.equals(actual.id).not() &
+                    t.desde.isSmallerOrEqualValue(actual.desde),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.desde)])
+              ..limit(1))
+            .getSingleOrNull();
+    if (anterior != null && soloDia(dia).isBefore(soloDia(anterior.desde))) {
+      throw FechaInvalidaException(
+        'La dieta anterior de este lote empezó el '
+        '${fechaCorta(anterior.desde)}: esta no puede empezar antes.',
+      );
+    }
+    var cuando = momentoDe(dia, ahora: ahora);
+    if (anterior != null && cuando.isBefore(anterior.desde)) {
+      cuando = anterior.desde;
+    }
+    if (anterior != null &&
+        (anterior.hasta == null || anterior.hasta!.isAfter(cuando))) {
+      await (db.update(
+        db.loteDietas,
+      )..where((t) => t.id.equals(anterior.id))).write(
+        LoteDietasCompanion(
+          hasta: Value(cuando),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+    }
+    await (db.update(
+      db.loteDietas,
+    )..where((t) => t.id.equals(actual.id))).write(
+      LoteDietasCompanion(
+        desde: Value(cuando),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
   }
 
   /// Stream con la dieta vigente del lote, o null si no tiene asignación.

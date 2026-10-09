@@ -65,6 +65,7 @@ void main() {
       pesoCompra: 100,
       precioKgCompra: 1000,
       precioCompra: 100000,
+      fecha: ingreso ?? entrada,
     );
     final a = (await pesajes.buscarAnimal('f1', id))!;
     final desde = ingreso ?? entrada;
@@ -139,7 +140,8 @@ void main() {
     );
     final vendido = (await pesajes.buscarAnimal('f1', 'A-1'))!;
     final e2 = await gastos.estanciaDe(vendido);
-    expect(e2.salida, ventaFecha);
+    // Una venta de otro día se guarda al mediodía de ese día.
+    expect(e2.salida, DateTime(2026, 7, 20, 12));
   });
 
   test('un solo animal absorbe el gasto completo del mes', () async {

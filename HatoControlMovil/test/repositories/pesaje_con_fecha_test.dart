@@ -45,6 +45,13 @@ void main() {
       pesoCompra: 200,
       precioKgCompra: 1000,
     );
+    // Se dio de alta hoy, pero entró hace un mes: así se le pueden pasar los
+    // pesajes del cuaderno (antes del ingreso la app no deja registrar nada).
+    final a = (await pesajes.buscarAnimal('f1', '0001'))!;
+    await pesajes.cambiarFechaIngreso(
+      animalId: a.id,
+      fecha: hoy.subtract(const Duration(days: 30)),
+    );
   });
 
   tearDown(() async => db.close());
@@ -121,18 +128,21 @@ void main() {
     expect(await pesajes.primerPeso(a.id), 180);
   });
 
-  test('con la fecha de hoy se comporta como el pesaje normal del día', () async {
-    final a = await animal();
+  test(
+    'con la fecha de hoy se comporta como el pesaje normal del día',
+    () async {
+      final a = await animal();
 
-    final corrigio = await pesajes.registrarPesajeEnFecha(
-      animalId: a.id,
-      peso: 205,
-      fecha: hoy,
-      registradoPor: 'u1',
-    );
+      final corrigio = await pesajes.registrarPesajeEnFecha(
+        animalId: a.id,
+        peso: 205,
+        fecha: hoy,
+        registradoPor: 'u1',
+      );
 
-    expect(corrigio, isTrue, reason: 'el del alta ya era de hoy');
-    expect(await pesajes.ultimoPeso(a.id), 205);
-    expect(await pesajesDe(a.id), hasLength(1));
-  });
+      expect(corrigio, isTrue, reason: 'el del alta ya era de hoy');
+      expect(await pesajes.ultimoPeso(a.id), 205);
+      expect(await pesajesDe(a.id), hasLength(1));
+    },
+  );
 }

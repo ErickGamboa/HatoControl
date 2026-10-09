@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../estadisticas/estadisticas_sanidad.dart';
 import '../local/database.dart';
 import 'medicamentos_repository.dart';
+import 'reglas_de_fechas.dart';
 
 /// Tipos de evento sanitario (legado + oro).
 abstract final class TipoEventoSanitario {
@@ -31,10 +32,12 @@ class AnimalEnRetiroException implements Exception {
 /// Acceso local a eventos sanitarios y retiro. Sync corre por separado.
 class SanidadRepository {
   SanidadRepository(this.db, {MedicamentosRepository? medicamentosRepository})
-    : _medicamentos = medicamentosRepository ?? MedicamentosRepository(db);
+    : _medicamentos = medicamentosRepository ?? MedicamentosRepository(db),
+      _reglas = ReglasDeFechas(db);
 
   final AppDatabase db;
   final MedicamentosRepository _medicamentos;
+  final ReglasDeFechas _reglas;
   final _uuid = const Uuid();
 
   Stream<List<EventoSanitarioRow>> observarHistorial(String animalId) {
@@ -45,15 +48,21 @@ class SanidadRepository {
   }
 
   /// Fecha fin de retiro vigente del animal (null si no está en retiro).
+  ///
+  /// [hoy] es el día contra el que se mira: la fecha de la venta cuando se
+  /// vende con fecha atrás. Solo cuentan los medicamentos aplicados hasta ese
+  /// día; lo que se aplicó después no podía bloquear una venta anterior.
   Future<DateTime?> retiroHasta(String animalId, {DateTime? hoy}) async {
     final ahora = hoy ?? DateTime.now();
     final dia = DateTime(ahora.year, ahora.month, ahora.day);
+    final finDelDia = dia.add(const Duration(days: 1));
     final eventos =
         await (db.select(db.eventosSanitarios)..where(
               (t) =>
                   t.animalId.equals(animalId) &
                   t.deletedAt.isNull() &
-                  t.retiroHasta.isNotNull(),
+                  t.retiroHasta.isNotNull() &
+                  t.fecha.isSmallerThanValue(finDelDia),
             ))
             .get();
     DateTime? maxFin;
@@ -91,6 +100,9 @@ class SanidadRepository {
   }
 
   /// Aplica un medicamento del catálogo con dosis/costo/retiro calculados.
+  ///
+  /// [fecha] es el día en que se aplicó (hoy si no se dice): el retiro se
+  /// cuenta desde ese día, aunque se digite después.
   Future<void> aplicarMedicamento({
     required String animalId,
     required String medicamentoId,
@@ -103,7 +115,10 @@ class SanidadRepository {
       throw StateError('Medicamento no encontrado: $medicamentoId');
     }
     final dosis = _medicamentos.dosisParaPeso(med, pesoKg);
-    final ahora = fecha ?? DateTime.now();
+    final digitado = DateTime.now();
+    final dia = fecha ?? digitado;
+    await _reglas.desdeElIngreso(animalId, dia, hoy: digitado);
+    final ahora = momentoDe(dia, ahora: digitado);
     final retiro = fechaFinRetiro(ahora, med.diasRetiro);
 
     await db
@@ -123,8 +138,8 @@ class SanidadRepository {
             aplicaciones: Value(dosis.aplicaciones),
             diasRetiro: Value(med.diasRetiro > 0 ? med.diasRetiro : null),
             retiroHasta: Value(retiro),
-            createdAt: ahora,
-            updatedAt: ahora,
+            createdAt: digitado,
+            updatedAt: digitado,
             pendiente: const Value(true),
           ),
         );

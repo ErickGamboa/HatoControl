@@ -151,8 +151,9 @@ class GastosFijosRepository {
   ///
   /// No hay columnas de ingreso/salida: el ingreso se deriva de la fecha de
   /// compra o del primer movimiento de lote (que se escribe al crear el
-  /// animal), y la salida de la última venta. Para un animal muerto sin venta
-  /// se usa `updatedAt`, que es cuando se marcó el estado.
+  /// animal), y la salida de la última venta o de la fecha de muerte. Para un
+  /// animal inactivo sin ninguna de las dos (datos viejos) se usa
+  /// `updatedAt`, que es cuando se marcó el estado.
   Future<EstanciaAnimal> estanciaDe(AnimalRow animal) async {
     final venta = await _ultimaVenta(animal.id);
     final ingreso = await _pesajes.fechaIngreso(animal);
@@ -170,7 +171,9 @@ class GastosFijosRepository {
     animalId: animal.id,
     ingreso: ingreso,
     salida:
-        ultimaVenta ?? (animal.estado == 'activo' ? null : animal.updatedAt),
+        ultimaVenta ??
+        animal.fechaMuerte ??
+        (animal.estado == 'activo' ? null : animal.updatedAt),
   );
 
   /// Estancia de varios animales en DOS consultas (las ventas y los primeros

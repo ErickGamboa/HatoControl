@@ -8,6 +8,7 @@ import '../local/cambios_en_tablas.dart';
 import '../local/database.dart';
 import 'dietas_repository.dart';
 import 'gastos_fijos_repository.dart';
+import 'reglas_de_fechas.dart';
 import 'sanidad_repository.dart';
 
 /// Estados del animal en inventario activo (D-08).
@@ -111,9 +112,11 @@ class VentasRepository {
   }) : _dietasRepository = dietasRepository ?? DietasRepository(db),
        _sanidadRepository = sanidadRepository ?? SanidadRepository(db),
        _gastosFijosRepository =
-           gastosFijosRepository ?? GastosFijosRepository(db);
+           gastosFijosRepository ?? GastosFijosRepository(db),
+       _reglas = ReglasDeFechas(db);
 
   final AppDatabase db;
+  final ReglasDeFechas _reglas;
   final DietasRepository _dietasRepository;
   final SanidadRepository _sanidadRepository;
   final GastosFijosRepository _gastosFijosRepository;
@@ -347,6 +350,14 @@ class VentasRepository {
     return out;
   }
 
+  /// Corrige la compra del animal. Igual que al darlo de alta, una de tres:
+  /// por kilo ([pesoCompra] × [precioKgCompra]), monto total ([precioCompra]
+  /// sin ₡/kg: se divide entre [pesoCompra] si se conoce) o nació en la finca
+  /// ([precioKgCompra] = 0).
+  ///
+  /// [fechaCompra] se respeta tal cual: cambiarla movería el ingreso y con él
+  /// la dieta y los gastos fijos. La fecha de ingreso se corrige aparte, con
+  /// `PesajesRepository.cambiarFechaIngreso`.
   Future<void> actualizarCompra({
     required String animalId,
     double? pesoCompra,
@@ -362,13 +373,19 @@ class VentasRepository {
               ((pesoCompra != null && precioKgCompra != null)
                   ? pesoCompra * precioKgCompra
                   : precioCompra);
+    final precioKg = nacio
+        ? 0.0
+        : precioKgCompra ??
+              ((total != null && pesoCompra != null && pesoCompra > 0)
+                  ? total / pesoCompra
+                  : null);
     await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
       AnimalesCompanion(
         pesoCompra: Value(nacio ? null : pesoCompra),
-        precioKgCompra: Value(precioKgCompra),
+        precioKgCompra: Value(precioKg),
         precioCompra: Value(total),
         fechaCompra: Value(
-          fechaCompra ?? (nacio || total == null ? null : ahora),
+          nacio ? null : (fechaCompra ?? (total == null ? null : ahora)),
         ),
         updatedAt: Value(ahora),
         pendiente: const Value(true),
@@ -376,10 +393,53 @@ class VentasRepository {
     );
   }
 
+  /// Registra que el animal murió el día [fecha] (hoy si no se dice).
+  ///
+  /// Sale del inventario y su dieta y su parte de los gastos fijos se cortan
+  /// ese día, aunque se registre después; la parte de gastos queda congelada
+  /// igual que en una venta. No puede ser antes de que entrara ni antes de su
+  /// último pesaje.
+  Future<void> registrarMuerte({
+    required String animalId,
+    DateTime? fecha,
+  }) async {
+    final ahora = DateTime.now();
+    final dia = fecha ?? ahora;
+    final animal = await _reglas.desdeElIngreso(animalId, dia, hoy: ahora);
+    if (animal.estado != EstadoAnimal.activo) {
+      throw FechaInvalidaException(
+        'El animal ${animal.identificador} ya no está activo.',
+      );
+    }
+    await _reglas.despuesDelUltimoPesaje(animal, dia, que: 'la muerte');
+    final cuando = momentoDe(dia, ahora: ahora);
+
+    await db.transaction(() async {
+      await _gastosFijosRepository.congelarGastosFijos(
+        fincaId: animal.fincaId,
+        animalIds: [animalId],
+        fecha: cuando,
+        hoy: cuando,
+      );
+      await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
+        AnimalesCompanion(
+          estado: const Value(EstadoAnimal.muerto),
+          fechaMuerte: Value(cuando),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+    });
+  }
+
   /// Confirma un grupo de venta (varios animales). Bloquea si alguno está en
   /// retiro. [items] llevan solo los **kilos de salida de la finca** (D-19): el
   /// dinero y los datos de planta se registran después, animal por animal, con
   /// [registrarDatosPlanta]. Mientras eso no pase, la utilidad queda en “—”.
+  ///
+  /// [fecha] es el día en que salieron (hoy si no se dice). Todo se corta ese
+  /// día aunque se digite después: la dieta, los gastos fijos, el pesaje de
+  /// salida y la revisión del retiro de medicamentos.
   Future<String> confirmarLoteVenta({
     required String fincaId,
     required List<({String animalId, double peso})> items,
@@ -388,14 +448,25 @@ class VentasRepository {
     if (items.isEmpty) {
       throw ArgumentError('La venta no tiene animales');
     }
+    final digitado = DateTime.now();
+    final dia = fecha ?? digitado;
     for (final item in items) {
-      final retiro = await _sanidadRepository.retiroHasta(item.animalId);
+      final animal = await _reglas.desdeElIngreso(
+        item.animalId,
+        dia,
+        hoy: digitado,
+      );
+      await _reglas.despuesDelUltimoPesaje(animal, dia, que: 'la venta');
+      final retiro = await _sanidadRepository.retiroHasta(
+        item.animalId,
+        hoy: dia,
+      );
       if (retiro != null) {
         throw AnimalEnRetiroException(retiro);
       }
     }
 
-    final ahora = fecha ?? DateTime.now();
+    final ahora = momentoDe(dia, ahora: digitado);
     final loteId = _uuid.v4();
     await db.transaction(() async {
       await db
@@ -405,8 +476,8 @@ class VentasRepository {
               id: loteId,
               fincaId: fincaId,
               fecha: ahora,
-              createdAt: ahora,
-              updatedAt: ahora,
+              createdAt: digitado,
+              updatedAt: digitado,
               pendiente: const Value(true),
             ),
           );
@@ -431,36 +502,66 @@ class VentasRepository {
                 // datos de planta. `precio` queda espejo de dineroRecibido.
                 precio: 0,
                 peso: Value(item.peso),
-                createdAt: ahora,
-                updatedAt: ahora,
+                createdAt: digitado,
+                updatedAt: digitado,
                 pendiente: const Value(true),
               ),
             );
-        await db
-            .into(db.pesajes)
-            .insert(
-              PesajesCompanion.insert(
-                id: _uuid.v4(),
-                animalId: item.animalId,
-                peso: item.peso,
-                fecha: ahora,
-                createdAt: ahora,
-                updatedAt: ahora,
-                pendiente: const Value(true),
-              ),
-            );
+        // El peso de salida queda como el pesaje de ese día. Si ya se había
+        // pesado ese día, se corrige ese: un animal, un peso por día.
+        final pesajeDelDia = await _pesajeDelDia(item.animalId, ahora);
+        if (pesajeDelDia != null) {
+          await (db.update(
+            db.pesajes,
+          )..where((t) => t.id.equals(pesajeDelDia.id))).write(
+            PesajesCompanion(
+              peso: Value(item.peso),
+              updatedAt: Value(digitado),
+              pendiente: const Value(true),
+            ),
+          );
+        } else {
+          await db
+              .into(db.pesajes)
+              .insert(
+                PesajesCompanion.insert(
+                  id: _uuid.v4(),
+                  animalId: item.animalId,
+                  peso: item.peso,
+                  fecha: ahora,
+                  createdAt: digitado,
+                  updatedAt: digitado,
+                  pendiente: const Value(true),
+                ),
+              );
+        }
         await (db.update(
           db.animales,
         )..where((t) => t.id.equals(item.animalId))).write(
           AnimalesCompanion(
             estado: const Value(EstadoAnimal.vendido),
-            updatedAt: Value(ahora),
+            updatedAt: Value(digitado),
             pendiente: const Value(true),
           ),
         );
       }
     });
     return loteId;
+  }
+
+  Future<PesajeRow?> _pesajeDelDia(String animalId, DateTime dia) {
+    final inicio = soloDia(dia);
+    final fin = inicio.add(const Duration(days: 1));
+    return (db.select(db.pesajes)
+          ..where(
+            (t) =>
+                t.animalId.equals(animalId) &
+                t.deletedAt.isNull() &
+                t.fecha.isBiggerOrEqualValue(inicio) &
+                t.fecha.isSmallerThanValue(fin),
+          )
+          ..limit(1))
+        .getSingleOrNull();
   }
 
   /// Registra los datos que devuelve la planta para un animal ya vendido
@@ -636,7 +737,7 @@ class VentasRepository {
         .toList();
 
     // Dieta se corta en la fecha de venta (o muerte); no sigue corriendo.
-    final corte = venta?.fecha;
+    final corte = venta?.fecha ?? animal.fechaMuerte;
     final alimentacion = costoAlimentacionDesdePeriodos(periodos, hasta: corte);
     final sanitario = costoSanitarioDesdeEventos(costosSanitarios);
     // La utilidad sale del **dinero recibido** (D-19). Mientras la planta no
@@ -651,10 +752,13 @@ class VentasRepository {
     final total =
         (animal.precioCompra ?? 0) + alimentacion + sanitario + gastosFijos;
 
-    // Compra confiable si hay ₡/kg explícito (0 = nació) o no hay rastro de compra.
+    // Compra confiable si hay ₡/kg explícito (0 = nació), si se digitó el
+    // monto total (aunque todavía no se haya pesado para sacar el ₡/kg) o si
+    // no hay rastro de compra.
     final compraConfiable =
         animal.precioKgCompra != null ||
-        (animal.precioCompra == null && animal.fechaCompra == null);
+        animal.precioCompra != null ||
+        animal.fechaCompra == null;
 
     return ResumenEconomicoAnimal(
       precioCompra: animal.precioCompra,

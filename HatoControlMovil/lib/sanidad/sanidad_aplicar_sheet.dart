@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
+import '../app/widgets/campo_fecha.dart';
 import '../data/local/database.dart';
 import '../data/repositories/medicamentos_repository.dart';
+import '../data/repositories/reglas_de_fechas.dart';
 import '../data/repositories/sanidad_repository.dart';
 import '../services.dart';
 
 /// Modal de Trabajo: medicamentos del catálogo con dosis ya calculada.
+///
+/// [fecha] es el día en que se aplicó (hoy si no se dice; en Trabajo, la
+/// fecha de la jornada). Se puede cambiar en la hoja: el retiro cuenta desde
+/// ese día.
 Future<void> mostrarSanidadAplicarSheet({
   required BuildContext context,
   required FincaRow finca,
@@ -15,6 +21,7 @@ Future<void> mostrarSanidadAplicarSheet({
   required String usuarioId,
   SanidadRepository? sanidadRepository,
   MedicamentosRepository? medicamentosRepository,
+  DateTime? fecha,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -27,6 +34,7 @@ Future<void> mostrarSanidadAplicarSheet({
       usuarioId: usuarioId,
       sanidadRepository: sanidadRepository ?? sanidadRepo,
       medicamentosRepository: medicamentosRepository ?? medicamentosRepo,
+      fecha: fecha ?? DateTime.now(),
     ),
   );
 }
@@ -39,6 +47,7 @@ class _SanidadAplicarSheet extends StatefulWidget {
     required this.usuarioId,
     required this.sanidadRepository,
     required this.medicamentosRepository,
+    required this.fecha,
   });
 
   final FincaRow finca;
@@ -47,6 +56,7 @@ class _SanidadAplicarSheet extends StatefulWidget {
   final String usuarioId;
   final SanidadRepository sanidadRepository;
   final MedicamentosRepository medicamentosRepository;
+  final DateTime fecha;
 
   @override
   State<_SanidadAplicarSheet> createState() => _SanidadAplicarSheetState();
@@ -57,6 +67,7 @@ class _SanidadAplicarSheetState extends State<_SanidadAplicarSheet> {
   List<MedicamentoRow> _meds = const [];
   bool _cargando = true;
   bool _guardando = false;
+  late DateTime _fecha = widget.fecha;
 
   @override
   void initState() {
@@ -90,6 +101,7 @@ class _SanidadAplicarSheetState extends State<_SanidadAplicarSheet> {
           medicamentoId: id,
           pesoKg: widget.pesoKg,
           responsableId: widget.usuarioId,
+          fecha: _fecha,
         );
       }
       sincronizarSiSePuede();
@@ -103,6 +115,8 @@ class _SanidadAplicarSheetState extends State<_SanidadAplicarSheet> {
           ),
         ),
       );
+    } on FechaInvalidaException catch (e) {
+      if (mounted) await avisarFechaInvalida(context, e.mensaje);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -135,7 +149,15 @@ class _SanidadAplicarSheetState extends State<_SanidadAplicarSheet> {
                 color: theme.colorScheme.outline,
               ),
             ),
-            const SizedBox(height: HatoSpacing.lg),
+            const SizedBox(height: HatoSpacing.md),
+            CampoFecha(
+              key: const ValueKey('sanidad.fecha'),
+              etiqueta: '¿Qué día se aplicó?',
+              fecha: _fecha,
+              ultima: DateTime.now(),
+              alCambiar: (f) => setState(() => _fecha = f),
+            ),
+            const SizedBox(height: HatoSpacing.md),
             if (_cargando)
               const Expanded(child: Center(child: CircularProgressIndicator()))
             else if (_meds.isEmpty)

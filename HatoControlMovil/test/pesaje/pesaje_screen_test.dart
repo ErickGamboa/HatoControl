@@ -340,6 +340,79 @@ void main() {
     await cerrarPantalla(tester);
   });
 
+  // ---- Fecha de jornada y alta sin peso ----
+
+  testWidgets('la fecha de la jornada arranca en hoy', (tester) async {
+    final finca = await seedFinca();
+    await abrirPantalla(tester, finca);
+
+    expect(find.byKey(const ValueKey('pesaje.fecha')), findsOneWidget);
+    expect(find.textContaining('Fecha: hoy'), findsOneWidget);
+    expect(find.byKey(const ValueKey('pesaje.fecha.hoy')), findsNothing);
+
+    await cerrarPantalla(tester);
+  });
+
+  testWidgets('animal nuevo sin peso, comprado por monto total', (
+    tester,
+  ) async {
+    final finca = await seedFinca();
+    await seedLote('lote-1', 'Montaña');
+    await abrirPantalla(tester, finca);
+
+    // Solo el arete: el peso queda vacío.
+    await tester.enterText(
+      find.byKey(const ValueKey('pesaje.animalId')),
+      '909',
+    );
+    await tocar(tester, const ValueKey('pesaje.submit'));
+
+    await tocar(tester, const ValueKey('pesaje.loteNombre.Montaña'));
+    await tocar(tester, const ValueKey('pesaje.alta.montoTotal'));
+    await tester.enterText(
+      find.byKey(const ValueKey('pesaje.alta.monto')),
+      '650000',
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('El ₡/kg sale cuando se pese por primera vez'),
+      findsOneWidget,
+    );
+    await tocar(tester, const ValueKey('pesaje.alta.guardar'));
+
+    final a = (await db.select(db.animales).get()).single;
+    expect(a.identificador, '909');
+    expect(a.precioCompra, 650000);
+    expect(a.pesoCompra, isNull);
+    expect(a.precioKgCompra, isNull);
+    expect(await db.select(db.pesajes).get(), isEmpty);
+
+    await cerrarPantalla(tester);
+  });
+
+  testWidgets('por kilo sin peso no deja registrar', (tester) async {
+    final finca = await seedFinca();
+    await seedLote('lote-1', 'Montaña');
+    await abrirPantalla(tester, finca);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('pesaje.animalId')),
+      '808',
+    );
+    await tocar(tester, const ValueKey('pesaje.submit'));
+    await tocar(tester, const ValueKey('pesaje.loteNombre.Montaña'));
+    await tester.enterText(
+      find.byKey(const ValueKey('pesaje.alta.precioKg')),
+      '1500',
+    );
+    await tocar(tester, const ValueKey('pesaje.alta.guardar'));
+
+    expect(find.textContaining('Por kilo hace falta el peso'), findsOneWidget);
+    expect(await db.select(db.animales).get(), isEmpty);
+
+    await cerrarPantalla(tester);
+  });
+
   // ---- Lector de aretes (entra por Bluetooth como teclado) ----
 
   /// Simula que el ganadero tocó otra parte de la pantalla: ninguna casilla de

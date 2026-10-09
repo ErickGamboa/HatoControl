@@ -7,11 +7,13 @@ import 'package:flutter/services.dart';
 
 import '../app/teclado/lector_de_aretes.dart';
 import '../app/theme.dart';
+import '../app/widgets/campo_fecha.dart';
 import '../app/widgets/quick_number_field.dart';
 import '../app/widgets/scan_field.dart';
 import '../data/local/database.dart';
 import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
+import '../data/repositories/reglas_de_fechas.dart';
 import '../data/repositories/sanidad_repository.dart';
 import '../data/repositories/ventas_repository.dart';
 import '../sanidad/sanidad_aplicar_sheet.dart';
@@ -57,9 +59,30 @@ class _PesajeScreenState extends State<PesajeScreen> {
   AnimalRow? _ultimoAnimal;
   double? _ultimoPeso;
 
+  /// Fecha de la jornada: el día en que de verdad se pesó. Hoy por defecto;
+  /// el patrón la cambia una vez para pasar la hoja que le dejó el peón, y
+  /// todo lo que digite queda con ese día. Al volver a entrar es hoy otra vez.
+  DateTime _fecha = DateTime.now();
+
+  bool get _esHoy => mismoDia(_fecha, DateTime.now());
+
   DateTime get _inicioDeHoy {
     final n = DateTime.now();
     return DateTime(n.year, n.month, n.day);
+  }
+
+  Future<void> _cambiarFecha() async {
+    final hoy = DateTime.now();
+    final elegida = await showDatePicker(
+      context: context,
+      initialDate: _fecha,
+      firstDate: DateTime(hoy.year - 5),
+      lastDate: hoy,
+      helpText: '¿Qué día se pesó?',
+    );
+    _soltarElFoco();
+    if (elegida == null || !mounted) return;
+    setState(() => _fecha = mismoDia(elegida, hoy) ? hoy : elegida);
   }
 
   /// Stream de la lista del día, creado UNA sola vez. Si se armara dentro de
@@ -136,8 +159,8 @@ class _PesajeScreenState extends State<PesajeScreen> {
       _mostrar('Escaneá o escribí el identificador.');
       return;
     }
-    if (peso == null) {
-      _mostrar('Ingresá el peso (kg).');
+    if (peso == null && _pesoCtrl.text.trim().isNotEmpty) {
+      _mostrar('Ese peso no es válido.');
       return;
     }
 
@@ -148,26 +171,38 @@ class _PesajeScreenState extends State<PesajeScreen> {
         ident,
       );
       if (animal != null) {
+        // Un animal que ya existe solo se registra para pesarlo.
+        if (peso == null) {
+          _mostrar('Ingresá el peso (kg).');
+          return;
+        }
         await _pesarExistente(animal, peso);
       } else {
+        // Uno nuevo puede entrar sin pesar: el peso se le pone después.
         await _animalNuevo(ident, peso);
       }
+    } on FechaInvalidaException catch (e) {
+      if (mounted) await avisarFechaInvalida(context, e.mensaje);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
   }
 
   Future<void> _pesarExistente(AnimalRow animal, double peso) async {
-    final hoy = await widget.pesajesRepository.pesajeDeHoy(animal.id);
+    final hoy = await widget.pesajesRepository.pesajeDeHoy(
+      animal.id,
+      dia: _fecha,
+    );
     if (hoy != null) {
       if (!mounted) return;
+      final cuando = _esHoy ? 'hoy' : 'el ${fmtFecha(_fecha)}';
       final corregir = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Ya se pesó hoy'),
+          title: Text(_esHoy ? 'Ya se pesó hoy' : 'Ya se pesó ese día'),
           content: Text(
             'El animal "${animal.identificador}" ya tiene '
-            '${_pesoFmt(hoy.peso)} kg registrados hoy.\n\n'
+            '${_pesoFmt(hoy.peso)} kg registrados $cuando.\n\n'
             '¿Querés corregir el peso a ${_pesoFmt(peso)} kg?',
           ),
           actions: [
@@ -202,16 +237,18 @@ class _PesajeScreenState extends State<PesajeScreen> {
       animalId: animal.id,
       peso: peso,
       registradoPor: widget.usuarioId,
+      fecha: _fecha,
     );
     sincronizarSiSePuede();
     _exito(
       animal,
       peso,
-      'Pesaje: ${animal.identificador} — ${_pesoFmt(peso)} kg',
+      'Pesaje: ${animal.identificador} — ${_pesoFmt(peso)} kg'
+      '${_esHoy ? '' : ' (${fmtFecha(_fecha)})'}',
     );
   }
 
-  Future<void> _animalNuevo(String ident, double peso) async {
+  Future<void> _animalNuevo(String ident, double? peso) async {
     final lotes = await widget.lotesRepository.lotesActivos(widget.finca.id);
     if (!mounted) return;
 
@@ -235,6 +272,9 @@ class _PesajeScreenState extends State<PesajeScreen> {
       return;
     }
 
+    // Mientras el ganadero llena la hoja no se está guardando nada: el botón
+    // no debe quedar dando vueltas detrás.
+    setState(() => _guardando = false);
     final alta = await showModalBottomSheet<_AltaAnimal>(
       context: context,
       isScrollControlled: true,
@@ -243,22 +283,32 @@ class _PesajeScreenState extends State<PesajeScreen> {
         identificador: ident,
         pesoInicial: peso,
         lotes: lotes,
+        fecha: _fecha,
       ),
     );
     _soltarElFoco();
-    if (alta == null) return;
+    if (alta == null || !mounted) return;
+    setState(() => _guardando = true);
 
+    final nacio = alta.modo == _ModoCompra.nacio;
     await widget.pesajesRepository.crearAnimalConPesaje(
       fincaId: widget.finca.id,
       loteId: alta.loteId,
       identificador: ident,
-      peso: alta.pesoCompra,
+      peso: alta.peso,
       registradoPor: widget.usuarioId,
-      pesoCompra: alta.nacioEnFinca ? null : alta.pesoCompra,
-      precioKgCompra: alta.nacioEnFinca ? 0 : alta.precioKgCompra,
-      precioCompra: alta.nacioEnFinca
-          ? 0
-          : alta.pesoCompra * (alta.precioKgCompra ?? 0),
+      fecha: _fecha,
+      pesoCompra: nacio ? null : alta.peso,
+      precioKgCompra: switch (alta.modo) {
+        _ModoCompra.nacio => 0,
+        _ModoCompra.porKilo => alta.precioKgCompra,
+        _ModoCompra.montoTotal => null,
+      },
+      precioCompra: switch (alta.modo) {
+        _ModoCompra.nacio => 0,
+        _ModoCompra.porKilo => alta.peso! * alta.precioKgCompra!,
+        _ModoCompra.montoTotal => alta.montoTotal,
+      },
     );
     sincronizarSiSePuede();
 
@@ -267,10 +317,20 @@ class _PesajeScreenState extends State<PesajeScreen> {
       ident,
     );
     if (animal == null) return;
+    final pesoAlta = alta.peso;
+    if (pesoAlta == null) {
+      // Sin pesar: no hay peso para la sanidad, el FAB sigue como estaba.
+      _avisarRegistrado();
+      _mostrar('Animal "$ident" registrado sin peso');
+      _identCtrl.clear();
+      _pesoCtrl.clear();
+      _soltarElFoco();
+      return;
+    }
     _exito(
       animal,
-      alta.pesoCompra,
-      'Animal "$ident" registrado · ${_pesoFmt(alta.pesoCompra)} kg',
+      pesoAlta,
+      'Animal "$ident" registrado · ${_pesoFmt(pesoAlta)} kg',
     );
   }
 
@@ -298,7 +358,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
       builder: (ctx) => _CorregirPesajeSheet(
         pesaje: p,
         lotes: lotes,
-        pesoInicial: _pesoFmt(p.peso),
+        pesoInicial: p.peso == null ? '' : _pesoFmt(p.peso!),
       ),
     );
     _soltarElFoco();
@@ -307,7 +367,11 @@ class _PesajeScreenState extends State<PesajeScreen> {
       await _eliminarPesaje(p);
       return;
     }
-    await _guardarCorreccion(p, r);
+    try {
+      await _guardarCorreccion(p, r);
+    } on FechaInvalidaException catch (e) {
+      if (mounted) await avisarFechaInvalida(context, e.mensaje);
+    }
   }
 
   /// Aplica solo lo que de verdad cambió: mover de lote, corregir el peso del
@@ -317,19 +381,33 @@ class _PesajeScreenState extends State<PesajeScreen> {
     final cambios = <String>[];
 
     if (r.loteId != p.loteId) {
-      await widget.pesajesRepository.moverAnimalDeLote(
+      // Si recién se dio de alta, se corrige el lote de entrada; si ya se
+      // había movido antes, es un cambio de lote el día de este pesaje.
+      await widget.pesajesRepository.corregirLote(
         animalId: p.animalId,
         nuevoLoteId: r.loteId,
+        fecha: p.fecha,
       );
       cambios.add('lote');
     }
 
-    if (r.peso != p.peso) {
+    final peso = r.peso;
+    if (p.sinPeso && peso != null) {
+      // Entró sin peso: este es su primer pesaje, el día que entró. Si se
+      // compró por monto total, de acá sale el ₡/kg.
+      await widget.pesajesRepository.registrarPesajeEnFecha(
+        animalId: p.animalId,
+        peso: peso,
+        fecha: p.fecha,
+        registradoPor: widget.usuarioId,
+      );
+      cambios.add('peso ${_pesoFmt(peso)} kg');
+    } else if (peso != null && peso != p.peso) {
       await widget.pesajesRepository.actualizarPesaje(
         pesajeId: p.id,
-        peso: r.peso,
+        peso: peso,
       );
-      cambios.add('peso ${_pesoFmt(r.peso)} kg');
+      cambios.add('peso ${_pesoFmt(peso)} kg');
     }
 
     if (r.precioKgCompra != null && r.precioKgCompra != p.precioKgCompra) {
@@ -370,8 +448,9 @@ class _PesajeScreenState extends State<PesajeScreen> {
           esEntrada
               ? 'Es el pesaje de entrada de "${p.identificador}": si lo '
                     'borrás, el animal queda sin peso registrado.'
-              : 'Se borra el pesaje de hoy de "${p.identificador}" '
-                    '(${_pesoFmt(p.peso)} kg). El animal sigue en el lote.',
+              : 'Se borra el pesaje del ${fmtFecha(p.fecha)} de '
+                    '"${p.identificador}" (${_pesoFmt(p.peso!)} kg). El animal '
+                    'sigue en el lote.',
         ),
         actions: [
           TextButton(
@@ -413,6 +492,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
       pesoKg: peso,
       usuarioId: widget.usuarioId,
       sanidadRepository: widget.sanidadRepository,
+      fecha: _fecha,
     );
     _soltarElFoco();
   }
@@ -451,15 +531,12 @@ class _PesajeScreenState extends State<PesajeScreen> {
         title: const Text('Trabajo'),
         actions: const [BotonSincronizar()],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(28),
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              'Pesaje · identificador + peso',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
+          preferredSize: const Size.fromHeight(48),
+          child: _FechaJornada(
+            fecha: _fecha,
+            esHoy: _esHoy,
+            alTocar: _cambiarFecha,
+            alVolverAHoy: () => setState(() => _fecha = DateTime.now()),
           ),
         ),
       ),
@@ -574,7 +651,9 @@ class _CorreccionPesaje {
       eliminar = true;
 
   final String loteId;
-  final double peso;
+
+  /// null = sigue sin peso (solo para un animal que entró sin pesar).
+  final double? peso;
 
   /// null = el campo quedó vacío, no se toca la compra. 0 = nació en la finca.
   final double? precioKgCompra;
@@ -644,7 +723,9 @@ class _CorregirPesajeSheetState extends State<_CorregirPesajeSheet> {
   void _guardar() {
     FocusScope.of(context).unfocus();
     final peso = _parse(_pesoCtrl);
-    if (peso == null || peso <= 0) {
+    // Un animal que entró sin peso puede seguir sin peso.
+    final sigueSinPeso = widget.pesaje.sinPeso && _pesoCtrl.text.trim().isEmpty;
+    if (!sigueSinPeso && (peso == null || peso <= 0)) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Peso inválido')));
@@ -719,7 +800,9 @@ class _CorregirPesajeSheetState extends State<_CorregirPesajeSheet> {
               QuickNumberField(
                 key: const ValueKey('pesaje.corregir.peso'),
                 controller: _pesoCtrl,
-                labelText: 'Peso',
+                labelText: widget.pesaje.sinPeso
+                    ? 'Peso (entró sin pesar)'
+                    : 'Peso',
                 suffixText: 'kg',
               ),
               const SizedBox(height: HatoSpacing.md),
@@ -752,20 +835,24 @@ class _CorregirPesajeSheetState extends State<_CorregirPesajeSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: HatoSpacing.sm),
-              TextButton.icon(
-                key: const ValueKey('pesaje.corregir.eliminar'),
-                onPressed: () =>
-                    Navigator.pop(context, const _CorreccionPesaje.eliminar()),
-                icon: Icon(
-                  Icons.delete_outline,
-                  color: theme.colorScheme.error,
+              if (!widget.pesaje.sinPeso) ...[
+                const SizedBox(height: HatoSpacing.sm),
+                TextButton.icon(
+                  key: const ValueKey('pesaje.corregir.eliminar'),
+                  onPressed: () => Navigator.pop(
+                    context,
+                    const _CorreccionPesaje.eliminar(),
+                  ),
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: theme.colorScheme.error,
+                  ),
+                  label: Text(
+                    'Eliminar pesaje',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
                 ),
-                label: Text(
-                  'Eliminar pesaje',
-                  style: TextStyle(color: theme.colorScheme.error),
-                ),
-              ),
+              ],
             ],
           ),
         ),
@@ -774,18 +861,97 @@ class _CorregirPesajeSheetState extends State<_CorregirPesajeSheet> {
   }
 }
 
+/// La fecha de la jornada, siempre a la vista arriba de la manga. En hoy se
+/// ve tranquila; en otro día se pinta de otro color para que no se olvide
+/// que se está digitando con fecha atrás, y trae el botón para volver a hoy.
+class _FechaJornada extends StatelessWidget {
+  const _FechaJornada({
+    required this.fecha,
+    required this.esHoy,
+    required this.alTocar,
+    required this.alVolverAHoy,
+  });
+
+  final DateTime fecha;
+  final bool esHoy;
+  final VoidCallback alTocar;
+  final VoidCallback alVolverAHoy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fondo = esHoy
+        ? theme.colorScheme.surfaceContainerHighest
+        : theme.colorScheme.tertiaryContainer;
+    final texto = esHoy
+        ? theme.colorScheme.onSurfaceVariant
+        : theme.colorScheme.onTertiaryContainer;
+    return Material(
+      color: fondo,
+      child: InkWell(
+        key: const ValueKey('pesaje.fecha'),
+        onTap: alTocar,
+        child: SizedBox(
+          height: 48,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: HatoSpacing.lg),
+            child: Row(
+              children: [
+                Icon(Icons.event_outlined, color: texto, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    esHoy
+                        ? 'Fecha: hoy, ${fmtFecha(fecha)}'
+                        : 'Digitando el ${fmtFecha(fecha)}',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: texto,
+                      fontWeight: esHoy ? FontWeight.w600 : FontWeight.w800,
+                    ),
+                  ),
+                ),
+                if (esHoy)
+                  Text(
+                    'Cambiar',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                else
+                  TextButton(
+                    key: const ValueKey('pesaje.fecha.hoy'),
+                    onPressed: alVolverAHoy,
+                    child: const Text('Volver a hoy'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Cómo se compró el animal que entra.
+enum _ModoCompra { porKilo, montoTotal, nacio }
+
 class _AltaAnimal {
   const _AltaAnimal({
     required this.loteId,
-    required this.pesoCompra,
-    required this.nacioEnFinca,
+    required this.peso,
+    required this.modo,
     this.precioKgCompra,
+    this.montoTotal,
   });
 
   final String loteId;
-  final double pesoCompra;
-  final bool nacioEnFinca;
-  final double? precioKgCompra;
+
+  /// Peso de entrada. null = entró sin pesar.
+  final double? peso;
+  final _ModoCompra modo;
+  final double? precioKgCompra; // solo por kilo
+  final double? montoTotal; // solo monto total
 }
 
 class _AltaAnimalSheet extends StatefulWidget {
@@ -793,11 +959,17 @@ class _AltaAnimalSheet extends StatefulWidget {
     required this.identificador,
     required this.pesoInicial,
     required this.lotes,
+    required this.fecha,
   });
 
   final String identificador;
-  final double pesoInicial;
+
+  /// Lo que marcó la romana. null = se registra sin pesar.
+  final double? pesoInicial;
   final List<LoteRow> lotes;
+
+  /// Fecha de la jornada: el día en que entra.
+  final DateTime fecha;
 
   @override
   State<_AltaAnimalSheet> createState() => _AltaAnimalSheetState();
@@ -805,12 +977,14 @@ class _AltaAnimalSheet extends StatefulWidget {
 
 class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
   late final _pesoCtrl = TextEditingController(
-    text: widget.pesoInicial == widget.pesoInicial.roundToDouble()
-        ? widget.pesoInicial.toInt().toString()
-        : widget.pesoInicial.toString(),
+    text: switch (widget.pesoInicial) {
+      null => '',
+      final p => p == p.roundToDouble() ? p.toInt().toString() : p.toString(),
+    },
   );
   final _precioKgCtrl = TextEditingController();
-  bool _nacioEnFinca = false;
+  final _montoCtrl = TextEditingController();
+  _ModoCompra _modo = _ModoCompra.porKilo;
   String? _loteId;
 
   @override
@@ -818,12 +992,14 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
     super.initState();
     _pesoCtrl.addListener(() => setState(() {}));
     _precioKgCtrl.addListener(() => setState(() {}));
+    _montoCtrl.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _pesoCtrl.dispose();
     _precioKgCtrl.dispose();
+    _montoCtrl.dispose();
     super.dispose();
   }
 
@@ -835,56 +1011,102 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
 
   double? get _peso => _parse(_pesoCtrl);
   double? get _precioKg => _parse(_precioKgCtrl);
-  double? get _totalCompra {
-    if (_nacioEnFinca) return 0;
-    final p = _peso;
-    final kg = _precioKg;
-    if (p == null || kg == null) return null;
-    return p * kg;
+  double? get _monto => _parse(_montoCtrl);
+
+  static String _colones(double v) =>
+      '₡${v == v.roundToDouble() ? v.toInt() : v.toStringAsFixed(0)}';
+
+  /// Lo que se le muestra debajo de los campos: el total cuando se compra
+  /// por kilo y el ₡/kg cuando se compra por monto.
+  String? get _resumen {
+    switch (_modo) {
+      case _ModoCompra.nacio:
+        return 'Compra ₡0';
+      case _ModoCompra.porKilo:
+        final p = _peso;
+        final kg = _precioKg;
+        if (p == null || kg == null) return null;
+        return 'Costo del animal: ${_colones(p * kg)}';
+      case _ModoCompra.montoTotal:
+        final m = _monto;
+        if (m == null) return null;
+        final p = _peso;
+        if (p == null || p == 0) {
+          return 'El ₡/kg sale cuando se pese por primera vez';
+        }
+        return '${_colones(m / p)} por kilo';
+    }
+  }
+
+  void _avisar(String texto) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
   }
 
   void _continuar() {
     FocusScope.of(context).unfocus();
     final loteId = _loteId;
     if (loteId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Elegí el lote')));
+      _avisar('Elegí el lote');
       return;
     }
-    final peso = _nacioEnFinca ? widget.pesoInicial : _peso;
-    if (peso == null || peso <= 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Peso de compra inválido')));
+    final textoPeso = _pesoCtrl.text.trim();
+    final peso = textoPeso.isEmpty ? null : _peso;
+    if (textoPeso.isNotEmpty && (peso == null || peso <= 0)) {
+      _avisar('Peso de entrada inválido');
       return;
     }
-    double? precioKg;
-    if (!_nacioEnFinca) {
-      precioKg = _precioKg;
-      if (precioKg == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Precio por kilo o marcá “nació”')),
+    switch (_modo) {
+      case _ModoCompra.porKilo:
+        if (peso == null) {
+          _avisar(
+            'Por kilo hace falta el peso. Si no se ha pesado, usá '
+            '"Monto total".',
+          );
+          return;
+        }
+        final precioKg = _precioKg;
+        if (precioKg == null) {
+          _avisar('Digitá el precio por kilo');
+          return;
+        }
+        Navigator.pop(
+          context,
+          _AltaAnimal(
+            loteId: loteId,
+            peso: peso,
+            modo: _modo,
+            precioKgCompra: precioKg,
+          ),
         );
-        return;
-      }
+      case _ModoCompra.montoTotal:
+        final monto = _monto;
+        if (monto == null || monto <= 0) {
+          _avisar('Digitá cuánto costó el animal');
+          return;
+        }
+        Navigator.pop(
+          context,
+          _AltaAnimal(
+            loteId: loteId,
+            peso: peso,
+            modo: _modo,
+            montoTotal: monto,
+          ),
+        );
+      case _ModoCompra.nacio:
+        Navigator.pop(
+          context,
+          _AltaAnimal(loteId: loteId, peso: peso, modo: _modo),
+        );
     }
-    Navigator.pop(
-      context,
-      _AltaAnimal(
-        loteId: loteId,
-        pesoCompra: peso,
-        nacioEnFinca: _nacioEnFinca,
-        precioKgCompra: precioKg,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    final total = _totalCompra;
+    final resumen = _resumen;
+    final esHoy = mismoDia(widget.fecha, DateTime.now());
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
@@ -903,10 +1125,16 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Solo lo mínimo para registrarlo',
+                esHoy
+                    ? 'Entra hoy · solo lo mínimo para registrarlo'
+                    : 'Entra el ${fmtFecha(widget.fecha)}',
+                key: const ValueKey('pesaje.alta.fecha'),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.outline,
+                  color: esHoy
+                      ? theme.colorScheme.outline
+                      : theme.colorScheme.tertiary,
+                  fontWeight: esHoy ? null : FontWeight.w700,
                 ),
               ),
               const SizedBox(height: HatoSpacing.lg),
@@ -930,22 +1158,48 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
                 ],
               ),
               const SizedBox(height: HatoSpacing.lg),
-              SwitchListTile(
-                key: const ValueKey('pesaje.alta.nacio'),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Nació en la finca'),
-                subtitle: const Text('Compra ₡0'),
-                value: _nacioEnFinca,
-                onChanged: (v) => setState(() => _nacioEnFinca = v),
+              QuickNumberField(
+                key: const ValueKey('pesaje.alta.pesoCompra'),
+                controller: _pesoCtrl,
+                labelText: 'Peso de entrada',
+                suffixText: 'kg',
               ),
-              if (!_nacioEnFinca) ...[
-                const SizedBox(height: HatoSpacing.sm),
-                QuickNumberField(
-                  key: const ValueKey('pesaje.alta.pesoCompra'),
-                  controller: _pesoCtrl,
-                  labelText: 'Peso de compra',
-                  suffixText: 'kg',
+              const SizedBox(height: 4),
+              Text(
+                'Vacío = todavía no se ha pesado',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
                 ),
+              ),
+              const SizedBox(height: HatoSpacing.lg),
+              Text('Compra', style: theme.textTheme.titleSmall),
+              const SizedBox(height: HatoSpacing.sm),
+              SegmentedButton<_ModoCompra>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(
+                    value: _ModoCompra.porKilo,
+                    label: Text(
+                      'Por kilo',
+                      key: ValueKey('pesaje.alta.porKilo'),
+                    ),
+                  ),
+                  ButtonSegment(
+                    value: _ModoCompra.montoTotal,
+                    label: Text(
+                      'Monto total',
+                      key: ValueKey('pesaje.alta.montoTotal'),
+                    ),
+                  ),
+                  ButtonSegment(
+                    value: _ModoCompra.nacio,
+                    label: Text('Nació', key: ValueKey('pesaje.alta.nacio')),
+                  ),
+                ],
+                selected: {_modo},
+                onSelectionChanged: (s) => setState(() => _modo = s.first),
+              ),
+              if (_modo == _ModoCompra.porKilo) ...[
                 const SizedBox(height: HatoSpacing.md),
                 QuickNumberField(
                   key: const ValueKey('pesaje.alta.precioKg'),
@@ -954,11 +1208,20 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
                   suffixText: '₡/kg',
                 ),
               ],
-              if (total != null) ...[
+              if (_modo == _ModoCompra.montoTotal) ...[
+                const SizedBox(height: HatoSpacing.md),
+                QuickNumberField(
+                  key: const ValueKey('pesaje.alta.monto'),
+                  controller: _montoCtrl,
+                  labelText: 'Cuánto costó el animal',
+                  suffixText: '₡',
+                ),
+              ],
+              if (resumen != null) ...[
                 const SizedBox(height: HatoSpacing.md),
                 Text(
                   key: const ValueKey('pesaje.alta.costoTotal'),
-                  'Costo del animal: ₡${total == total.roundToDouble() ? total.toInt() : total.toStringAsFixed(0)}',
+                  resumen,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -992,12 +1255,16 @@ class _PesajesDeHoy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final totalAnimales = pesajes.map((p) => p.identificador).toSet().length;
+    final totalAnimales = pesajes
+        .where((p) => !p.sinPeso)
+        .map((p) => p.identificador)
+        .toSet()
+        .length;
 
     if (pesajes.isEmpty) {
       return Center(
         child: Text(
-          'Acá aparecen los animales que peses hoy.',
+          'Acá aparecen los animales que digités hoy.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.outline,
@@ -1027,7 +1294,7 @@ class _PesajesDeHoy extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Hoy',
+                  'Digitado hoy',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -1070,7 +1337,7 @@ class _PesajesDeHoy extends StatelessWidget {
                       // Contador discreto: cuántos animales distintos van
                       // pesados en este lote hoy.
                       Text(
-                        '${porLote[id]!.map((p) => p.identificador).toSet().length}',
+                        '${porLote[id]!.where((p) => !p.sinPeso).map((p) => p.identificador).toSet().length}',
                         key: ValueKey('pesaje.contadorLote.${nombres[id]}'),
                         style: theme.textTheme.labelMedium?.copyWith(
                           fontWeight: FontWeight.w600,
@@ -1157,7 +1424,11 @@ class _TablaLote extends StatelessWidget {
             itemBuilder: (context, i) {
               final f = filas[i];
               return InkWell(
-                key: ValueKey('pesaje.fila.${f.id}'),
+                key: ValueKey(
+                  f.sinPeso
+                      ? 'pesaje.fila.sinPeso.${f.animalId}'
+                      : 'pesaje.fila.${f.id}',
+                ),
                 onTap: () => onTocarFila(f),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -1168,28 +1439,52 @@ class _TablaLote extends StatelessWidget {
                     children: [
                       Expanded(
                         flex: 3,
-                        child: Text(
-                          f.identificador,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              f.identificador,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            // Digitado hoy pero pesado otro día: que se vea.
+                            if (!mismoDia(f.fecha, DateTime.now()))
+                              Text(
+                                'del ${fmtFecha(f.fecha)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.tertiary,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       Expanded(
                         flex: 2,
                         child: Text(
-                          _fmt(f.peso),
+                          f.peso == null ? '—' : _fmt(f.peso!),
                           textAlign: TextAlign.end,
                           style: const TextStyle(fontSize: 16),
                         ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: _ValorGanancia(
-                          valor: f.ganancia,
-                          esEntrada: f.ganancia == null,
-                        ),
+                        child: f.sinPeso
+                            ? Text(
+                                'Sin peso',
+                                textAlign: TextAlign.end,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: theme.colorScheme.outline,
+                                ),
+                              )
+                            : _ValorGanancia(
+                                valor: f.ganancia,
+                                esEntrada: f.ganancia == null,
+                              ),
                       ),
                       Expanded(
                         flex: 2,

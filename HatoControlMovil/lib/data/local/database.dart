@@ -153,6 +153,10 @@ class Animales extends Table {
   /// ₡/kg de compra. 0 = nació en la finca. null = legacy / sin precio.
   RealColumn get precioKgCompra => real().nullable()();
   DateTimeColumn get fechaCompra => dateTime().nullable()();
+
+  /// Día en que murió (estado `muerto`). Corta la dieta y los gastos fijos
+  /// ese día, aunque se registre después. null = no ha muerto.
+  DateTimeColumn get fechaMuerte => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -510,8 +514,7 @@ class Deudas extends Table {
   DateTimeColumn get vence => dateTime().nullable()();
 
   /// 'pendiente' | 'pagada' | 'anulada' — ver `EstadoDeuda`.
-  TextColumn get estado =>
-      text().withDefault(const Constant('pendiente'))();
+  TextColumn get estado => text().withDefault(const Constant('pendiente'))();
   TextColumn get nota => text().nullable()();
   TextColumn get moneda => text().withDefault(const Constant('CRC'))();
   DateTimeColumn get createdAt => dateTime()();
@@ -680,7 +683,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -866,6 +869,10 @@ class AppDatabase extends _$AppDatabase {
         await _crearTablaSiFalta(m, deudas);
         await _crearTablaSiFalta(m, deudaAbonos);
       }
+      if (from < 20) {
+        // v20: muerte del animal con su fecha (corta dieta y gastos fijos).
+        await _agregarColumnaSiFalta(m, animales, animales.fechaMuerte);
+      }
     },
   );
 
@@ -908,6 +915,9 @@ class AppDatabase extends _$AppDatabase {
     final filas = await customSelect(
       'PRAGMA table_info(`${table.actualTableName}`)',
     ).get();
+    // Sin filas = la tabla no existe (bases de prueba armadas a mano): no hay
+    // a qué agregarle la columna; cuando se cree, ya nace con ella.
+    if (filas.isEmpty) return;
     final nombres = filas.map((f) => f.read<String>('name')).toSet();
     if (nombres.contains(column.name)) return;
     await m.addColumn(table, column);

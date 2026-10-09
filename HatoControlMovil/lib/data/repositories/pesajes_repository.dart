@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../estadisticas/estadisticas_pesajes.dart';
 import '../local/cambios_en_tablas.dart';
 import '../local/database.dart';
+import 'reglas_de_fechas.dart';
 import 'ventas_repository.dart';
 
 /// Un animal con su peso actual (último pesaje) y su ganancia por día (entre
@@ -35,13 +36,17 @@ class PesajeHoy {
     required this.precioKgCompra,
     required this.fechaCompra,
   });
-  final String id; // id del pesaje (para poder eliminarlo)
+  final String id; // id del pesaje (para poder eliminarlo); '' = sin peso
   final String animalId; // para corregirle el lote o la compra
   final String identificador;
   final String loteId;
   final String loteNombre;
-  final double peso;
+  final double? peso; // null = entró sin peso y todavía no se ha pesado
   final DateTime fecha;
+
+  /// Animal dado de alta sin peso: está en la lista para que se vea que
+  /// entró, pero no tiene pesaje que corregir ni borrar.
+  bool get sinPeso => peso == null;
   final double? ganancia; // total vs. el pesaje anterior; null = entrada
   final int? dias; // días entre el pesaje anterior y este; null = entrada
   final double? pesoCompra; // kilos de entrada; null = nació en la finca
@@ -64,11 +69,22 @@ class PesajeHistorial {
     required this.peso,
     required this.ganancia,
     required this.dias,
+    this.id = '',
+    this.digitadoEl,
+    this.digitadoPor,
   });
+  final String id; // para corregirlo o borrarlo desde la hoja de vida
   final DateTime fecha;
   final double peso;
   final double? ganancia; // vs. el pesaje anterior; null = primero (entrada)
   final int? dias; // días desde el pesaje anterior
+
+  /// Cuándo se digitó, si fue otro día que el del pesaje (se pesó el 5 y se
+  /// pasó a la app el 8). null = se digitó el mismo día.
+  final DateTime? digitadoEl;
+
+  /// Nombre (o correo) de quien lo digitó, si se conoce.
+  final String? digitadoPor;
 
   double? get gananciaDiaria {
     if (ganancia == null || dias == null || dias! < 1) return null;
@@ -109,9 +125,10 @@ class AnimalDuplicadoException implements Exception {
 
 /// Acceso a animales y pesajes (base local; el sync corre por separado).
 class PesajesRepository {
-  PesajesRepository(this.db);
+  PesajesRepository(this.db) : _reglas = ReglasDeFechas(db);
 
   final AppDatabase db;
+  final ReglasDeFechas _reglas;
   final _uuid = const Uuid();
 
   /// Días de CALENDARIO entre dos pesajes (ignora la hora del día). Así, de
@@ -232,19 +249,32 @@ class PesajesRepository {
   }
 
   /// Crea un animal nuevo en un lote y registra su primer pesaje (peso de
-  /// entrada), todo en una transacción. Ambas filas quedan pendientes de subir.
+  /// entrada), todo en una transacción. Todas las filas quedan pendientes de
+  /// subir.
   ///
-  /// Compra: [pesoCompra] × [precioKgCompra] = total en [precioCompra].
-  /// Nació en la finca: [precioKgCompra] = 0 → compra ₡0.
+  /// [fecha] es el día en que el animal ENTRÓ (la fecha de la jornada en
+  /// Trabajo; hoy si no se dice otra cosa). De esa fecha arrancan la compra,
+  /// el primer movimiento de lote, el pesaje de entrada y con ellos la dieta
+  /// y los gastos fijos. `createdAt` sí es el momento en que se digitó.
+  ///
+  /// [peso] null = entró sin pesar: no se crea pesaje, y el primero que se le
+  /// haga después pasa a ser su peso de entrada.
+  ///
+  /// Compra, una de tres:
+  /// - por kilo: [pesoCompra] × [precioKgCompra] = total;
+  /// - monto total: [precioCompra] sin ₡/kg; el ₡/kg sale de dividir entre
+  ///   el peso de entrada (ahora, o cuando se pese por primera vez);
+  /// - nació en la finca: [precioKgCompra] = 0 → compra ₡0.
   Future<void> crearAnimalConPesaje({
     required String fincaId,
     required String loteId,
     required String identificador,
-    required double peso,
+    required double? peso,
     required String registradoPor,
     double? pesoCompra,
     double? precioKgCompra,
     double? precioCompra,
+    DateTime? fecha,
   }) async {
     final existente = await buscarAnimal(fincaId, identificador);
     if (existente != null) {
@@ -252,6 +282,9 @@ class PesajesRepository {
     }
 
     final ahora = DateTime.now();
+    final dia = fecha ?? ahora;
+    _reglas.noFutura(dia, hoy: ahora);
+    final cuando = momentoDe(dia, ahora: ahora);
     final animalId = _uuid.v4();
     final nacioEnFinca = precioKgCompra == 0;
     final totalCompra = nacioEnFinca
@@ -259,6 +292,13 @@ class PesajesRepository {
         : precioCompra ??
               ((pesoCompra != null && precioKgCompra != null)
                   ? pesoCompra * precioKgCompra
+                  : null);
+    // Monto total sin ₡/kg: si ya se sabe el peso de compra, se divide.
+    final precioKg = nacioEnFinca
+        ? 0.0
+        : precioKgCompra ??
+              ((totalCompra != null && pesoCompra != null && pesoCompra > 0)
+                  ? totalCompra / pesoCompra
                   : null);
     await db.transaction(() async {
       await db
@@ -270,30 +310,32 @@ class PesajesRepository {
               loteId: loteId,
               identificador: identificador,
               pesoCompra: Value(nacioEnFinca ? null : pesoCompra),
-              precioKgCompra: Value(precioKgCompra),
+              precioKgCompra: Value(precioKg),
               precioCompra: Value(totalCompra),
               fechaCompra: Value(
-                nacioEnFinca || totalCompra == null ? null : ahora,
+                nacioEnFinca || totalCompra == null ? null : cuando,
               ),
               createdAt: ahora,
               updatedAt: ahora,
               pendiente: const Value(true),
             ),
           );
-      await db
-          .into(db.pesajes)
-          .insert(
-            PesajesCompanion.insert(
-              id: _uuid.v4(),
-              animalId: animalId,
-              peso: peso,
-              fecha: ahora,
-              registradoPor: Value(registradoPor),
-              createdAt: ahora,
-              updatedAt: ahora,
-              pendiente: const Value(true),
-            ),
-          );
+      if (peso != null) {
+        await db
+            .into(db.pesajes)
+            .insert(
+              PesajesCompanion.insert(
+                id: _uuid.v4(),
+                animalId: animalId,
+                peso: peso,
+                fecha: cuando,
+                registradoPor: Value(registradoPor),
+                createdAt: ahora,
+                updatedAt: ahora,
+                pendiente: const Value(true),
+              ),
+            );
+      }
       await db
           .into(db.movimientosLote)
           .insert(
@@ -302,7 +344,7 @@ class PesajesRepository {
               animalId: animalId,
               loteOrigen: const Value(null),
               loteDestino: loteId,
-              fecha: ahora,
+              fecha: cuando,
               createdAt: ahora,
               updatedAt: ahora,
               pendiente: const Value(true),
@@ -311,34 +353,60 @@ class PesajesRepository {
     });
   }
 
-  /// Stream con los pesajes de la finca registrados desde [desde] (inicio del
+  /// Stream con los pesajes de la finca DIGITADOS desde [desde] (inicio del
   /// día), cada uno con el lote del animal y la ganancia respecto al pesaje
   /// inmediatamente anterior. Más reciente primero.
+  ///
+  /// Se filtra por cuándo se digitó y no por la fecha del pesaje: si el
+  /// patrón pasa hoy lo que el peón pesó el 5, lo tiene que ver en la lista
+  /// para poder corregirlo. Los animales dados de alta en ese lapso sin peso
+  /// también salen (con `peso` null), para que se vea que entraron.
   Stream<List<PesajeHoy>> observarPesajesDelDia(
     String fincaId,
     DateTime desde,
   ) {
     final consulta =
-        db.select(db.pesajes).join([
-            innerJoin(
-              db.animales,
-              db.animales.id.equalsExp(db.pesajes.animalId),
-            ),
-            innerJoin(db.lotes, db.lotes.id.equalsExp(db.animales.loteId)),
-          ])
-          ..where(
-            db.animales.fincaId.equals(fincaId) &
-                db.pesajes.deletedAt.isNull() &
-                db.pesajes.fecha.isBiggerOrEqualValue(desde),
-          )
-          ..orderBy([OrderingTerm.desc(db.pesajes.fecha)]);
+        db.select(db.animales).join([
+          leftOuterJoin(
+            db.pesajes,
+            db.pesajes.animalId.equalsExp(db.animales.id) &
+                db.pesajes.deletedAt.isNull(),
+          ),
+          innerJoin(db.lotes, db.lotes.id.equalsExp(db.animales.loteId)),
+        ])..where(
+          db.animales.fincaId.equals(fincaId) &
+              db.animales.deletedAt.isNull() &
+              (db.pesajes.createdAt.isBiggerOrEqualValue(desde) |
+                  (db.pesajes.id.isNull() &
+                      db.animales.createdAt.isBiggerOrEqualValue(desde))),
+        );
 
     return consulta.watch().asyncMap((filas) async {
-      final resultado = <PesajeHoy>[];
+      final resultado = <(DateTime, PesajeHoy)>[];
       for (final fila in filas) {
-        final p = fila.readTable(db.pesajes);
+        final p = fila.readTableOrNull(db.pesajes);
         final a = fila.readTable(db.animales);
         final l = fila.readTable(db.lotes);
+        if (p == null) {
+          resultado.add((
+            a.createdAt,
+            PesajeHoy(
+              id: '',
+              animalId: a.id,
+              identificador: a.identificador,
+              loteId: l.id,
+              loteNombre: l.nombre,
+              peso: null,
+              fecha: a.fechaCompra ?? a.createdAt,
+              ganancia: null,
+              dias: null,
+              pesoCompra: a.pesoCompra,
+              precioKgCompra: a.precioKgCompra,
+              fechaCompra: a.fechaCompra,
+            ),
+          ));
+          continue;
+        }
         // Peso del pesaje inmediatamente anterior a este (de ese animal).
         final prev =
             await (db.select(db.pesajes)
@@ -351,7 +419,8 @@ class PesajesRepository {
                   ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
                   ..limit(1))
                 .getSingleOrNull();
-        resultado.add(
+        resultado.add((
+          p.createdAt,
           PesajeHoy(
             id: p.id,
             animalId: a.id,
@@ -366,9 +435,11 @@ class PesajesRepository {
             precioKgCompra: a.precioKgCompra,
             fechaCompra: a.fechaCompra,
           ),
-        );
+        ));
       }
-      return resultado;
+      // Lo último digitado arriba.
+      resultado.sort((x, y) => y.$1.compareTo(x.$1));
+      return [for (final r in resultado) r.$2];
     });
   }
 
@@ -380,30 +451,44 @@ class PesajesRepository {
       ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
       ..orderBy([(t) => OrderingTerm.asc(t.fecha)]);
 
-    return consulta.watch().map((filas) {
+    return consulta.watch().asyncMap((filas) async {
+      // Quién digitó cada uno: solo hace falta cuando se digitó otro día.
+      final quienes = {
+        for (final p in filas)
+          if (p.registradoPor != null && !mismoDia(p.createdAt, p.fecha))
+            p.registradoPor!,
+      };
+      final nombres = <String, String>{};
+      if (quienes.isNotEmpty) {
+        final usuarios = await (db.select(
+          db.usuarios,
+        )..where((t) => t.id.isIn(quienes))).get();
+        for (final u in usuarios) {
+          // Sin nombre, la parte del correo antes de la @: el correo entero
+          // no cabe en la columna de la fecha.
+          final nombre = (u.nombre?.trim().isNotEmpty ?? false)
+              ? u.nombre!.trim()
+              : u.email?.split('@').first;
+          if (nombre != null) nombres[u.id] = nombre;
+        }
+      }
+
       final resultado = <PesajeHistorial>[];
       for (var i = 0; i < filas.length; i++) {
         final p = filas[i];
-        if (i == 0) {
-          resultado.add(
-            PesajeHistorial(
-              fecha: p.fecha,
-              peso: p.peso,
-              ganancia: null,
-              dias: null,
-            ),
-          );
-        } else {
-          final prev = filas[i - 1];
-          resultado.add(
-            PesajeHistorial(
-              fecha: p.fecha,
-              peso: p.peso,
-              ganancia: p.peso - prev.peso,
-              dias: _diasCalendario(prev.fecha, p.fecha),
-            ),
-          );
-        }
+        final prev = i == 0 ? null : filas[i - 1];
+        final tarde = !mismoDia(p.createdAt, p.fecha);
+        resultado.add(
+          PesajeHistorial(
+            id: p.id,
+            fecha: p.fecha,
+            peso: p.peso,
+            ganancia: prev == null ? null : p.peso - prev.peso,
+            dias: prev == null ? null : _diasCalendario(prev.fecha, p.fecha),
+            digitadoEl: tarde ? p.createdAt : null,
+            digitadoPor: tarde ? nombres[p.registradoPor] : null,
+          ),
+        );
       }
       return resultado;
     });
@@ -541,16 +626,34 @@ class PesajesRepository {
 
   /// Mueve un animal a otro lote y registra el movimiento (D-05). Queda
   /// pendiente para sincronizar.
+  ///
+  /// [fecha] es el día en que de verdad se movió (hoy si no se dice). Cuenta
+  /// para la dieta: hasta ese día come la del lote viejo, desde ese día la
+  /// del nuevo. No puede ser antes de que entrara ni antes de su último
+  /// movimiento, porque partiría en dos un período que ya pasó.
   Future<void> moverAnimalDeLote({
     required String animalId,
     required String nuevoLoteId,
+    DateTime? fecha,
   }) async {
-    final animal = await (db.select(
-      db.animales,
-    )..where((t) => t.id.equals(animalId))).getSingle();
+    final ahora = DateTime.now();
+    final dia = fecha ?? ahora;
+    final animal = await _reglas.desdeElIngreso(animalId, dia, hoy: ahora);
     if (animal.loteId == nuevoLoteId) return;
 
-    final ahora = DateTime.now();
+    final ultimo = await _ultimoMovimiento(animalId);
+    if (ultimo != null && soloDia(dia).isBefore(soloDia(ultimo.fecha))) {
+      throw FechaInvalidaException(
+        'El animal ${animal.identificador} cambió de lote el '
+        '${fechaCorta(ultimo.fecha)}: el nuevo cambio no puede ser antes.',
+      );
+    }
+    var cuando = momentoDe(dia, ahora: ahora);
+    // Mismo día que el movimiento anterior: que quede después de ese.
+    if (ultimo != null && !cuando.isAfter(ultimo.fecha)) {
+      cuando = ultimo.fecha.add(const Duration(minutes: 1));
+    }
+
     await db.transaction(() async {
       await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
         AnimalesCompanion(
@@ -567,12 +670,162 @@ class PesajesRepository {
               animalId: animalId,
               loteOrigen: Value(animal.loteId),
               loteDestino: nuevoLoteId,
-              fecha: ahora,
+              fecha: cuando,
               createdAt: ahora,
               updatedAt: ahora,
               pendiente: const Value(true),
             ),
           );
+    });
+  }
+
+  Future<MovimientoLoteRow?> _ultimoMovimiento(String animalId) {
+    return (db.select(db.movimientosLote)
+          ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// Corrige el lote que se escogió mal al dar de alta el animal.
+  ///
+  /// Si el animal no se ha movido nunca, el error es del alta: se cambia el
+  /// lote de entrada y no se inventa un movimiento (si no, la dieta del lote
+  /// equivocado le quedaría cobrada desde el ingreso hasta hoy). Si ya tenía
+  /// movimientos, es un cambio de lote normal, con la fecha [fecha].
+  Future<void> corregirLote({
+    required String animalId,
+    required String nuevoLoteId,
+    DateTime? fecha,
+  }) async {
+    final animal = await (db.select(
+      db.animales,
+    )..where((t) => t.id.equals(animalId))).getSingle();
+    if (animal.loteId == nuevoLoteId) return;
+    final movimientos = await (db.select(
+      db.movimientosLote,
+    )..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())).get();
+    // Ya se había movido (o es un dato viejo sin movimiento de entrada): es
+    // un cambio de lote normal.
+    if (movimientos.length != 1) {
+      await moverAnimalDeLote(
+        animalId: animalId,
+        nuevoLoteId: nuevoLoteId,
+        fecha: fecha,
+      );
+      return;
+    }
+
+    final ahora = DateTime.now();
+    await db.transaction(() async {
+      await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
+        AnimalesCompanion(
+          loteId: Value(nuevoLoteId),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+      if (movimientos.isNotEmpty) {
+        await (db.update(
+          db.movimientosLote,
+        )..where((t) => t.id.equals(movimientos.single.id))).write(
+          MovimientosLoteCompanion(
+            loteDestino: Value(nuevoLoteId),
+            updatedAt: Value(ahora),
+            pendiente: const Value(true),
+          ),
+        );
+      }
+    });
+  }
+
+  /// Cambia el día en que el animal entró a la finca: mueve la fecha de
+  /// compra y la de su primer movimiento de lote, que son las que mandan el
+  /// arranque de la dieta y de los gastos fijos.
+  ///
+  /// No puede quedar después de su primer pesaje, de su primer cambio de
+  /// lote, de su primera sanidad ni de su venta: el animal no puede haber
+  /// sido pesado, movido o vacunado antes de llegar.
+  Future<void> cambiarFechaIngreso({
+    required String animalId,
+    required DateTime fecha,
+  }) async {
+    final ahora = DateTime.now();
+    _reglas.noFutura(fecha, hoy: ahora);
+    final animal = await (db.select(
+      db.animales,
+    )..where((t) => t.id.equals(animalId))).getSingle();
+
+    final movimientos =
+        await (db.select(db.movimientosLote)
+              ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.asc(t.fecha)]))
+            .get();
+    final primerPesaje =
+        await (db.select(db.pesajes)
+              ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.asc(t.fecha)])
+              ..limit(1))
+            .getSingleOrNull();
+    final primeraSanidad =
+        await (db.select(db.eventosSanitarios)
+              ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.asc(t.fecha)])
+              ..limit(1))
+            .getSingleOrNull();
+    final venta =
+        await (db.select(db.ventas)
+              ..where((t) => t.animalId.equals(animalId) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.asc(t.fecha)])
+              ..limit(1))
+            .getSingleOrNull();
+
+    final topes = <(DateTime, String)>[
+      if (primerPesaje != null) (primerPesaje.fecha, 'su primer pesaje'),
+      if (movimientos.length > 1) (movimientos[1].fecha, 'un cambio de lote'),
+      if (primeraSanidad != null) (primeraSanidad.fecha, 'sanidad aplicada'),
+      if (venta != null) (venta.fecha, 'su venta'),
+    ];
+    for (final (tope, que) in topes) {
+      if (soloDia(fecha).isAfter(soloDia(tope))) {
+        throw FechaInvalidaException(
+          'El animal ${animal.identificador} tiene $que el ${fechaCorta(tope)}: '
+          'no pudo haber entrado después.',
+        );
+      }
+    }
+
+    var cuando = momentoDe(fecha, ahora: ahora);
+    // Mismo día que su primer pesaje: la entrada no puede quedar después.
+    if (primerPesaje != null &&
+        mismoDia(cuando, primerPesaje.fecha) &&
+        cuando.isAfter(primerPesaje.fecha)) {
+      cuando = primerPesaje.fecha;
+    }
+
+    await db.transaction(() async {
+      if (animal.fechaCompra != null) {
+        await (db.update(
+          db.animales,
+        )..where((t) => t.id.equals(animalId))).write(
+          AnimalesCompanion(
+            fechaCompra: Value(cuando),
+            updatedAt: Value(ahora),
+            pendiente: const Value(true),
+          ),
+        );
+      }
+      if (movimientos.isNotEmpty) {
+        await (db.update(
+          db.movimientosLote,
+        )..where((t) => t.id.equals(movimientos.first.id))).write(
+          MovimientosLoteCompanion(
+            fecha: Value(cuando),
+            updatedAt: Value(ahora),
+            pendiente: const Value(true),
+          ),
+        );
+      }
     });
   }
 
@@ -620,6 +873,48 @@ class PesajesRepository {
     );
   }
 
+  /// Corrige un pesaje desde la hoja de vida: el peso y/o el día.
+  ///
+  /// El día nuevo respeta las mismas reglas que un pesaje nuevo (no futuro,
+  /// no antes de que el animal entrara) y no puede caer en un día que ya
+  /// tiene otro pesaje: un animal, un peso por día.
+  Future<void> editarPesaje({
+    required String pesajeId,
+    required double peso,
+    required DateTime fecha,
+  }) async {
+    final ahora = DateTime.now();
+    final actual = await (db.select(
+      db.pesajes,
+    )..where((t) => t.id.equals(pesajeId))).getSingle();
+    final animal = await _reglas.desdeElIngreso(
+      actual.animalId,
+      fecha,
+      hoy: ahora,
+    );
+    final otro = await pesajeDeHoy(actual.animalId, dia: fecha);
+    if (otro != null && otro.id != pesajeId) {
+      throw FechaInvalidaException(
+        '${animal.identificador} ya tiene un pesaje el ${fechaCorta(fecha)} '
+        '(${_kg(otro.peso)} kg): corregí ese.',
+      );
+    }
+    final cuando = mismoDia(fecha, actual.fecha)
+        ? actual.fecha
+        : momentoDe(fecha, ahora: ahora);
+    await (db.update(db.pesajes)..where((t) => t.id.equals(pesajeId))).write(
+      PesajesCompanion(
+        peso: Value(peso),
+        fecha: Value(cuando),
+        updatedAt: Value(ahora),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
+  static String _kg(double p) =>
+      p == p.roundToDouble() ? p.toInt().toString() : p.toStringAsFixed(1);
+
   /// Registra un pesaje en la FECHA que elija el usuario: sirve para pasar a
   /// la app los pesajes que trae anotados en el cuaderno.
   ///
@@ -627,26 +922,21 @@ class PesajesRepository {
   /// misma regla del pesaje del día: un animal, un peso por día). Devuelve
   /// true cuando corrigió uno que ya existía, para poder avisarlo.
   ///
-  /// La hora se fija al mediodía y no a la de este momento: así el día queda
-  /// bien parado aunque el registro viaje entre husos horarios, y un pesaje
-  /// viejo no compite con el de hoy al ordenar por fecha.
+  /// Un día que no es hoy se guarda al mediodía (ver [momentoDe]).
   Future<bool> registrarPesajeEnFecha({
     required String animalId,
     required double peso,
     required DateTime fecha,
     required String registradoPor,
   }) async {
+    final ahora = DateTime.now();
+    await _reglas.desdeElIngreso(animalId, fecha, hoy: ahora);
     final existente = await pesajeDeHoy(animalId, dia: fecha);
     if (existente != null) {
       await actualizarPesaje(pesajeId: existente.id, peso: peso);
       return true;
     }
 
-    final ahora = DateTime.now();
-    final esHoy = diasCalendario(fecha, ahora) == 0;
-    final cuando = esHoy
-        ? ahora
-        : DateTime(fecha.year, fecha.month, fecha.day, 12);
     await db
         .into(db.pesajes)
         .insert(
@@ -654,23 +944,28 @@ class PesajesRepository {
             id: _uuid.v4(),
             animalId: animalId,
             peso: peso,
-            fecha: cuando,
+            fecha: momentoDe(fecha, ahora: ahora),
             registradoPor: Value(registradoPor),
             createdAt: ahora,
             updatedAt: ahora,
             pendiente: const Value(true),
           ),
         );
+    await _completarCompraConPrimerPeso(animalId);
     return false;
   }
 
-  /// Registra un pesaje para un animal existente.
+  /// Registra un pesaje para un animal existente, el día [fecha] (hoy si no
+  /// se dice otra cosa).
   Future<void> agregarPesaje({
     required String animalId,
     required double peso,
     required String registradoPor,
+    DateTime? fecha,
   }) async {
     final ahora = DateTime.now();
+    final dia = fecha ?? ahora;
+    await _reglas.desdeElIngreso(animalId, dia, hoy: ahora);
     await db
         .into(db.pesajes)
         .insert(
@@ -678,12 +973,34 @@ class PesajesRepository {
             id: _uuid.v4(),
             animalId: animalId,
             peso: peso,
-            fecha: ahora,
+            fecha: momentoDe(dia, ahora: ahora),
             registradoPor: Value(registradoPor),
             createdAt: ahora,
             updatedAt: ahora,
             pendiente: const Value(true),
           ),
         );
+    await _completarCompraConPrimerPeso(animalId);
+  }
+
+  /// Un animal que se compró por MONTO TOTAL y entró sin pesar: con su
+  /// primer pesaje ya se sabe el peso de compra, y el ₡/kg sale de dividir
+  /// el monto entre esos kilos.
+  Future<void> _completarCompraConPrimerPeso(String animalId) async {
+    final animal = await (db.select(
+      db.animales,
+    )..where((t) => t.id.equals(animalId))).getSingle();
+    final total = animal.precioCompra;
+    if (total == null || total <= 0 || animal.pesoCompra != null) return;
+    final peso = await primerPeso(animalId);
+    if (peso == null || peso <= 0) return;
+    await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
+      AnimalesCompanion(
+        pesoCompra: Value(peso),
+        precioKgCompra: Value(total / peso),
+        updatedAt: Value(DateTime.now()),
+        pendiente: const Value(true),
+      ),
+    );
   }
 }

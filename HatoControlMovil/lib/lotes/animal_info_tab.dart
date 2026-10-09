@@ -1,8 +1,10 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 
+import '../app/widgets/campo_fecha.dart';
 import '../data/local/database.dart';
 import '../data/repositories/pesajes_repository.dart';
+import '../data/repositories/reglas_de_fechas.dart';
 import '../data/repositories/sanidad_repository.dart';
 import '../data/repositories/ventas_repository.dart';
 import '../services.dart';
@@ -28,12 +30,60 @@ class AnimalInfoTab extends StatelessWidget {
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   /// El lote actual y la fecha real de ingreso a la finca, en una sola pasada.
-  Future<({LoteRow? lote, DateTime ingreso})> _loteEIngreso() async {
+  Future<({LoteRow? lote, DateTime ingreso})> _loteEIngreso(
+    AnimalRow animal,
+  ) async {
     final lote = await (db.select(
       db.lotes,
     )..where((t) => t.id.equals(animal.loteId))).getSingleOrNull();
     final ingreso = await pesajesRepository.fechaIngreso(animal);
     return (lote: lote, ingreso: ingreso);
+  }
+
+  /// Registra que el animal murió, con el día real: la dieta y los gastos
+  /// fijos se le cortan ese día aunque se digite después.
+  Future<void> _registrarMuerte(BuildContext context, AnimalRow animal) async {
+    final dia = await pedirFecha(
+      context,
+      titulo: 'Registrar muerte',
+      etiqueta: '¿Qué día murió?',
+      detalle:
+          '"${animal.identificador}" sale del inventario. Su dieta y sus '
+          'gastos fijos se cortan ese día. Esto no se puede deshacer desde '
+          'la app.',
+      confirmar: 'Registrar muerte',
+      peligroso: true,
+    );
+    if (dia == null) return;
+    try {
+      await ventasRepository.registrarMuerte(animalId: animal.id, fecha: dia);
+    } on FechaInvalidaException catch (e) {
+      if (context.mounted) await avisarFechaInvalida(context, e.mensaje);
+      return;
+    }
+    sincronizarSiSePuede();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '"${animal.identificador}" registrado como muerto '
+            '(${fmtFecha(dia)}).',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // La fila viva del animal: al registrar la muerte o corregir la compra,
+    // la pestaña se actualiza sin salir y volver a entrar.
+    return StreamBuilder<AnimalRow?>(
+      stream: (db.select(
+        db.animales,
+      )..where((t) => t.id.equals(animal.id))).watchSingleOrNull(),
+      builder: (context, snap) => _contenido(context, snap.data ?? animal),
+    );
   }
 
   String _peso(double? p) {
@@ -43,11 +93,10 @@ class AnimalInfoTab extends StatelessWidget {
         : '${p.toStringAsFixed(1)} kg';
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _contenido(BuildContext context, AnimalRow animal) {
     final theme = Theme.of(context);
     return FutureBuilder<({LoteRow? lote, DateTime ingreso})>(
-      future: _loteEIngreso(),
+      future: _loteEIngreso(animal),
       builder: (context, datosSnap) {
         final lote = datosSnap.data?.lote;
         final ingreso = datosSnap.data?.ingreso;
@@ -80,10 +129,17 @@ class AnimalInfoTab extends StatelessWidget {
                               ? 'Muerto'
                               : 'Activo',
                         ),
+                        if (animal.fechaMuerte != null)
+                          _FilaInfo(
+                            'Fecha de muerte',
+                            _fecha(animal.fechaMuerte!),
+                          ),
                         _FilaInfo(
                           'Lote actual',
                           animal.estado == EstadoAnimal.vendido
                               ? '— (vendido)'
+                              : animal.estado == EstadoAnimal.muerto
+                              ? '— (murió)'
                               : (lote?.nombre ?? '—'),
                         ),
                         _FilaInfo('Peso actual', _peso(peso)),
@@ -166,6 +222,22 @@ class AnimalInfoTab extends StatelessWidget {
                               ),
                             ),
                           ),
+                        if (animal.estado == EstadoAnimal.activo &&
+                            !permisosFinca.esSoloLectura) ...[
+                          const SizedBox(height: 32),
+                          OutlinedButton.icon(
+                            key: const ValueKey('ficha.registrarMuerte'),
+                            onPressed: () => _registrarMuerte(context, animal),
+                            icon: Icon(
+                              Icons.heart_broken_outlined,
+                              color: theme.colorScheme.error,
+                            ),
+                            label: Text(
+                              'Registrar muerte',
+                              style: TextStyle(color: theme.colorScheme.error),
+                            ),
+                          ),
+                        ],
                       ],
                     );
                   },

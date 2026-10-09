@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../data/local/database.dart';
 import '../data/repositories/pesajes_repository.dart';
+import '../data/repositories/reglas_de_fechas.dart';
 import '../data/repositories/sanidad_repository.dart';
 import '../sanidad/sanidad_aplicar_sheet.dart';
 import '../services.dart';
@@ -63,6 +64,38 @@ class AnimalSanidadTab extends StatelessWidget {
     );
   }
 
+  /// Tocar un registro ofrece borrarlo (se digitó con la fecha o el
+  /// medicamento equivocado). El borrado es suave: queda el rastro.
+  Future<void> _eliminar(BuildContext context, EventoSanitarioRow e) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Borrar este registro?'),
+        content: Text(
+          '${e.producto} del ${_fecha(e.fecha)}.\n\n'
+          'Si quedó mal, borralo y volvelo a aplicar con los datos correctos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const ValueKey('sanidad.borrar.confirmar'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Borrar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await repo.eliminarEvento(e.id);
+    sincronizarSiSePuede();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -106,8 +139,12 @@ class AnimalSanidadTab extends StatelessWidget {
                       '${TipoEventoSanitario.etiqueta(e.tipo)} · ${_fecha(e.fecha)}'
                       '${e.dosis != null ? ' · ${e.dosis}' : ''}'
                       '${e.costo != null ? ' · ₡${e.costo!.toStringAsFixed(0)}' : ''}'
-                      '${e.retiroHasta != null ? ' · retiro hasta ${_fecha(e.retiroHasta!)}' : ''}',
+                      '${e.retiroHasta != null ? ' · retiro hasta ${_fecha(e.retiroHasta!)}' : ''}'
+                      '${mismoDia(e.createdAt, e.fecha) ? '' : ' · digitado el ${_fecha(e.createdAt)}'}',
                     ),
+                    onTap: permisosFinca.esSoloLectura
+                        ? null
+                        : () => _eliminar(context, e),
                     isThreeLine: e.observaciones != null,
                     trailing: e.pendiente
                         ? Icon(
