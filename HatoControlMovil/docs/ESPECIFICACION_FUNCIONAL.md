@@ -16,7 +16,8 @@ App para un **ganadero de campo**: sencilla, **mucho de tocar y poco de escribir
 | **Offline primero** | Todo se registra y se ve sin señal. Sync automática cuando hay internet. |
 | **Poco teclado** | Toques y valores por defecto. Escribir solo lo mínimo (peso, precios). |
 | **Una finca activa** | Todos los módulos operan sobre la finca seleccionada. |
-| **Un identificador por animal** | Un solo número. RFID o manual en el **mismo campo**. Sin número visual aparte (por ahora). |
+| **Un identificador por animal** | Un solo número. RFID o manual en el **mismo campo**. Opcionalmente un **alias** (nombre corto: "Pinta", "23") para reconocerlo y buscarlo; no reemplaza al arete. |
+| **Buscar sin digitar todo** | Todo campo donde se digita un arete es un **buscador**: con los últimos dígitos o el alias aparece la lista (arete · alias · lote) y se escoge. Con el lector entra el número completo como siempre. |
 | **Nada se borra de verdad** | El animal vendido o muerto no se elimina: pasa a historial (trazabilidad). Un pesaje o una sanidad mal digitados se pueden borrar, pero el borrado es suave: queda el rastro. |
 | **Todo alimenta la Hoja de Vida** | Pesaje, sanidad, dieta, cambio de lote, venta y muerte quedan registrados con fecha. |
 | **La fecha es la del hecho** | Todo se registra con el día en que **pasó**, no el día en que se digitó. Por defecto es **hoy**; se puede escoger un día anterior (el peón pesa el 5 y el patrón lo pasa el 8). |
@@ -50,7 +51,15 @@ Donde el ganadero trabaja en la manga. Todo gira alrededor de ella.
 
 ### Registrar un pesaje
 
-1. **Identificador:** RFID o escritura manual (mismo campo).
+1. **Identificador:** RFID o escritura manual (mismo campo, "Arete o alias").
+   - Escribiendo a mano, con **2 o más** caracteres aparece una lista: primero lo exacto,
+     luego aretes que **terminan** en lo digitado o alias que **empiezan** así, luego los
+     que lo contienen. Tocar uno llena el arete completo y pasa al peso.
+   - El campo trae un botón **ABC / 123** para buscar el alias con letras.
+   - Debajo del campo se ve el alias y el lote del animal que calza exacto.
+   - Si se registra sin escoger y lo digitado no es un arete ni un alias exacto, pero se
+     parece a otros, se pregunta **"¿Cuál es?"** con la lista y la opción **"Es nuevo"**.
+   - Un alias con letras que no calza con nadie no crea un animal: los aretes son números.
 2. **Peso:** solo manual por ahora.
 3. **Animal existente:** guardar pesaje → aparece en la lista. Necesita peso.
 4. **Animal nuevo:** ofrecer registrarlo de una vez, con lo mínimo:
@@ -60,10 +69,12 @@ Donde el ganadero trabaja en la manga. Todo gira alrededor de ella.
      - **Por kilo:** precio por kilo × peso de entrada (necesita el peso).
      - **Monto total:** lo que costó el animal. El ₡/kg sale de dividir entre el peso de entrada; si entró sin pesar, se calcula solo con su primer pesaje.
      - **Nació en la finca:** compra ₡0.
+   - **Alias** (opcional).
 
 ### Lista de pesajes digitados hoy (misma pantalla)
 
-- Muestra lo **digitado hoy**, aunque sea de otro día (así se puede corregir). Lo que es de otro día lleva su fecha debajo del arete.
+- Muestra lo **digitado hoy**, aunque sea de otro día (así se puede corregir). Lo que es de otro día lleva su fecha debajo del arete, y el alias si tiene.
+- Un animal dado de alta **sin peso** también sale, con "—" y "Sin peso"; tocarlo deja ponerle el peso (queda como pesaje del día en que entró). Los contadores cuentan solo los pesados.
 - Columnas: **Animal | Peso | Ganancia** (vs. pesaje anterior del mismo animal).
 - **GMD (kg/día)** = (peso hoy − peso anterior) ÷ días entre pesajes. Número clave de engorde.
 - **Pestañas por lote:** una por cada lote pesado.
@@ -119,7 +130,7 @@ La dosificación calcula sola cuánto aplicar y cuánto cuesta según el peso en
 
 - **Crear lotes** con **nombre** y **número**, ambos editables.
 - Son los lotes que se eligen al registrar un animal nuevo en Pesaje.
-- **Dentro del lote:** lista con buscador; columnas **Animal | Peso actual**; acciones **Nuevo pesaje** (con fecha) y **Cambiar de lote**.
+- **Dentro del lote:** lista con buscador (por arete o alias, sin importar mayúsculas ni tildes; el alias se ve debajo del arete); columnas **Animal | Peso actual**; acciones **Nuevo pesaje** (con fecha) y **Cambiar de lote**.
 - **Cambiar de lote** se registra en la hoja de vida con el **día en que se movió** (hoy por defecto): hasta ese día come la dieta del lote viejo, desde ese día la del nuevo.
 - **Tocar un animal** → abre su **Hoja de Vida**.
 
@@ -164,7 +175,7 @@ Ordenado por fecha, muestra:
 | **Sanidad** | Medicamento, dosis, fecha, retiro. Tocar uno → **borrarlo** |
 | **Dietas** | Por rangos de fecha |
 | **Cambios de lote** | Fechas |
-| **Estado actual** | Lote actual, peso actual, si está **en retiro** (y hasta cuándo), fecha de ingreso; botón **Registrar muerte** |
+| **Estado actual** | Arete y **alias** (lápiz para ponerlo, cambiarlo o quitarlo; no se repite entre animales activos ni puede ser el arete de otro), lote actual, peso actual, si está **en retiro** (y hasta cuándo), fecha de ingreso; botón **Registrar muerte** |
 | **Venta** | Fecha, peso y precio de venta (cuando aplique). **Editar compra** (por kilo, monto total o nació) y **fecha de ingreso** |
 
 ### Muerte del animal
@@ -182,7 +193,7 @@ hasta que la planta liquida (D-19).
 
 ### Momento 1 — Armar el grupo de venta
 
-1. Identificador (RFID o manual).
+1. Identificador (RFID o manual), con el mismo buscador por arete o alias que en Trabajo.
 2. **Validación de retiro:** si hay retiro activo → **alerta y no permite vender**.
 3. Digitar los **kilos de salida de la finca** → agregar a la lista. **Nada más:
    no se pide precio ni dinero**, porque todavía no se conocen.

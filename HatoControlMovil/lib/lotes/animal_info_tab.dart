@@ -40,6 +40,30 @@ class AnimalInfoTab extends StatelessWidget {
     return (lote: lote, ingreso: ingreso);
   }
 
+  /// Pone, cambia o quita el alias: el nombre corto con que lo encuentran
+  /// los buscadores sin digitar el arete completo.
+  Future<void> _editarAlias(BuildContext context, AnimalRow animal) async {
+    final nuevo = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _AliasDialog(
+        identificador: animal.identificador,
+        actual: limpiarAlias(animal.alias) ?? '',
+      ),
+    );
+    if (nuevo == null) return;
+    try {
+      await pesajesRepository.cambiarAlias(animalId: animal.id, alias: nuevo);
+    } on AliasEnUsoException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.mensaje)));
+      }
+      return;
+    }
+    sincronizarSiSePuede();
+  }
+
   /// Registra que el animal murió, con el día real: la dieta y los gastos
   /// fijos se le cortan ese día aunque se digite después.
   Future<void> _registrarMuerte(BuildContext context, AnimalRow animal) async {
@@ -121,6 +145,16 @@ class AnimalInfoTab extends StatelessWidget {
                       padding: const EdgeInsets.all(16),
                       children: [
                         _FilaInfo('Identificador', animal.identificador),
+                        _FilaInfo(
+                          'Alias',
+                          limpiarAlias(animal.alias) ?? '—',
+                          claveEditar: const ValueKey('ficha.alias'),
+                          alEditar:
+                              animal.estado == EstadoAnimal.activo &&
+                                  !permisosFinca.esSoloLectura
+                              ? () => _editarAlias(context, animal)
+                              : null,
+                        ),
                         _FilaInfo(
                           'Estado',
                           animal.estado == EstadoAnimal.vendido
@@ -251,11 +285,65 @@ class AnimalInfoTab extends StatelessWidget {
   }
 }
 
+/// Diálogo del alias. Dueño de su controlador: liberarlo desde afuera revienta
+/// mientras el diálogo todavía se está cerrando.
+class _AliasDialog extends StatefulWidget {
+  const _AliasDialog({required this.identificador, required this.actual});
+
+  final String identificador;
+  final String actual;
+
+  @override
+  State<_AliasDialog> createState() => _AliasDialogState();
+}
+
+class _AliasDialogState extends State<_AliasDialog> {
+  late final _ctrl = TextEditingController(text: widget.actual);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Alias de ${widget.identificador}'),
+      content: TextField(
+        key: const ValueKey('ficha.alias.campo'),
+        controller: _ctrl,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(
+          labelText: 'Alias',
+          helperText: 'Vacío = sin alias',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const ValueKey('ficha.alias.guardar'),
+          onPressed: () => Navigator.pop(context, _ctrl.text),
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+
 class _FilaInfo extends StatelessWidget {
-  const _FilaInfo(this.etiqueta, this.valor);
+  const _FilaInfo(this.etiqueta, this.valor, {this.alEditar, this.claveEditar});
 
   final String etiqueta;
   final String valor;
+
+  /// Si viene, la fila trae un lápiz para cambiar el valor.
+  final VoidCallback? alEditar;
+  final Key? claveEditar;
 
   @override
   Widget build(BuildContext context) {
@@ -282,6 +370,14 @@ class _FilaInfo extends StatelessWidget {
               ),
             ),
           ),
+          if (alEditar != null)
+            IconButton(
+              key: claveEditar,
+              onPressed: alEditar,
+              icon: const Icon(Icons.edit_outlined),
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Cambiar',
+            ),
         ],
       ),
     );

@@ -342,7 +342,7 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
               focusNode: _buscarFocus,
               onChanged: (v) => setState(() => _filtro = v.trim()),
               decoration: InputDecoration(
-                hintText: 'Buscar o escanear arete',
+                hintText: 'Buscar arete o alias',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _filtro.isEmpty
                     ? null
@@ -419,9 +419,11 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                     ? todos
                     : todos
                           .where(
-                            (a) => a.animal.identificador
-                                .toLowerCase()
-                                .contains(_filtro.toLowerCase()),
+                            (a) => calzaConBusqueda(
+                              _filtro,
+                              a.animal.identificador,
+                              a.animal.alias,
+                            ),
                           )
                           .toList();
 
@@ -462,10 +464,26 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
                                 children: [
                                   Expanded(
                                     flex: 4,
-                                    child: Text(
-                                      a.animal.identificador,
-                                      style: const TextStyle(fontSize: 17),
-                                      overflow: TextOverflow.ellipsis,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          a.animal.identificador,
+                                          style: const TextStyle(fontSize: 17),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (limpiarAlias(a.animal.alias)
+                                            case final alias?)
+                                          Text(
+                                            alias,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: theme.colorScheme.primary,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                      ],
                                     ),
                                   ),
                                   Expanded(

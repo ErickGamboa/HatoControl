@@ -141,6 +141,11 @@ class Animales extends Table {
   TextColumn get loteId => text()();
   TextColumn get identificador => text()();
 
+  /// Nombre corto para reconocerlo sin el arete largo ("Pinta", "23"). Lo
+  /// respetan los buscadores. null o vacío = sin alias. Único entre los
+  /// animales activos de la finca (lo cuida el repositorio).
+  TextColumn get alias => text().nullable()();
+
   /// activo | vendido | muerto (D-08)
   TextColumn get estado => text().withDefault(const Constant('activo'))();
 
@@ -683,7 +688,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -872,6 +877,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 20) {
         // v20: muerte del animal con su fecha (corta dieta y gastos fijos).
         await _agregarColumnaSiFalta(m, animales, animales.fechaMuerte);
+      }
+      if (from < 21) {
+        // v21: alias del animal, para buscarlo sin digitar el arete largo.
+        await _agregarColumnaSiFalta(m, animales, animales.alias);
       }
     },
   );

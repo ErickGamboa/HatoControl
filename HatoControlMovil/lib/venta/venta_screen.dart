@@ -5,7 +5,7 @@ import '../app/teclado/lector_de_aretes.dart';
 import '../app/theme.dart';
 import '../app/widgets/campo_fecha.dart';
 import '../app/widgets/quick_number_field.dart';
-import '../app/widgets/scan_field.dart';
+import '../app/widgets/campo_animal.dart';
 import '../data/estadisticas/estadisticas_economicas.dart';
 import '../data/local/database.dart';
 import '../data/repositories/lotes_repository.dart';
@@ -66,6 +66,11 @@ class _VentaScreenState extends State<VentaScreen>
 
   final _enCurso = <_ItemVenta>[];
   bool _guardando = false;
+
+  /// Los animales para el buscador del campo del arete.
+  late final Stream<List<AnimalBuscable>> _buscables = widget.pesajesRepository
+      .observarBuscables(widget.finca.id)
+      .asBroadcastStream();
 
   /// Igual que en Trabajo: la lectura entra aunque ningún campo tenga el foco.
   /// Antes Venta dependía de dejar el campo del arete enfocado, y eso hacía
@@ -129,14 +134,13 @@ class _VentaScreenState extends State<VentaScreen>
       return;
     }
 
-    final animal = await widget.pesajesRepository.buscarAnimalActivo(
-      widget.finca.id,
-      ident,
-    );
-    if (animal == null) {
-      _snack('No hay un animal activo con ese identificador.');
-      return;
-    }
+    final animal =
+        await widget.pesajesRepository.buscarActivoPorIdOAlias(
+          widget.finca.id,
+          ident,
+        ) ??
+        await _escogerEntreParecidos(ident);
+    if (animal == null) return;
 
     final retiro = await widget.sanidadRepository.retiroHasta(animal.id);
     if (retiro != null) {
@@ -175,6 +179,59 @@ class _VentaScreenState extends State<VentaScreen>
     _identFocus.unfocus();
     _pesoFocus.unfocus();
     _snack('${animal.identificador} agregado');
+  }
+
+  /// Lo digitado no es el arete ni el alias exacto de ningún animal: si hay
+  /// animales que se le parecen (los últimos dígitos, un pedazo del alias),
+  /// se pregunta cuál es. null si no hay ninguno o canceló.
+  Future<AnimalRow?> _escogerEntreParecidos(String ident) async {
+    final parecidos = sugerencias(
+      await widget.pesajesRepository.buscables(widget.finca.id),
+      ident,
+    );
+    if (!mounted) return null;
+    if (parecidos.isEmpty) {
+      _snack('No hay un animal activo con ese arete o alias.');
+      return null;
+    }
+    final escogido = await showDialog<AnimalBuscable>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('¿Cuál es "$ident"?'),
+        contentPadding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (final a in parecidos)
+                ListTile(
+                  key: ValueKey('venta.parecido.${a.identificador}'),
+                  title: Text(
+                    a.identificador,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    [if (a.alias != null) a.alias!, a.loteNombre].join(' · '),
+                  ),
+                  onTap: () => Navigator.pop(ctx, a),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+    if (escogido == null) return null;
+    return widget.pesajesRepository.buscarAnimalActivo(
+      widget.finca.id,
+      escogido.identificador,
+    );
   }
 
   /// Vende un lote de manejo completo, sin escanear animal por animal.
@@ -442,12 +499,14 @@ class _VentaScreenState extends State<VentaScreen>
         padding: const EdgeInsets.all(HatoSpacing.lg),
         child: Column(
           children: [
-            ScanField(
+            CampoAnimal(
               key: const ValueKey('venta.animalId'),
               controller: _identCtrl,
               focusNode: _identFocus,
-              labelText: 'Identificador (RFID o manual)',
+              animales: _buscables,
+              labelText: 'Arete o alias',
               onSubmitted: (_) => _pesoFocus.requestFocus(),
+              onSeleccionado: (_) => _pesoFocus.requestFocus(),
             ),
             const SizedBox(height: HatoSpacing.md),
             QuickNumberField(
@@ -527,7 +586,10 @@ class _VentaScreenState extends State<VentaScreen>
                         final item = _enCurso[i];
                         return ListTile(
                           title: Text(
-                            item.animal.identificador,
+                            [
+                              item.animal.identificador,
+                              ?limpiarAlias(item.animal.alias),
+                            ].join(' · '),
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           subtitle: item.faltaPeso

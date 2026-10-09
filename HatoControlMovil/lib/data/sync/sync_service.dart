@@ -994,6 +994,9 @@ class SyncService {
                 // columna sigue aceptando los animales vivos.
                 if (a.fechaMuerte != null)
                   'fecha_muerte': a.fechaMuerte!.toIso8601String(),
+                // Igual con el alias: quitarlo lo deja en '' (no en null)
+                // para que el cambio también suba.
+                if (a.alias != null) 'alias': a.alias,
                 'created_at': a.createdAt.toIso8601String(),
                 'deleted_at': a.deletedAt?.toIso8601String(),
               },
@@ -1036,6 +1039,7 @@ class SyncService {
               fechaMuerte: r['fecha_muerte'] != null
                   ? DateTime.parse(r['fecha_muerte'] as String)
                   : null,
+              alias: r['alias'] as String?,
               createdAt: DateTime.parse(r['created_at'] as String),
               updatedAt: DateTime.parse(r['updated_at'] as String),
               deletedAt: r['deleted_at'] != null

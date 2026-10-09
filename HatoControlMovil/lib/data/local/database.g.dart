@@ -3181,6 +3181,15 @@ class $AnimalesTable extends Animales
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _aliasMeta = const VerificationMeta('alias');
+  @override
+  late final GeneratedColumn<String> alias = GeneratedColumn<String>(
+    'alias',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _estadoMeta = const VerificationMeta('estado');
   @override
   late final GeneratedColumn<String> estado = GeneratedColumn<String>(
@@ -3300,6 +3309,7 @@ class $AnimalesTable extends Animales
     fincaId,
     loteId,
     identificador,
+    alias,
     estado,
     precioCompra,
     pesoCompra,
@@ -3354,6 +3364,12 @@ class $AnimalesTable extends Animales
       );
     } else if (isInserting) {
       context.missing(_identificadorMeta);
+    }
+    if (data.containsKey('alias')) {
+      context.handle(
+        _aliasMeta,
+        alias.isAcceptableOrUnknown(data['alias']!, _aliasMeta),
+      );
     }
     if (data.containsKey('estado')) {
       context.handle(
@@ -3456,6 +3472,10 @@ class $AnimalesTable extends Animales
         DriftSqlType.string,
         data['${effectivePrefix}identificador'],
       )!,
+      alias: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}alias'],
+      ),
       estado: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}estado'],
@@ -3511,6 +3531,11 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
   final String loteId;
   final String identificador;
 
+  /// Nombre corto para reconocerlo sin el arete largo ("Pinta", "23"). Lo
+  /// respetan los buscadores. null o vacío = sin alias. Único entre los
+  /// animales activos de la finca (lo cuida el repositorio).
+  final String? alias;
+
   /// activo | vendido | muerto (D-08)
   final String estado;
 
@@ -3536,6 +3561,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     required this.fincaId,
     required this.loteId,
     required this.identificador,
+    this.alias,
     required this.estado,
     this.precioCompra,
     this.pesoCompra,
@@ -3554,6 +3580,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     map['finca_id'] = Variable<String>(fincaId);
     map['lote_id'] = Variable<String>(loteId);
     map['identificador'] = Variable<String>(identificador);
+    if (!nullToAbsent || alias != null) {
+      map['alias'] = Variable<String>(alias);
+    }
     map['estado'] = Variable<String>(estado);
     if (!nullToAbsent || precioCompra != null) {
       map['precio_compra'] = Variable<double>(precioCompra);
@@ -3585,6 +3614,9 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       fincaId: Value(fincaId),
       loteId: Value(loteId),
       identificador: Value(identificador),
+      alias: alias == null && nullToAbsent
+          ? const Value.absent()
+          : Value(alias),
       estado: Value(estado),
       precioCompra: precioCompra == null && nullToAbsent
           ? const Value.absent()
@@ -3620,6 +3652,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       fincaId: serializer.fromJson<String>(json['fincaId']),
       loteId: serializer.fromJson<String>(json['loteId']),
       identificador: serializer.fromJson<String>(json['identificador']),
+      alias: serializer.fromJson<String?>(json['alias']),
       estado: serializer.fromJson<String>(json['estado']),
       precioCompra: serializer.fromJson<double?>(json['precioCompra']),
       pesoCompra: serializer.fromJson<double?>(json['pesoCompra']),
@@ -3640,6 +3673,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       'fincaId': serializer.toJson<String>(fincaId),
       'loteId': serializer.toJson<String>(loteId),
       'identificador': serializer.toJson<String>(identificador),
+      'alias': serializer.toJson<String?>(alias),
       'estado': serializer.toJson<String>(estado),
       'precioCompra': serializer.toJson<double?>(precioCompra),
       'pesoCompra': serializer.toJson<double?>(pesoCompra),
@@ -3658,6 +3692,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     String? fincaId,
     String? loteId,
     String? identificador,
+    Value<String?> alias = const Value.absent(),
     String? estado,
     Value<double?> precioCompra = const Value.absent(),
     Value<double?> pesoCompra = const Value.absent(),
@@ -3673,6 +3708,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     fincaId: fincaId ?? this.fincaId,
     loteId: loteId ?? this.loteId,
     identificador: identificador ?? this.identificador,
+    alias: alias.present ? alias.value : this.alias,
     estado: estado ?? this.estado,
     precioCompra: precioCompra.present ? precioCompra.value : this.precioCompra,
     pesoCompra: pesoCompra.present ? pesoCompra.value : this.pesoCompra,
@@ -3694,6 +3730,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
       identificador: data.identificador.present
           ? data.identificador.value
           : this.identificador,
+      alias: data.alias.present ? data.alias.value : this.alias,
       estado: data.estado.present ? data.estado.value : this.estado,
       precioCompra: data.precioCompra.present
           ? data.precioCompra.value
@@ -3724,6 +3761,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           ..write('fincaId: $fincaId, ')
           ..write('loteId: $loteId, ')
           ..write('identificador: $identificador, ')
+          ..write('alias: $alias, ')
           ..write('estado: $estado, ')
           ..write('precioCompra: $precioCompra, ')
           ..write('pesoCompra: $pesoCompra, ')
@@ -3744,6 +3782,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
     fincaId,
     loteId,
     identificador,
+    alias,
     estado,
     precioCompra,
     pesoCompra,
@@ -3763,6 +3802,7 @@ class AnimalRow extends DataClass implements Insertable<AnimalRow> {
           other.fincaId == this.fincaId &&
           other.loteId == this.loteId &&
           other.identificador == this.identificador &&
+          other.alias == this.alias &&
           other.estado == this.estado &&
           other.precioCompra == this.precioCompra &&
           other.pesoCompra == this.pesoCompra &&
@@ -3780,6 +3820,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
   final Value<String> fincaId;
   final Value<String> loteId;
   final Value<String> identificador;
+  final Value<String?> alias;
   final Value<String> estado;
   final Value<double?> precioCompra;
   final Value<double?> pesoCompra;
@@ -3796,6 +3837,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     this.fincaId = const Value.absent(),
     this.loteId = const Value.absent(),
     this.identificador = const Value.absent(),
+    this.alias = const Value.absent(),
     this.estado = const Value.absent(),
     this.precioCompra = const Value.absent(),
     this.pesoCompra = const Value.absent(),
@@ -3813,6 +3855,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     required String fincaId,
     required String loteId,
     required String identificador,
+    this.alias = const Value.absent(),
     this.estado = const Value.absent(),
     this.precioCompra = const Value.absent(),
     this.pesoCompra = const Value.absent(),
@@ -3835,6 +3878,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     Expression<String>? fincaId,
     Expression<String>? loteId,
     Expression<String>? identificador,
+    Expression<String>? alias,
     Expression<String>? estado,
     Expression<double>? precioCompra,
     Expression<double>? pesoCompra,
@@ -3852,6 +3896,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
       if (fincaId != null) 'finca_id': fincaId,
       if (loteId != null) 'lote_id': loteId,
       if (identificador != null) 'identificador': identificador,
+      if (alias != null) 'alias': alias,
       if (estado != null) 'estado': estado,
       if (precioCompra != null) 'precio_compra': precioCompra,
       if (pesoCompra != null) 'peso_compra': pesoCompra,
@@ -3871,6 +3916,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     Value<String>? fincaId,
     Value<String>? loteId,
     Value<String>? identificador,
+    Value<String?>? alias,
     Value<String>? estado,
     Value<double?>? precioCompra,
     Value<double?>? pesoCompra,
@@ -3888,6 +3934,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
       fincaId: fincaId ?? this.fincaId,
       loteId: loteId ?? this.loteId,
       identificador: identificador ?? this.identificador,
+      alias: alias ?? this.alias,
       estado: estado ?? this.estado,
       precioCompra: precioCompra ?? this.precioCompra,
       pesoCompra: pesoCompra ?? this.pesoCompra,
@@ -3916,6 +3963,9 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
     }
     if (identificador.present) {
       map['identificador'] = Variable<String>(identificador.value);
+    }
+    if (alias.present) {
+      map['alias'] = Variable<String>(alias.value);
     }
     if (estado.present) {
       map['estado'] = Variable<String>(estado.value);
@@ -3960,6 +4010,7 @@ class AnimalesCompanion extends UpdateCompanion<AnimalRow> {
           ..write('fincaId: $fincaId, ')
           ..write('loteId: $loteId, ')
           ..write('identificador: $identificador, ')
+          ..write('alias: $alias, ')
           ..write('estado: $estado, ')
           ..write('precioCompra: $precioCompra, ')
           ..write('pesoCompra: $pesoCompra, ')
@@ -16772,6 +16823,7 @@ typedef $$AnimalesTableCreateCompanionBuilder =
       required String fincaId,
       required String loteId,
       required String identificador,
+      Value<String?> alias,
       Value<String> estado,
       Value<double?> precioCompra,
       Value<double?> pesoCompra,
@@ -16790,6 +16842,7 @@ typedef $$AnimalesTableUpdateCompanionBuilder =
       Value<String> fincaId,
       Value<String> loteId,
       Value<String> identificador,
+      Value<String?> alias,
       Value<String> estado,
       Value<double?> precioCompra,
       Value<double?> pesoCompra,
@@ -16829,6 +16882,11 @@ class $$AnimalesTableFilterComposer
 
   ColumnFilters<String> get identificador => $composableBuilder(
     column: $table.identificador,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get alias => $composableBuilder(
+    column: $table.alias,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16912,6 +16970,11 @@ class $$AnimalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get alias => $composableBuilder(
+    column: $table.alias,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get estado => $composableBuilder(
     column: $table.estado,
     builder: (column) => ColumnOrderings(column),
@@ -16986,6 +17049,9 @@ class $$AnimalesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get alias =>
+      $composableBuilder(column: $table.alias, builder: (column) => column);
+
   GeneratedColumn<String> get estado =>
       $composableBuilder(column: $table.estado, builder: (column) => column);
 
@@ -17059,6 +17125,7 @@ class $$AnimalesTableTableManager
                 Value<String> fincaId = const Value.absent(),
                 Value<String> loteId = const Value.absent(),
                 Value<String> identificador = const Value.absent(),
+                Value<String?> alias = const Value.absent(),
                 Value<String> estado = const Value.absent(),
                 Value<double?> precioCompra = const Value.absent(),
                 Value<double?> pesoCompra = const Value.absent(),
@@ -17075,6 +17142,7 @@ class $$AnimalesTableTableManager
                 fincaId: fincaId,
                 loteId: loteId,
                 identificador: identificador,
+                alias: alias,
                 estado: estado,
                 precioCompra: precioCompra,
                 pesoCompra: pesoCompra,
@@ -17093,6 +17161,7 @@ class $$AnimalesTableTableManager
                 required String fincaId,
                 required String loteId,
                 required String identificador,
+                Value<String?> alias = const Value.absent(),
                 Value<String> estado = const Value.absent(),
                 Value<double?> precioCompra = const Value.absent(),
                 Value<double?> pesoCompra = const Value.absent(),
@@ -17109,6 +17178,7 @@ class $$AnimalesTableTableManager
                 fincaId: fincaId,
                 loteId: loteId,
                 identificador: identificador,
+                alias: alias,
                 estado: estado,
                 precioCompra: precioCompra,
                 pesoCompra: pesoCompra,

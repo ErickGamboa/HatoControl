@@ -139,6 +139,7 @@ medidos en unidades distintas. La conversión vive en `UnidadArea`
 | finca_id | uuid → fincas.id | |
 | lote_id | uuid → lotes.id | **obligatorio** (todo animal está en un lote) |
 | identificador | text | el número/arete que digita el usuario |
+| alias | text | nombre corto opcional para buscarlo ("Pinta", "23"); null o `''` = sin alias |
 | estado | text | `activo` \| `vendido` \| `muerto` |
 | precio_compra | numeric | ₡ total de la compra (0 = nació en la finca) |
 | peso_compra | numeric | kilos de entrada; null = nació o entró sin pesar |
@@ -162,6 +163,11 @@ Reglas:
 - `fecha_muerte` (migración `20261008120000_fecha_muerte_animales.sql`): la app solo
   la manda en la subida cuando el animal murió, así un servidor sin la columna sigue
   aceptando los vivos. **Aplicarla antes de publicar** la versión que registra muertes.
+- `alias` (migración `20261009120000_alias_animales.sql`, Drift v21): igual, solo se
+  manda cuando no es null; quitar un alias lo deja en `''` para que el cambio suba.
+  Único entre los animales **activos** de la finca y distinto del arete de cualquiera
+  (lo valida `PesajesRepository`, sin restricción en el servidor). **Aplicarla antes de
+  publicar**: sin la columna, el animal con alias queda pendiente de subir.
 
 ### Fechas del hecho vs. fecha de digitado
 

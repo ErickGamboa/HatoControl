@@ -94,6 +94,14 @@ void main() {
         );
   }
 
+  /// Pasa el pesaje sembrado (y la entrada del animal) a hace [dias] días,
+  /// para que pesarlo hoy no choque con "Ya se pesó hoy".
+  Future<void> pesadoHaceDias(String animalId, int dias) async {
+    final antes = ahora.subtract(Duration(days: dias));
+    await (db.update(db.pesajes)..where((t) => t.animalId.equals(animalId)))
+        .write(PesajesCompanion(fecha: Value(antes)));
+  }
+
   Future<void> abrirPantalla(WidgetTester tester, FincaRow finca) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -341,6 +349,83 @@ void main() {
   });
 
   // ---- Fecha de jornada y alta sin peso ----
+
+  // ---- Buscador por arete o alias ----
+
+  testWidgets('con los últimos dígitos se escoge el animal de la lista', (
+    tester,
+  ) async {
+    final finca = await seedFinca();
+    await seedLote('lote-1', 'Montaña');
+    await seedPesado('animal-1', 'lote-1', '982000111223344', 300);
+    await pesadoHaceDias('animal-1', 10);
+    await (db.update(db.animales)..where((t) => t.id.equals('animal-1'))).write(
+      const AnimalesCompanion(alias: Value('Pinta')),
+    );
+    await abrirPantalla(tester, finca);
+
+    await tester.tap(find.byKey(const ValueKey('pesaje.animalId')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('pesaje.animalId')),
+      '3344',
+    );
+    await tester.pumpAndSettle();
+    final opcion = find.byKey(
+      const ValueKey('campoAnimal.opcion.982000111223344'),
+    );
+    expect(opcion, findsOneWidget);
+    expect(find.text('Pinta · Montaña'), findsOneWidget);
+    await tester.tap(opcion);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<EditableText>(
+            find.descendant(
+              of: find.byKey(const ValueKey('pesaje.animalId')),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .controller
+          .text,
+      '982000111223344',
+    );
+    await tester.enterText(find.byKey(const ValueKey('pesaje.weight')), '320');
+    await tocar(tester, const ValueKey('pesaje.submit'));
+
+    final pesos = (await db.select(db.pesajes).get()).map((p) => p.peso);
+    expect(pesos, containsAll([300.0, 320.0]));
+    expect(await db.select(db.animales).get(), hasLength(1));
+
+    await cerrarPantalla(tester);
+  });
+
+  testWidgets('sin escoger de la lista pregunta cuál es o si es nuevo', (
+    tester,
+  ) async {
+    final finca = await seedFinca();
+    await seedLote('lote-1', 'Montaña');
+    await seedPesado('animal-1', 'lote-1', '982000111223344', 300);
+    await pesadoHaceDias('animal-1', 10);
+    await abrirPantalla(tester, finca);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('pesaje.animalId')),
+      '3344',
+    );
+    await tester.enterText(find.byKey(const ValueKey('pesaje.weight')), '330');
+    await tocar(tester, const ValueKey('pesaje.submit'));
+
+    expect(find.byKey(const ValueKey('pesaje.parecido.nuevo')), findsOneWidget);
+    await tocar(tester, const ValueKey('pesaje.parecido.982000111223344'));
+
+    final pesos = (await db.select(db.pesajes).get()).map((p) => p.peso);
+    expect(pesos, containsAll([300.0, 330.0]));
+    expect(await db.select(db.animales).get(), hasLength(1));
+
+    await cerrarPantalla(tester);
+  });
 
   testWidgets('la fecha de la jornada arranca en hoy', (tester) async {
     final finca = await seedFinca();

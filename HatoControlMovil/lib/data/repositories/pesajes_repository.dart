@@ -4,8 +4,11 @@ import 'package:uuid/uuid.dart';
 import '../estadisticas/estadisticas_pesajes.dart';
 import '../local/cambios_en_tablas.dart';
 import '../local/database.dart';
+import 'buscador_de_animales.dart';
 import 'reglas_de_fechas.dart';
 import 'ventas_repository.dart';
+
+export 'buscador_de_animales.dart';
 
 /// Un animal con su peso actual (último pesaje) y su ganancia por día (entre
 /// los dos últimos pesajes). Ambos null si no hay datos suficientes.
@@ -26,6 +29,7 @@ class PesajeHoy {
     required this.id,
     required this.animalId,
     required this.identificador,
+    this.alias,
     required this.loteId,
     required this.loteNombre,
     required this.peso,
@@ -39,6 +43,7 @@ class PesajeHoy {
   final String id; // id del pesaje (para poder eliminarlo); '' = sin peso
   final String animalId; // para corregirle el lote o la compra
   final String identificador;
+  final String? alias;
   final String loteId;
   final String loteNombre;
   final double? peso; // null = entró sin peso y todavía no se ha pesado
@@ -248,6 +253,113 @@ class PesajesRepository {
         .getSingleOrNull();
   }
 
+  /// Los animales activos de la finca para el buscador (arete, alias y lote).
+  /// Se mantiene al día solo: un alta o un alias nuevo aparecen enseguida.
+  Stream<List<AnimalBuscable>> observarBuscables(String fincaId) =>
+      _consultaBuscables(fincaId).watch().map(_aBuscables);
+
+  /// Lo mismo que [observarBuscables], una sola vez.
+  Future<List<AnimalBuscable>> buscables(String fincaId) =>
+      _consultaBuscables(fincaId).get().then(_aBuscables);
+
+  JoinedSelectStatement<HasResultSet, dynamic> _consultaBuscables(
+    String fincaId,
+  ) {
+    return db.select(db.animales).join([
+      innerJoin(db.lotes, db.lotes.id.equalsExp(db.animales.loteId)),
+    ])..where(
+      db.animales.fincaId.equals(fincaId) &
+          db.animales.deletedAt.isNull() &
+          db.animales.estado.equals(EstadoAnimal.activo),
+    );
+  }
+
+  List<AnimalBuscable> _aBuscables(List<TypedResult> filas) => [
+    for (final f in filas)
+      AnimalBuscable(
+        id: f.readTable(db.animales).id,
+        identificador: f.readTable(db.animales).identificador,
+        alias: limpiarAlias(f.readTable(db.animales).alias),
+        loteNombre: f.readTable(db.lotes).nombre,
+      ),
+  ];
+
+  /// Busca un animal activo por su arete exacto o, si no hay, por su alias
+  /// (sin importar mayúsculas ni tildes). null si ninguno calza.
+  Future<AnimalRow?> buscarActivoPorIdOAlias(
+    String fincaId,
+    String texto,
+  ) async {
+    final t = texto.trim();
+    if (t.isEmpty) return null;
+    final porArete = await buscarAnimalActivo(fincaId, t);
+    if (porArete != null) return porArete;
+    final q = normalizarBusqueda(t);
+    final conAlias =
+        await (db.select(db.animales)..where(
+              (a) =>
+                  a.fincaId.equals(fincaId) &
+                  a.deletedAt.isNull() &
+                  a.estado.equals(EstadoAnimal.activo) &
+                  a.alias.isNotNull(),
+            ))
+            .get();
+    for (final a in conAlias) {
+      final alias = limpiarAlias(a.alias);
+      if (alias != null && normalizarBusqueda(alias) == q) return a;
+    }
+    return null;
+  }
+
+  /// Lanza [AliasEnUsoException] si [alias] ya lo usa otro animal activo de
+  /// la finca, como alias o como arete: el buscador no sabría cuál es.
+  Future<void> _validarAlias(
+    String fincaId,
+    String alias, {
+    String? exceptoAnimalId,
+  }) async {
+    final q = normalizarBusqueda(alias);
+    final activos =
+        await (db.select(db.animales)..where(
+              (a) =>
+                  a.fincaId.equals(fincaId) &
+                  a.deletedAt.isNull() &
+                  a.estado.equals(EstadoAnimal.activo),
+            ))
+            .get();
+    for (final a in activos) {
+      if (a.id == exceptoAnimalId) continue;
+      final otro = limpiarAlias(a.alias);
+      if ((otro != null && normalizarBusqueda(otro) == q) ||
+          normalizarBusqueda(a.identificador) == q) {
+        throw AliasEnUsoException(alias, a.identificador);
+      }
+    }
+  }
+
+  /// Pone, cambia o quita (vacío) el alias de un animal.
+  Future<void> cambiarAlias({
+    required String animalId,
+    required String? alias,
+  }) async {
+    final animal = await (db.select(
+      db.animales,
+    )..where((t) => t.id.equals(animalId))).getSingle();
+    final limpio = limpiarAlias(alias);
+    if (limpio == limpiarAlias(animal.alias)) return;
+    if (limpio != null) {
+      await _validarAlias(animal.fincaId, limpio, exceptoAnimalId: animalId);
+    }
+    await (db.update(db.animales)..where((t) => t.id.equals(animalId))).write(
+      AnimalesCompanion(
+        // '' y no null: así el "sin alias" también sube a la nube.
+        alias: Value(limpio ?? ''),
+        updatedAt: Value(DateTime.now()),
+        pendiente: const Value(true),
+      ),
+    );
+  }
+
   /// Crea un animal nuevo en un lote y registra su primer pesaje (peso de
   /// entrada), todo en una transacción. Todas las filas quedan pendientes de
   /// subir.
@@ -275,11 +387,14 @@ class PesajesRepository {
     double? precioKgCompra,
     double? precioCompra,
     DateTime? fecha,
+    String? alias,
   }) async {
     final existente = await buscarAnimal(fincaId, identificador);
     if (existente != null) {
       throw AnimalDuplicadoException(identificador);
     }
+    final aliasLimpio = limpiarAlias(alias);
+    if (aliasLimpio != null) await _validarAlias(fincaId, aliasLimpio);
 
     final ahora = DateTime.now();
     final dia = fecha ?? ahora;
@@ -309,6 +424,7 @@ class PesajesRepository {
               fincaId: fincaId,
               loteId: loteId,
               identificador: identificador,
+              alias: Value(aliasLimpio),
               pesoCompra: Value(nacioEnFinca ? null : pesoCompra),
               precioKgCompra: Value(precioKg),
               precioCompra: Value(totalCompra),
@@ -394,6 +510,7 @@ class PesajesRepository {
               id: '',
               animalId: a.id,
               identificador: a.identificador,
+              alias: limpiarAlias(a.alias),
               loteId: l.id,
               loteNombre: l.nombre,
               peso: null,
@@ -425,6 +542,7 @@ class PesajesRepository {
             id: p.id,
             animalId: a.id,
             identificador: a.identificador,
+            alias: limpiarAlias(a.alias),
             loteId: l.id,
             loteNombre: l.nombre,
             peso: p.peso,

@@ -9,7 +9,7 @@ import '../app/teclado/lector_de_aretes.dart';
 import '../app/theme.dart';
 import '../app/widgets/campo_fecha.dart';
 import '../app/widgets/quick_number_field.dart';
-import '../app/widgets/scan_field.dart';
+import '../app/widgets/campo_animal.dart';
 import '../data/local/database.dart';
 import '../data/repositories/lotes_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
@@ -91,6 +91,11 @@ class _PesajeScreenState extends State<PesajeScreen> {
   late final Stream<List<PesajeHoy>> _pesajesDelDia = widget.pesajesRepository
       .observarPesajesDelDia(widget.finca.id, _inicioDeHoy);
 
+  /// Los animales para el buscador del campo del arete.
+  late final Stream<List<AnimalBuscable>> _buscables = widget.pesajesRepository
+      .observarBuscables(widget.finca.id)
+      .asBroadcastStream();
+
   /// El lector escribe en el campo del arete sin necesidad de que ese campo
   /// tenga el foco: ningún campo de la app toma el foco solo.
   late final _lector = LectorDeAretes(
@@ -166,10 +171,26 @@ class _PesajeScreenState extends State<PesajeScreen> {
 
     setState(() => _guardando = true);
     try {
-      final animal = await widget.pesajesRepository.buscarAnimalActivo(
+      var animal = await widget.pesajesRepository.buscarActivoPorIdOAlias(
         widget.finca.id,
         ident,
       );
+      if (animal == null) {
+        // Unos dígitos del final o un pedazo del alias: que escoja cuál, o
+        // que confirme que de verdad es uno nuevo.
+        final eleccion = await _escogerEntreParecidos(ident);
+        if (eleccion == null) return;
+        if (eleccion.animalId != null) {
+          animal = await widget.pesajesRepository.buscarAnimalActivo(
+            widget.finca.id,
+            eleccion.identificador!,
+          );
+        }
+      }
+      if (animal == null && !RegExp(r'^\d+$').hasMatch(ident)) {
+        _mostrar('No hay un animal con el arete o alias "$ident".');
+        return;
+      }
       if (animal != null) {
         // Un animal que ya existe solo se registra para pesarlo.
         if (peso == null) {
@@ -183,9 +204,70 @@ class _PesajeScreenState extends State<PesajeScreen> {
       }
     } on FechaInvalidaException catch (e) {
       if (mounted) await avisarFechaInvalida(context, e.mensaje);
+    } on AliasEnUsoException catch (e) {
+      _mostrar('${e.mensaje} No se registró el animal.');
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
+  }
+
+  /// Lo digitado no es el arete ni el alias de ningún animal. Si hay animales
+  /// que se le parecen, se pregunta cuál es (o si es uno nuevo). Devuelve
+  /// null si canceló, `_Eleccion.nuevo` si no hay parecidos o dijo que es
+  /// nuevo, o el animal escogido.
+  Future<_Eleccion?> _escogerEntreParecidos(String ident) async {
+    final parecidos = sugerencias(
+      await widget.pesajesRepository.buscables(widget.finca.id),
+      ident,
+    );
+    if (parecidos.isEmpty || !mounted) return const _Eleccion.nuevo();
+    final esNumero = RegExp(r'^\d+$').hasMatch(ident);
+    setState(() => _guardando = false);
+    final r = await showDialog<_Eleccion>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('¿Cuál es "$ident"?'),
+        contentPadding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (final a in parecidos)
+                ListTile(
+                  key: ValueKey('pesaje.parecido.${a.identificador}'),
+                  title: Text(
+                    a.identificador,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    [if (a.alias != null) a.alias!, a.loteNombre].join(' · '),
+                  ),
+                  onTap: () => Navigator.pop(
+                    ctx,
+                    _Eleccion(animalId: a.id, identificador: a.identificador),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          if (esNumero)
+            TextButton(
+              key: const ValueKey('pesaje.parecido.nuevo'),
+              onPressed: () => Navigator.pop(ctx, const _Eleccion.nuevo()),
+              child: Text('Es nuevo: $ident'),
+            ),
+        ],
+      ),
+    );
+    _soltarElFoco();
+    if (mounted) setState(() => _guardando = true);
+    return r;
   }
 
   Future<void> _pesarExistente(AnimalRow animal, double peso) async {
@@ -298,6 +380,7 @@ class _PesajeScreenState extends State<PesajeScreen> {
       peso: alta.peso,
       registradoPor: widget.usuarioId,
       fecha: _fecha,
+      alias: alta.alias,
       pesoCompra: nacio ? null : alta.peso,
       precioKgCompra: switch (alta.modo) {
         _ModoCompra.nacio => 0,
@@ -565,13 +648,15 @@ class _PesajeScreenState extends State<PesajeScreen> {
           ),
           child: Column(
             children: [
-              ScanField(
+              CampoAnimal(
                 key: const ValueKey('pesaje.animalId'),
                 controller: _identCtrl,
                 focusNode: _identFocus,
-                labelText: 'Identificador (RFID o manual)',
+                animales: _buscables,
+                labelText: 'Arete o alias',
                 textInputAction: TextInputAction.next,
                 onSubmitted: (_) => _pesoFocus.requestFocus(),
+                onSeleccionado: (_) => _pesoFocus.requestFocus(),
                 prefixIcon: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Image.asset(
@@ -933,6 +1018,15 @@ class _FechaJornada extends StatelessWidget {
   }
 }
 
+/// Respuesta a "¿cuál es?": un animal que ya existe, o uno nuevo.
+class _Eleccion {
+  const _Eleccion({required this.animalId, required this.identificador});
+  const _Eleccion.nuevo() : animalId = null, identificador = null;
+
+  final String? animalId;
+  final String? identificador;
+}
+
 /// Cómo se compró el animal que entra.
 enum _ModoCompra { porKilo, montoTotal, nacio }
 
@@ -943,6 +1037,7 @@ class _AltaAnimal {
     required this.modo,
     this.precioKgCompra,
     this.montoTotal,
+    this.alias,
   });
 
   final String loteId;
@@ -952,6 +1047,9 @@ class _AltaAnimal {
   final _ModoCompra modo;
   final double? precioKgCompra; // solo por kilo
   final double? montoTotal; // solo monto total
+
+  /// Nombre corto opcional ("Pinta", "23").
+  final String? alias;
 }
 
 class _AltaAnimalSheet extends StatefulWidget {
@@ -984,6 +1082,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
   );
   final _precioKgCtrl = TextEditingController();
   final _montoCtrl = TextEditingController();
+  final _aliasCtrl = TextEditingController();
   _ModoCompra _modo = _ModoCompra.porKilo;
   String? _loteId;
 
@@ -1000,6 +1099,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
     _pesoCtrl.dispose();
     _precioKgCtrl.dispose();
     _montoCtrl.dispose();
+    _aliasCtrl.dispose();
     super.dispose();
   }
 
@@ -1076,6 +1176,7 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
             peso: peso,
             modo: _modo,
             precioKgCompra: precioKg,
+            alias: _aliasCtrl.text,
           ),
         );
       case _ModoCompra.montoTotal:
@@ -1091,12 +1192,18 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
             peso: peso,
             modo: _modo,
             montoTotal: monto,
+            alias: _aliasCtrl.text,
           ),
         );
       case _ModoCompra.nacio:
         Navigator.pop(
           context,
-          _AltaAnimal(loteId: loteId, peso: peso, modo: _modo),
+          _AltaAnimal(
+            loteId: loteId,
+            peso: peso,
+            modo: _modo,
+            alias: _aliasCtrl.text,
+          ),
         );
     }
   }
@@ -1229,6 +1336,17 @@ class _AltaAnimalSheetState extends State<_AltaAnimalSheet> {
                   ),
                 ),
               ],
+              const SizedBox(height: HatoSpacing.lg),
+              TextField(
+                key: const ValueKey('pesaje.alta.alias'),
+                controller: _aliasCtrl,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Alias (opcional)',
+                  helperText: 'Un nombre corto para buscarlo: "Pinta", "23"',
+                  border: OutlineInputBorder(),
+                ),
+              ),
               const SizedBox(height: HatoSpacing.xl),
               FilledButton(
                 key: const ValueKey('pesaje.alta.guardar'),
@@ -1449,6 +1567,14 @@ class _TablaLote extends StatelessWidget {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                            if (f.alias != null)
+                              Text(
+                                f.alias!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
                             // Digitado hoy pero pesado otro día: que se vea.
                             if (!mismoDia(f.fecha, DateTime.now()))
                               Text(

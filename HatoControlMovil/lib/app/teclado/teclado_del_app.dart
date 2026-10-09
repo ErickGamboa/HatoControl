@@ -53,6 +53,11 @@ class TecladoDelApp extends StatefulWidget {
   /// atajos de unos 50, y Android nada; un teclado de verdad pasa de 200.
   static const umbralTecladoDelSistema = 120.0;
 
+  /// Un campo cambió de teclado sin perder el foco (el botón ABC/123 del
+  /// campo del arete): el propio se vuelve a dibujar con el tipo nuevo.
+  static void cambioElTipoDeTeclado() => _cambioDeTipo.value++;
+  static final _cambioDeTipo = ValueNotifier<int>(0);
+
   @override
   State<TecladoDelApp> createState() => _TecladoDelAppState();
 }
@@ -74,6 +79,7 @@ class _TecladoDelAppState extends State<TecladoDelApp>
     WidgetsBinding.instance.addObserver(this);
     FocusManager.instance.addListener(_cambioElFoco);
     widget.detector.escondido.addListener(_repintar);
+    TecladoDelApp._cambioDeTipo.addListener(_repintar);
     widget.detector.iniciar();
   }
 
@@ -81,6 +87,7 @@ class _TecladoDelAppState extends State<TecladoDelApp>
   void dispose() {
     _espera?.cancel();
     widget.detector.escondido.removeListener(_repintar);
+    TecladoDelApp._cambioDeTipo.removeListener(_repintar);
     FocusManager.instance.removeListener(_cambioElFoco);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
