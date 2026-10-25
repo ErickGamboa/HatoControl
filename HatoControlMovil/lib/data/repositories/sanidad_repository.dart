@@ -24,6 +24,33 @@ abstract final class TipoEventoSanitario {
   };
 }
 
+/// Lo que pasó al aplicar medicamentos a un lote entero (ver
+/// [SanidadRepository.aplicarMedicamentoALote]).
+class ResultadoAplicacionLote {
+  const ResultadoAplicacionLote({
+    required this.animales,
+    required this.aplicadas,
+    required this.yaLoTenian,
+    required this.entraronDespues,
+    required this.sinPeso,
+  });
+
+  /// Animales activos del lote.
+  final int animales;
+
+  /// Aplicaciones nuevas (animal × medicamento).
+  final int aplicadas;
+
+  /// Aplicaciones que se saltaron porque ese día ya estaban.
+  final int yaLoTenian;
+
+  /// Aretes de los que entraron a la finca después de la fecha.
+  final List<String> entraronDespues;
+
+  /// Aretes sin ningún peso, a los que no se les pudo calcular la dosis.
+  final List<String> sinPeso;
+}
+
 class AnimalEnRetiroException implements Exception {
   const AnimalEnRetiroException(this.retiroHasta);
   final DateTime retiroHasta;
@@ -114,10 +141,145 @@ class SanidadRepository {
     if (med == null) {
       throw StateError('Medicamento no encontrado: $medicamentoId');
     }
-    final dosis = _medicamentos.dosisParaPeso(med, pesoKg);
     final digitado = DateTime.now();
     final dia = fecha ?? digitado;
     await _reglas.desdeElIngreso(animalId, dia, hoy: digitado);
+    await _insertarAplicacion(
+      animalId: animalId,
+      med: med,
+      pesoKg: pesoKg,
+      dia: dia,
+      digitado: digitado,
+      responsableId: responsableId,
+    );
+  }
+
+  /// Aplica uno o varios medicamentos del catálogo a todos los animales
+  /// activos del lote, de un solo tiro, el día [fecha] (hoy si no se dice).
+  ///
+  /// La dosis de cada animal sale de su último peso hasta ese día. Se salta:
+  /// - el animal que ese mismo día ya tiene ese mismo medicamento (así se
+  ///   puede terminar un lote que quedó a medias sin duplicar a nadie);
+  /// - el que entró a la finca después de esa fecha;
+  /// - el que no tiene ningún peso, si la dosis va por peso.
+  Future<ResultadoAplicacionLote> aplicarMedicamentoALote({
+    required String loteId,
+    required List<String> medicamentoIds,
+    DateTime? fecha,
+    String? responsableId,
+  }) async {
+    final digitado = DateTime.now();
+    final dia = fecha ?? digitado;
+    _reglas.noFutura(dia, hoy: digitado);
+    final inicio = soloDia(dia);
+    final finDelDia = inicio.add(const Duration(days: 1));
+
+    final meds = <MedicamentoRow>[];
+    for (final id in medicamentoIds) {
+      final med = await _medicamentos.porId(id);
+      if (med == null) throw StateError('Medicamento no encontrado: $id');
+      meds.add(med);
+    }
+    final animales =
+        await (db.select(db.animales)..where(
+              (t) =>
+                  t.loteId.equals(loteId) &
+                  t.deletedAt.isNull() &
+                  t.estado.equals('activo'),
+            ))
+            .get();
+
+    var aplicadas = 0;
+    var yaLoTenian = 0;
+    final entraronDespues = <String>[];
+    final sinPeso = <String>[];
+    await db.transaction(() async {
+      for (final a in animales) {
+        if (soloDia(dia).isBefore(soloDia(await _reglas.primerDia(a)))) {
+          entraronDespues.add(a.identificador);
+          continue;
+        }
+        final peso = await _pesoAl(a, finDelDia);
+        for (final med in meds) {
+          final yaTiene =
+              await (db.select(db.eventosSanitarios)
+                    ..where(
+                      (t) =>
+                          t.animalId.equals(a.id) &
+                          t.medicamentoId.equals(med.id) &
+                          t.deletedAt.isNull() &
+                          t.fecha.isBiggerOrEqualValue(inicio) &
+                          t.fecha.isSmallerThanValue(finDelDia),
+                    )
+                    ..limit(1))
+                  .getSingleOrNull();
+          if (yaTiene != null) {
+            yaLoTenian++;
+            continue;
+          }
+          if (peso == null &&
+              med.tipoAplicacion == TipoAplicacionMedicamento.porPeso) {
+            if (!sinPeso.contains(a.identificador)) {
+              sinPeso.add(a.identificador);
+            }
+            continue;
+          }
+          await _insertarAplicacion(
+            animalId: a.id,
+            med: med,
+            pesoKg: peso ?? 0,
+            dia: dia,
+            digitado: digitado,
+            responsableId: responsableId,
+          );
+          aplicadas++;
+        }
+      }
+    });
+    return ResultadoAplicacionLote(
+      animales: animales.length,
+      aplicadas: aplicadas,
+      yaLoTenian: yaLoTenian,
+      entraronDespues: entraronDespues,
+      sinPeso: sinPeso,
+    );
+  }
+
+  /// Último peso del animal antes de [hasta]; si no tiene pesajes hasta ese
+  /// día, el primero que tenga, y si no, el de compra.
+  Future<double?> _pesoAl(AnimalRow animal, DateTime hasta) async {
+    final antes =
+        await (db.select(db.pesajes)
+              ..where(
+                (t) =>
+                    t.animalId.equals(animal.id) &
+                    t.deletedAt.isNull() &
+                    t.fecha.isSmallerThanValue(hasta),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.fecha)])
+              ..limit(1))
+            .getSingleOrNull();
+    if (antes != null) return antes.peso;
+    final despues =
+        await (db.select(db.pesajes)
+              ..where(
+                (t) => t.animalId.equals(animal.id) & t.deletedAt.isNull(),
+              )
+              ..orderBy([(t) => OrderingTerm.asc(t.fecha)])
+              ..limit(1))
+            .getSingleOrNull();
+    return despues?.peso ?? animal.pesoCompra;
+  }
+
+  Future<void> _insertarAplicacion({
+    required String animalId,
+    required MedicamentoRow med,
+    required double pesoKg,
+    required DateTime dia,
+    required DateTime digitado,
+    String? responsableId,
+  }) async {
+    final dosis = _medicamentos.dosisParaPeso(med, pesoKg);
     final ahora = momentoDe(dia, ahora: digitado);
     final retiro = fechaFinRetiro(ahora, med.diasRetiro);
 
@@ -133,7 +295,7 @@ class SanidadRepository {
             fecha: ahora,
             responsableId: Value(responsableId),
             costo: Value(dosis.costoUso),
-            medicamentoId: Value(medicamentoId),
+            medicamentoId: Value(med.id),
             mlAplicados: Value(dosis.mlAplicados),
             aplicaciones: Value(dosis.aplicaciones),
             diasRetiro: Value(med.diasRetiro > 0 ? med.diasRetiro : null),

@@ -23,6 +23,11 @@ class LotesScreen extends StatelessWidget {
     );
     if (datos == null) return;
 
+    if (lote != null && datos.eliminar) {
+      if (!context.mounted) return;
+      await _eliminarLote(context, lote);
+      return;
+    }
     if (lote != null) {
       await lotesRepo.editarLote(
         loteId: lote.id,
@@ -41,6 +46,25 @@ class LotesScreen extends StatelessWidget {
       );
     }
     sincronizarSiSePuede();
+  }
+
+  /// Elimina el lote con todo lo que tiene, después de advertir qué se pierde
+  /// y de que el ganadero confirme que lo hace bajo su responsabilidad.
+  Future<void> _eliminarLote(BuildContext context, LoteRow lote) async {
+    final resumen = await lotesRepo.resumenParaBorrar(lote.id);
+    if (!context.mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _ConfirmarEliminarLote(lote: lote, resumen: resumen),
+    );
+    if (ok != true) return;
+    await lotesRepo.eliminarLoteConTodo(lote.id);
+    sincronizarSiSePuede();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lote "${lote.nombre}" eliminado.')),
+      );
+    }
   }
 
   @override
@@ -123,8 +147,17 @@ class _DatosLote {
     this.numero,
     this.area,
     this.areaUnidad,
-  });
+  }) : eliminar = false;
 
+  /// El ganadero tocó "Eliminar lote" en vez de guardar.
+  const _DatosLote.eliminar()
+    : nombre = '',
+      numero = null,
+      area = null,
+      areaUnidad = null,
+      eliminar = true;
+
+  final bool eliminar;
   final String nombre;
   final int? numero;
 
@@ -271,6 +304,25 @@ class _LoteDialogState extends State<_LoteDialog> {
                 ),
               ],
             ),
+            if (esEdicion) ...[
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  key: const ValueKey('lotes.eliminar'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.error,
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  onPressed: () =>
+                      Navigator.pop(context, const _DatosLote.eliminar()),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Eliminar lote'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -283,6 +335,102 @@ class _LoteDialogState extends State<_LoteDialog> {
           key: const ValueKey('lotes.save'),
           onPressed: _guardar,
           child: Text(esEdicion ? 'Guardar' : 'Crear'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Advertencia antes de eliminar un lote: dice todo lo que se pierde y pide
+/// marcar que el ganadero lo hace bajo su propia responsabilidad.
+class _ConfirmarEliminarLote extends StatefulWidget {
+  const _ConfirmarEliminarLote({required this.lote, required this.resumen});
+
+  final LoteRow lote;
+  final ResumenBorradoLote resumen;
+
+  @override
+  State<_ConfirmarEliminarLote> createState() => _ConfirmarEliminarLoteState();
+}
+
+class _ConfirmarEliminarLoteState extends State<_ConfirmarEliminarLote> {
+  bool _acepto = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final r = widget.resumen;
+    final perdidas = <String>[
+      if (r.animales > 0)
+        '${r.animales} animal(es)'
+            '${r.vendidos > 0 ? ', ${r.vendidos} ya vendido(s) con su venta' : ''}',
+      if (r.pesajes > 0) '${r.pesajes} pesaje(s)',
+      if (r.sanidad > 0) '${r.sanidad} aplicación(es) de sanidad',
+    ];
+    return AlertDialog(
+      icon: Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
+      title: Text('¿Eliminar "${widget.lote.nombre}"?'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              perdidas.isEmpty
+                  ? 'El lote no tiene animales. Se elimina el lote.'
+                  : 'Se borra el lote y TODA su información:',
+              style: theme.textTheme.bodyLarge,
+            ),
+            for (final p in perdidas)
+              Padding(
+                padding: const EdgeInsets.only(top: 6, left: 8),
+                child: Text('• $p', style: theme.textTheme.bodyLarge),
+              ),
+            if (perdidas.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'También sus costos, ventas e historial. Esos animales salen '
+                'del inventario, de los análisis y de la utilidad de la '
+                'finca.',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+            const SizedBox(height: 12),
+            Text(
+              'Se borra también en la nube y en los otros teléfonos. '
+              'No se puede deshacer.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              key: const ValueKey('lotes.eliminar.acepto'),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: _acepto,
+              onChanged: (v) => setState(() => _acepto = v ?? false),
+              title: const Text(
+                'Entiendo y lo elimino bajo mi propia responsabilidad',
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const ValueKey('lotes.eliminar.confirmar'),
+          style: FilledButton.styleFrom(
+            backgroundColor: theme.colorScheme.error,
+            foregroundColor: theme.colorScheme.onError,
+          ),
+          onPressed: _acepto ? () => Navigator.pop(context, true) : null,
+          child: const Text('Eliminar todo'),
         ),
       ],
     );

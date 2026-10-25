@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hato_control/data/local/database.dart';
 import 'package:hato_control/data/repositories/dietas_repository.dart';
+import 'package:hato_control/data/repositories/lotes_repository.dart';
 import 'package:hato_control/data/repositories/medicamentos_repository.dart';
 import 'package:hato_control/data/repositories/pesajes_repository.dart';
 import 'package:hato_control/data/repositories/reglas_de_fechas.dart';
@@ -119,16 +120,39 @@ void main() {
       );
     });
 
-    test('no se pesa antes de que el animal entrara', () async {
-      final a = await alta('A-1', haceNDias: 3);
-      expect(
-        () => pesajes.agregarPesaje(
+    test(
+      'un pesaje más viejo que la entrada corre la entrada a ese día',
+      () async {
+        final a = await alta('A-1', haceNDias: 3);
+        await pesajes.agregarPesaje(
           animalId: a.id,
           peso: 280,
           registradoPor: 'u1',
           fecha: haceDias(5),
-        ),
-        throwsA(isA<FechaInvalidaException>()),
+        );
+        final dia = haceDias(5);
+        final mediodia = DateTime(dia.year, dia.month, dia.day, 12);
+        final actualizado = await animal('A-1');
+        expect(actualizado.fechaCompra, mediodia);
+        final mov = (await db.select(db.movimientosLote).get()).single;
+        expect(mov.fecha, mediodia);
+        expect(await pesajes.fechaIngreso(actualizado), mediodia);
+        expect((await pesajesDe(a.id)).map((p) => p.peso), [280.0, 300.0]);
+      },
+    );
+
+    test('editar un pesaje a antes de la entrada también la corre', () async {
+      final a = await alta('A-1', haceNDias: 3);
+      final entrada = (await pesajesDe(a.id)).single;
+      await pesajes.editarPesaje(
+        pesajeId: entrada.id,
+        peso: 300,
+        fecha: haceDias(8),
+      );
+      final dia = haceDias(8);
+      expect(
+        (await animal('A-1')).fechaCompra,
+        DateTime(dia.year, dia.month, dia.day, 12),
       );
     });
 
@@ -489,6 +513,117 @@ void main() {
         () => ventas.registrarMuerte(animalId: a.id, fecha: haceDias(5)),
         throwsA(isA<FechaInvalidaException>()),
       );
+    });
+  });
+
+  group('medicamento a todo el lote', () {
+    test('solo se le aplica a los que ese día no lo tienen', () async {
+      final a = await alta('L-1', haceNDias: 10);
+      await alta('L-2', haceNDias: 10);
+      await alta('L-3', haceNDias: 10);
+      final med = await meds.crearMedicamento(
+        fincaId: 'f1',
+        nombre: 'Ivermectina',
+        costoEnvase: 10000,
+        tipoAplicacion: 'por_peso',
+        mlEnvase: 500,
+        dosisCantidad: 1,
+        dosisPorCadaKg: 50,
+      );
+      // L-1 ya la tenía ese día; otro día no cuenta.
+      await sanidad.aplicarMedicamento(
+        animalId: a.id,
+        medicamentoId: med,
+        pesoKg: 300,
+        fecha: haceDias(2),
+      );
+
+      final r = await sanidad.aplicarMedicamentoALote(
+        loteId: 'l1',
+        medicamentoIds: [med],
+        fecha: haceDias(2),
+      );
+      expect(r.animales, 3);
+      expect(r.aplicadas, 2);
+      expect(r.yaLoTenian, 1);
+      final eventos = await db.select(db.eventosSanitarios).get();
+      expect(eventos, hasLength(3));
+      expect(eventos.every((e) => mismoDia(e.fecha, haceDias(2))), isTrue);
+
+      // Repetirlo no duplica a nadie.
+      final otra = await sanidad.aplicarMedicamentoALote(
+        loteId: 'l1',
+        medicamentoIds: [med],
+        fecha: haceDias(2),
+      );
+      expect(otra.aplicadas, 0);
+      expect(otra.yaLoTenian, 3);
+    });
+
+    test('se salta al que entró después de la fecha', () async {
+      await alta('L-1', haceNDias: 10);
+      await alta('L-2', haceNDias: 1);
+      final med = await meds.crearMedicamento(
+        fincaId: 'f1',
+        nombre: 'Vitamina',
+        costoEnvase: 5000,
+        tipoAplicacion: 'dosis_fija',
+        mlEnvase: 100,
+        dosisCantidad: 5,
+      );
+      final r = await sanidad.aplicarMedicamentoALote(
+        loteId: 'l1',
+        medicamentoIds: [med],
+        fecha: haceDias(5),
+      );
+      expect(r.aplicadas, 1);
+      expect(r.entraronDespues, ['L-2']);
+    });
+  });
+
+  group('eliminar un lote', () {
+    test('se lleva los animales del lote y todo lo de ellos', () async {
+      final lotes = LotesRepository(db);
+      final a = await alta('E-1', haceNDias: 10);
+      await alta('E-2', haceNDias: 10);
+      await pesajes.agregarPesaje(
+        animalId: a.id,
+        peso: 320,
+        registradoPor: 'u1',
+        fecha: haceDias(3),
+      );
+      // Uno que está en el otro lote no se toca.
+      await pesajes.crearAnimalConPesaje(
+        fincaId: 'f1',
+        loteId: 'l2',
+        identificador: 'Q-1',
+        peso: 250,
+        registradoPor: 'u1',
+      );
+
+      final resumen = await lotes.resumenParaBorrar('l1');
+      expect(resumen.animales, 2);
+      expect(resumen.pesajes, 3);
+
+      await lotes.eliminarLoteConTodo('l1');
+
+      final lote = await (db.select(
+        db.lotes,
+      )..where((t) => t.id.equals('l1'))).getSingle();
+      expect(lote.deletedAt, isNotNull);
+      expect(lote.pendiente, isTrue);
+      final vivos = await (db.select(
+        db.animales,
+      )..where((t) => t.deletedAt.isNull())).get();
+      expect(vivos.map((x) => x.identificador), ['Q-1']);
+      final pesajesVivos = await (db.select(
+        db.pesajes,
+      )..where((t) => t.deletedAt.isNull())).get();
+      expect(pesajesVivos, hasLength(1));
+      final movsVivos = await (db.select(
+        db.movimientosLote,
+      )..where((t) => t.deletedAt.isNull())).get();
+      expect(movsVivos, hasLength(1));
     });
   });
 }

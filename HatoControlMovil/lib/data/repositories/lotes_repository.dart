@@ -144,8 +144,181 @@ class LotesRepository {
     );
   }
 
+  /// Lo que se pierde si se elimina el lote: sus animales (activos,
+  /// vendidos y muertos) y todo lo que cuelga de ellos. Se le muestra al
+  /// ganadero antes de confirmar.
+  Future<ResumenBorradoLote> resumenParaBorrar(String loteId) async {
+    final animales = await _animalesDelLote(loteId);
+    final ids = [for (final a in animales) a.id];
+    if (ids.isEmpty) return const ResumenBorradoLote();
+
+    Future<int> contar(TableInfo tabla, Expression<bool> filtro) async {
+      final total = countAll();
+      final fila =
+          await (db.selectOnly(tabla)
+                ..addColumns([total])
+                ..where(filtro))
+              .getSingle();
+      return fila.read(total) ?? 0;
+    }
+
+    return ResumenBorradoLote(
+      animales: animales.length,
+      vendidos: animales.where((a) => a.estado == 'vendido').length,
+      pesajes: await contar(
+        db.pesajes,
+        db.pesajes.animalId.isIn(ids) & db.pesajes.deletedAt.isNull(),
+      ),
+      sanidad: await contar(
+        db.eventosSanitarios,
+        db.eventosSanitarios.animalId.isIn(ids) &
+            db.eventosSanitarios.deletedAt.isNull(),
+      ),
+    );
+  }
+
+  /// Elimina el lote y todo lo de los animales que están en él: los animales
+  /// (activos, vendidos y muertos), sus pesajes, su sanidad, sus ventas, sus
+  /// otros costos, sus cargos de gastos fijos y su historial de movimientos.
+  /// Los grupos de venta que se quedan sin ninguna venta también se van.
+  ///
+  /// Es borrado suave (`deletedAt`) y sincroniza como cualquier cambio, así
+  /// que se borra también en la nube y en los otros aparatos.
+  ///
+  /// No toca el historial de dietas del lote: los animales que pasaron por él
+  /// y ahora están en otro lote siguen debiendo esa comida.
+  Future<void> eliminarLoteConTodo(String loteId) async {
+    final ahora = DateTime.now();
+    await db.transaction(() async {
+      final animales = await _animalesDelLote(loteId);
+      final ids = [for (final a in animales) a.id];
+      if (ids.isNotEmpty) {
+        await (db.update(
+          db.pesajes,
+        )..where((t) => t.animalId.isIn(ids) & t.deletedAt.isNull())).write(
+          PesajesCompanion(
+            deletedAt: Value(ahora),
+            updatedAt: Value(ahora),
+            pendiente: const Value(true),
+          ),
+        );
+        await (db.update(
+          db.eventosSanitarios,
+        )..where((t) => t.animalId.isIn(ids) & t.deletedAt.isNull())).write(
+          EventosSanitariosCompanion(
+            deletedAt: Value(ahora),
+            updatedAt: Value(ahora),
+            pendiente: const Value(true),
+          ),
+        );
+        await (db.update(
+          db.movimientosLote,
+        )..where((t) => t.animalId.isIn(ids) & t.deletedAt.isNull())).write(
+          MovimientosLoteCompanion(
+            deletedAt: Value(ahora),
+            updatedAt: Value(ahora),
+            pendiente: const Value(true),
+          ),
+        );
+        await (db.update(
+          db.costosOtros,
+        )..where((t) => t.animalId.isIn(ids) & t.deletedAt.isNull())).write(
+          CostosOtrosCompanion(
+            deletedAt: Value(ahora),
+            updatedAt: Value(ahora),
+            pendiente: const Value(true),
+          ),
+        );
+        await (db.update(
+          db.gastoFijoCargos,
+        )..where((t) => t.animalId.isIn(ids) & t.deletedAt.isNull())).write(
+          GastoFijoCargosCompanion(
+            deletedAt: Value(ahora),
+            updatedAt: Value(ahora),
+            pendiente: const Value(true),
+          ),
+        );
+
+        final ventas = await (db.select(
+          db.ventas,
+        )..where((t) => t.animalId.isIn(ids) & t.deletedAt.isNull())).get();
+        await (db.update(
+          db.ventas,
+        )..where((t) => t.animalId.isIn(ids) & t.deletedAt.isNull())).write(
+          VentasCompanion(
+            deletedAt: Value(ahora),
+            updatedAt: Value(ahora),
+            pendiente: const Value(true),
+          ),
+        );
+        // Grupos de venta que quedaron sin ninguna venta.
+        final grupos = {
+          for (final v in ventas)
+            if (v.loteVentaId != null) v.loteVentaId!,
+        };
+        for (final grupo in grupos) {
+          final quedan =
+              await (db.select(db.ventas)
+                    ..where(
+                      (t) => t.loteVentaId.equals(grupo) & t.deletedAt.isNull(),
+                    )
+                    ..limit(1))
+                  .getSingleOrNull();
+          if (quedan != null) continue;
+          await (db.update(
+            db.lotesVenta,
+          )..where((t) => t.id.equals(grupo) & t.deletedAt.isNull())).write(
+            LotesVentaCompanion(
+              deletedAt: Value(ahora),
+              updatedAt: Value(ahora),
+              pendiente: const Value(true),
+            ),
+          );
+        }
+
+        await (db.update(db.animales)..where((t) => t.id.isIn(ids))).write(
+          AnimalesCompanion(
+            deletedAt: Value(ahora),
+            updatedAt: Value(ahora),
+            pendiente: const Value(true),
+          ),
+        );
+      }
+      await (db.update(db.lotes)..where((t) => t.id.equals(loteId))).write(
+        LotesCompanion(
+          deletedAt: Value(ahora),
+          updatedAt: Value(ahora),
+          pendiente: const Value(true),
+        ),
+      );
+    });
+  }
+
+  Future<List<AnimalRow>> _animalesDelLote(String loteId) {
+    return (db.select(
+      db.animales,
+    )..where((t) => t.loteId.equals(loteId) & t.deletedAt.isNull())).get();
+  }
+
   static String _unidad(String? unidad) => UnidadArea.normalizar(unidad);
 
   static double? _aM2(double? area, String? unidad) =>
       area == null || area <= 0 ? null : UnidadArea.aM2(area, _unidad(unidad));
+}
+
+/// Lo que se pierde al eliminar un lote (ver
+/// [LotesRepository.resumenParaBorrar]).
+class ResumenBorradoLote {
+  const ResumenBorradoLote({
+    this.animales = 0,
+    this.vendidos = 0,
+    this.pesajes = 0,
+    this.sanidad = 0,
+  });
+
+  /// Todos los animales del lote, incluidos los [vendidos] y los muertos.
+  final int animales;
+  final int vendidos;
+  final int pesajes;
+  final int sanidad;
 }

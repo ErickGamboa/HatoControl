@@ -7,6 +7,7 @@ import '../data/local/database.dart';
 import '../data/repositories/dietas_repository.dart';
 import '../data/repositories/pesajes_repository.dart';
 import '../data/repositories/reglas_de_fechas.dart';
+import '../sanidad/sanidad_lote_sheet.dart';
 import '../services.dart';
 import 'animal_ficha_screen.dart';
 
@@ -282,6 +283,17 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
     }
   }
 
+  /// Medicamento a todos los animales del lote de un solo tiro.
+  Future<void> _medicarLote() async {
+    final r = await mostrarSanidadLoteSheet(
+      context: context,
+      lote: widget.lote,
+      usuarioId: widget.usuarioId,
+    );
+    if (r == null || !mounted) return;
+    await avisarResultadoSanidadLote(context, r);
+  }
+
   /// Pesaje con FECHA a mano: para pasar a la app lo que el ganadero trae
   /// anotado en el cuaderno, sin tener que hacerlo el mismo día.
   Future<void> _nuevoPesaje(AnimalRow animal) async {
@@ -334,6 +346,19 @@ class _LoteAnimalesScreenState extends State<LoteAnimalesScreen> {
             onQuitar: _quitarDieta,
             soloLectura: soloLectura,
           ),
+          if (!soloLectura)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              child: FilledButton.tonalIcon(
+                key: const ValueKey('lote.medicarLote'),
+                onPressed: _medicarLote,
+                icon: const Icon(Icons.vaccines_outlined),
+                label: const Text('Aplicar medicamento a todo el lote'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+              ),
+            ),
           // Buscador (fuera del StreamBuilder: nunca pierde el foco)
           Padding(
             padding: const EdgeInsets.all(12),
