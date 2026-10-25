@@ -16,8 +16,11 @@ import 'gastos_fijos_tab.dart' show fmtColones;
 /// le debe, cuánto falta y qué ya se pagó. Por eso tiene filtros, buscador,
 /// totales de lo que se está viendo y un PDF con exactamente eso.
 class DeudasTab extends StatefulWidget {
-  DeudasTab({super.key, required this.finca, DeudasRepository? deudasRepository})
-    : deudasRepository = deudasRepository ?? deudasRepo;
+  DeudasTab({
+    super.key,
+    required this.finca,
+    DeudasRepository? deudasRepository,
+  }) : deudasRepository = deudasRepository ?? deudasRepo;
 
   final FincaRow finca;
   final DeudasRepository deudasRepository;
@@ -447,7 +450,12 @@ class _BarraTotales extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(HatoSpacing.lg, 10, HatoSpacing.lg, 10),
+          padding: const EdgeInsets.fromLTRB(
+            HatoSpacing.lg,
+            10,
+            HatoSpacing.lg,
+            10,
+          ),
           child: Row(
             children: [
               Expanded(

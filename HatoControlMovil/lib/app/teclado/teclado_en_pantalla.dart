@@ -183,8 +183,11 @@ class _TecladoEnPantallaState extends State<TecladoEnPantalla> {
     alTocar: () => _escribirLetra(letra),
   );
 
-  Widget _tecla(String texto, {int flex = 2}) =>
-      _Tecla(etiqueta: texto, flex: flex, alTocar: () => widget.alEscribir(texto));
+  Widget _tecla(String texto, {int flex = 2}) => _Tecla(
+    etiqueta: texto,
+    flex: flex,
+    alTocar: () => widget.alEscribir(texto),
+  );
 
   Widget _digito(String texto, {int flex = 2}) => _Tecla(
     etiqueta: texto,

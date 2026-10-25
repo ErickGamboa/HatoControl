@@ -81,20 +81,23 @@ void main() {
     expect(guardada.saldo, 250000);
   });
 
-  test('actualizar dos veces no rompe nada (la migración es repetible)', () async {
-    final db = baseVieja();
-    addTearDown(db.close);
+  test(
+    'actualizar dos veces no rompe nada (la migración es repetible)',
+    () async {
+      final db = baseVieja();
+      addTearDown(db.close);
 
-    await db.customStatement('SELECT 1');
-    // Se vuelve a pedir el mismo salto: no debe quejarse de que ya existe.
-    await db.customStatement('PRAGMA user_version = 18');
-    final deudas = DeudasRepository(db);
-    await deudas.crearDeuda(
-      fincaId: 'f1',
-      acreedor: 'Banco',
-      monto: 1000,
-      fecha: DateTime(2026, 9, 1),
-    );
-    expect(await deudas.deudasDe('f1'), hasLength(1));
-  });
+      await db.customStatement('SELECT 1');
+      // Se vuelve a pedir el mismo salto: no debe quejarse de que ya existe.
+      await db.customStatement('PRAGMA user_version = 18');
+      final deudas = DeudasRepository(db);
+      await deudas.crearDeuda(
+        fincaId: 'f1',
+        acreedor: 'Banco',
+        monto: 1000,
+        fecha: DateTime(2026, 9, 1),
+      );
+      expect(await deudas.deudasDe('f1'), hasLength(1));
+    },
+  );
 }

@@ -79,9 +79,7 @@ class _DeudaFormSheetState extends State<DeudaFormSheet> {
   }
 
   void _avisar(String texto) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(texto)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
   }
 
   Future<void> _guardar() async {
@@ -282,9 +280,7 @@ class _DeudaFormSheetState extends State<DeudaFormSheet> {
                     child: OutlinedButton.icon(
                       key: const ValueKey('deudas.marcarPagada'),
                       onPressed:
-                          _guardando ||
-                              existente.pagada ||
-                              existente.anulada
+                          _guardando || existente.pagada || existente.anulada
                           ? null
                           : () => _accion(
                               () => widget.repositorio.marcarPagada(

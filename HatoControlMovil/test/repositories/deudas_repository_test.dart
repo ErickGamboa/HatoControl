@@ -50,15 +50,18 @@ void main() {
     return todas.firstWhere((d) => d.deuda.id == id);
   }
 
-  test('una deuda nueva nace pendiente, sin abonos y con todo el saldo', () async {
-    final id = await crear();
-    final d = await leer(id);
+  test(
+    'una deuda nueva nace pendiente, sin abonos y con todo el saldo',
+    () async {
+      final id = await crear();
+      final d = await leer(id);
 
-    expect(d.deuda.estado, EstadoDeuda.pendiente);
-    expect(d.abonado, 0);
-    expect(d.saldo, 450000);
-    expect(d.deuda.pendiente, isTrue, reason: 'queda por sincronizar');
-  });
+      expect(d.deuda.estado, EstadoDeuda.pendiente);
+      expect(d.abonado, 0);
+      expect(d.saldo, 450000);
+      expect(d.deuda.pendiente, isTrue, reason: 'queda por sincronizar');
+    },
+  );
 
   test('los abonos bajan el saldo y al cubrirlo la deja pagada sola', () async {
     final id = await crear();
@@ -88,19 +91,22 @@ void main() {
     expect(d.saldo, 100000);
   });
 
-  test('marcar pagada registra el abono que falta, no solo cambia el estado', () async {
-    final id = await crear(monto: 300000);
-    await deudas.registrarAbono(deudaId: id, monto: 100000, fecha: hoy);
+  test(
+    'marcar pagada registra el abono que falta, no solo cambia el estado',
+    () async {
+      final id = await crear(monto: 300000);
+      await deudas.registrarAbono(deudaId: id, monto: 100000, fecha: hoy);
 
-    await deudas.marcarPagada(id, fecha: hoy);
+      await deudas.marcarPagada(id, fecha: hoy);
 
-    final d = await leer(id);
-    expect(d.pagada, isTrue);
-    expect(d.saldo, 0);
-    // Los números siguen cuadrando: abonado == monto.
-    expect(d.abonado, 300000);
-    expect(await deudas.observarAbonos(id).first, hasLength(2));
-  });
+      final d = await leer(id);
+      expect(d.pagada, isTrue);
+      expect(d.saldo, 0);
+      // Los números siguen cuadrando: abonado == monto.
+      expect(d.abonado, 300000);
+      expect(await deudas.observarAbonos(id).first, hasLength(2));
+    },
+  );
 
   test('anular la saca de los totales y reabrir la devuelve', () async {
     final id = await crear(monto: 80000);
@@ -169,10 +175,7 @@ void main() {
     });
 
     test('por estado', () {
-      final pendientes = filtrarDeudas(
-        todas,
-        filtro: FiltroDeuda.pendientes,
-      );
+      final pendientes = filtrarDeudas(todas, filtro: FiltroDeuda.pendientes);
       expect(pendientes.map((d) => d.deuda.acreedor), ['Cooperativa', 'Banco']);
 
       final pagadas = filtrarDeudas(todas, filtro: FiltroDeuda.pagadas);

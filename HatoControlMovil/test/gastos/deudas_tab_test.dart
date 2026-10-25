@@ -106,9 +106,7 @@ void main() {
     await abrir(tester);
     expect(find.text('Saldo: ₡450.000'), findsOneWidget);
 
-    await tester.tap(
-      find.byKey(const ValueKey('deudas.filtro.${'pagadas'}')),
-    );
+    await tester.tap(find.byKey(const ValueKey('deudas.filtro.${'pagadas'}')));
     await tester.pumpAndSettle();
 
     expect(find.text('Veterinario'), findsOneWidget);

@@ -169,7 +169,10 @@ void main() {
       final lote = (await lotes.lotesActivos('f1')).single;
       expect(lote.areaM2, 20000);
       expect(lote.areaUnidad, UnidadArea.hectarea);
-      expect(UnidadArea.formatear(lote.areaM2!, lote.areaUnidad!), '2 hectáreas');
+      expect(
+        UnidadArea.formatear(lote.areaM2!, lote.areaUnidad!),
+        '2 hectáreas',
+      );
     });
 
     test('un lote viejo, sin terreno en la nube, no se inventa uno', () async {

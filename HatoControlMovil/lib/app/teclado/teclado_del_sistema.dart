@@ -48,7 +48,8 @@ class TecladoDelSistema {
     // suplir, y el canal nativo no existe.
     if (kIsWeb) return;
     _canal.setMethodCallHandler((llamada) async {
-      if (llamada.method == 'cambio') escondido.value = llamada.arguments == true;
+      if (llamada.method == 'cambio')
+        escondido.value = llamada.arguments == true;
       return null;
     });
     await refrescar();

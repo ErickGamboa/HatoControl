@@ -56,18 +56,19 @@ void main() {
     expect(find.textContaining('1 registros'), findsNothing);
   });
 
-  testWidgets('"Salir y borrarlo" devuelve descartar, no cierra por su cuenta', (
-    tester,
-  ) async {
-    DecisionCierre? elegida;
-    await mostrar(tester, (context) async {
-      elegida = await preguntarQueHacerConPendientes(context, 3);
-    });
+  testWidgets(
+    '"Salir y borrarlo" devuelve descartar, no cierra por su cuenta',
+    (tester) async {
+      DecisionCierre? elegida;
+      await mostrar(tester, (context) async {
+        elegida = await preguntarQueHacerConPendientes(context, 3);
+      });
 
-    await tester.tap(find.text('Salir y borrarlo'));
-    await tester.pumpAndSettle();
-    expect(elegida, DecisionCierre.descartar);
-  });
+      await tester.tap(find.text('Salir y borrarlo'));
+      await tester.pumpAndSettle();
+      expect(elegida, DecisionCierre.descartar);
+    },
+  );
 
   testWidgets('perder el trabajo pide una segunda confirmación', (
     tester,

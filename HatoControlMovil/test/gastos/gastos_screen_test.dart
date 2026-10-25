@@ -105,20 +105,21 @@ void main() {
     await cerrar(tester);
   });
 
-  testWidgets('sin deudas que mostrar, el PDF avisa en vez de abrir una hoja vacía', (
-    tester,
-  ) async {
-    await abrir(tester);
-    await irADeudas(tester);
+  testWidgets(
+    'sin deudas que mostrar, el PDF avisa en vez de abrir una hoja vacía',
+    (tester) async {
+      await abrir(tester);
+      await irADeudas(tester);
 
-    await tester.tap(find.byKey(const ValueKey('deudas.exportar')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('deudas.exportar')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('No hay deudas que exportar.'), findsOneWidget);
-    expect(find.text('Deudas en PDF'), findsNothing);
+      expect(find.text('No hay deudas que exportar.'), findsOneWidget);
+      expect(find.text('Deudas en PDF'), findsNothing);
 
-    await cerrar(tester);
-  });
+      await cerrar(tester);
+    },
+  );
 
   testWidgets('con deudas filtradas, el PDF sale con lo que se está viendo', (
     tester,

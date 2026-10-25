@@ -91,8 +91,7 @@ void main() {
     await (db.update(db.pesajes)..where((t) => t.animalId.equals(a.id))).write(
       PesajesCompanion(fecha: Value(entrada)),
     );
-    await (db.update(db.movimientosLote)
-          ..where((t) => t.animalId.equals(a.id)))
+    await (db.update(db.movimientosLote)..where((t) => t.animalId.equals(a.id)))
         .write(MovimientosLoteCompanion(fecha: Value(entrada)));
 
     if (fechaCompra != null) {
@@ -234,7 +233,11 @@ void main() {
       enFicha.precioVenta,
       reason: porque('precioVenta'),
     );
-    expect(enAnalisis.pesoVenta, enFicha.pesoVenta, reason: porque('pesoVenta'));
+    expect(
+      enAnalisis.pesoVenta,
+      enFicha.pesoVenta,
+      reason: porque('pesoVenta'),
+    );
     expect(
       enAnalisis.precioKgVenta,
       enFicha.precioKgVenta,
@@ -264,17 +267,20 @@ void main() {
     );
   }
 
-  test('Análisis financiero dice lo mismo que la ficha, animal por animal', () async {
-    await sembrarFincaCompleta();
+  test(
+    'Análisis financiero dice lo mismo que la ficha, animal por animal',
+    () async {
+      await sembrarFincaCompleta();
 
-    final delAnalisis = await ventas.financieroDeFinca('f1');
-    expect(delAnalisis, hasLength(6));
+      final delAnalisis = await ventas.financieroDeFinca('f1');
+      expect(delAnalisis, hasLength(6));
 
-    for (final fila in delAnalisis) {
-      final deLaFicha = await ventas.resumenDe(fila.animal.id);
-      compararResumen(fila.animal.identificador, fila.resumen, deLaFicha);
-    }
-  });
+      for (final fila in delAnalisis) {
+        final deLaFicha = await ventas.resumenDe(fila.animal.id);
+        compararResumen(fila.animal.identificador, fila.resumen, deLaFicha);
+      }
+    },
+  );
 
   test('los kilos ganados son el último peso menos el primero', () async {
     await sembrarFincaCompleta();
@@ -298,7 +304,10 @@ void main() {
     );
 
     final delAnalisis = await ventas.financieroDeFinca('f1');
-    expect(delAnalisis.map((f) => f.animal.identificador), isNot(contains('0002')));
+    expect(
+      delAnalisis.map((f) => f.animal.identificador),
+      isNot(contains('0002')),
+    );
     expect(delAnalisis, hasLength(5));
   });
 

@@ -59,9 +59,9 @@ void main() {
   /// Un animal sin ningún pesaje: se borra el que crea el alta.
   Future<AnimalRow> crearAnimalSinPesaje(String ident) async {
     final a = await crearAnimal(ident);
-    final suyos = await (db.select(db.pesajes)
-          ..where((t) => t.animalId.equals(a.id)))
-        .get();
+    final suyos = await (db.select(
+      db.pesajes,
+    )..where((t) => t.animalId.equals(a.id))).get();
     for (final p in suyos) {
       await pesajes.eliminarPesaje(p.id);
     }

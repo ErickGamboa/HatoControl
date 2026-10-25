@@ -342,48 +342,49 @@ void main() {
       expect(find.byType(TecladoEnPantalla), findsNothing);
     });
 
-    testWidgets('mientras sube el del sistema, el propio no se asoma ni un frame', (
-      tester,
-    ) async {
-      final foco = FocusNode();
-      addTearDown(foco.dispose);
-      final tapado = ValueNotifier<double>(0);
-      addTearDown(tapado.dispose);
+    testWidgets(
+      'mientras sube el del sistema, el propio no se asoma ni un frame',
+      (tester) async {
+        final foco = FocusNode();
+        addTearDown(foco.dispose);
+        final tapado = ValueNotifier<double>(0);
+        addTearDown(tapado.dispose);
 
-      await tester.pumpWidget(
-        ValueListenableBuilder<double>(
-          valueListenable: tapado,
-          builder: (context, alto, _) => MediaQuery(
-            data: MediaQueryData(viewInsets: EdgeInsets.only(bottom: alto)),
-            child: MaterialApp(
-              builder: (context, child) =>
-                  TecladoDelApp(detector: detectorEn(true), child: child!),
-              home: Scaffold(
-                body: TextField(
-                  focusNode: foco,
-                  controller: TextEditingController(),
+        await tester.pumpWidget(
+          ValueListenableBuilder<double>(
+            valueListenable: tapado,
+            builder: (context, alto, _) => MediaQuery(
+              data: MediaQueryData(viewInsets: EdgeInsets.only(bottom: alto)),
+              child: MaterialApp(
+                builder: (context, child) =>
+                    TecladoDelApp(detector: detectorEn(true), child: child!),
+                home: Scaffold(
+                  body: TextField(
+                    focusNode: foco,
+                    controller: TextEditingController(),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      foco.requestFocus();
-      // El teclado del sistema tarda en subir: pasa por alturas chiquitas antes
-      // de tapar la pantalla. El propio no debe verse en ningun momento del
-      // camino, ni siquiera un parpadeo.
-      for (var ms = 0; ms <= 400; ms += 25) {
-        tapado.value = (ms * 1.2).clamp(0, 300).toDouble();
-        await tester.pump(const Duration(milliseconds: 25));
-        expect(
-          find.byType(TecladoEnPantalla),
-          findsNothing,
-          reason: 'se asomo a los $ms ms, con ${tapado.value} tapados',
         );
-      }
-    });
+        await tester.pumpAndSettle();
+
+        foco.requestFocus();
+        // El teclado del sistema tarda en subir: pasa por alturas chiquitas antes
+        // de tapar la pantalla. El propio no debe verse en ningun momento del
+        // camino, ni siquiera un parpadeo.
+        for (var ms = 0; ms <= 400; ms += 25) {
+          tapado.value = (ms * 1.2).clamp(0, 300).toDouble();
+          await tester.pump(const Duration(milliseconds: 25));
+          expect(
+            find.byType(TecladoEnPantalla),
+            findsNothing,
+            reason: 'se asomo a los $ms ms, con ${tapado.value} tapados',
+          );
+        }
+      },
+    );
   });
 
   testWidgets('nunca sale solo: hace falta que el ganadero toque el campo', (
@@ -434,7 +435,8 @@ void main() {
       await esperarAlTeclado(tester);
 
       final alto = tester.getSize(find.byType(TecladoEnPantalla)).height;
-      final pantalla = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final pantalla =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
       expect(
         alto / pantalla,
         lessThan(0.35),

@@ -65,15 +65,18 @@ void main() {
     'deleted_at': null,
   };
 
-  Map<String, dynamic> usuario(String id, String cuentaId, DateTime updatedAt) =>
-      {
-        'id': id,
-        'nombre': null,
-        'email': '$id@example.com',
-        'cuenta_id': cuentaId,
-        'created_at': DateTime.utc(2026, 8, 21).toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
-      };
+  Map<String, dynamic> usuario(
+    String id,
+    String cuentaId,
+    DateTime updatedAt,
+  ) => {
+    'id': id,
+    'nombre': null,
+    'email': '$id@example.com',
+    'cuenta_id': cuentaId,
+    'created_at': DateTime.utc(2026, 8, 21).toIso8601String(),
+    'updated_at': updatedAt.toIso8601String(),
+  };
 
   Map<String, dynamic> finca(
     String id,
@@ -132,70 +135,64 @@ void main() {
       ..['finca_miembros'] = [miembro('miembro-b', 'finca-b', 'user-b', el21)];
   }
 
-  test(
-    'sin limpiar la caché, las filas viejas de la segunda cuenta no bajan '
-    '(el bug que se arregló)',
-    () async {
-      datosDeLaPrimeraCuenta();
-      await sync.sincronizar();
+  test('sin limpiar la caché, las filas viejas de la segunda cuenta no bajan '
+      '(el bug que se arregló)', () async {
+    datosDeLaPrimeraCuenta();
+    await sync.sincronizar();
 
-      // La segunda cuenta entra SIN pasar por guardarUsuarioVerificado, que
-      // es lo que hacía la app antes del arreglo.
-      datosDeLaSegundaCuenta();
-      await sync.sincronizar();
+    // La segunda cuenta entra SIN pasar por guardarUsuarioVerificado, que
+    // es lo que hacía la app antes del arreglo.
+    datosDeLaSegundaCuenta();
+    await sync.sincronizar();
 
-      // La finca sí baja (24 de agosto > cursor del 22)...
-      final fincaBajada = await (db.select(
-        db.fincas,
-      )..where((t) => t.id.equals('finca-b'))).getSingleOrNull();
-      expect(fincaBajada, isNotNull);
+    // La finca sí baja (24 de agosto > cursor del 22)...
+    final fincaBajada = await (db.select(
+      db.fincas,
+    )..where((t) => t.id.equals('finca-b'))).getSingleOrNull();
+    expect(fincaBajada, isNotNull);
 
-      // ...pero la membresía y la fila de usuarios, no: quedan detrás del
-      // cursor para siempre.
-      expect(await fincas.observarFincas('user-b').first, isEmpty);
-      expect(await fincas.estadoLicencia('user-b'), isNull);
-    },
-  );
+    // ...pero la membresía y la fila de usuarios, no: quedan detrás del
+    // cursor para siempre.
+    expect(await fincas.observarFincas('user-b').first, isEmpty);
+    expect(await fincas.estadoLicencia('user-b'), isNull);
+  });
 
-  test(
-    'al entrar una cuenta distinta se limpia la caché y sus filas viejas sí '
-    'bajan',
-    () async {
-      datosDeLaPrimeraCuenta();
-      await sesiones.guardarUsuarioVerificado(
-        usuarioId: 'user-a',
-        email: 'user-a@example.com',
-      );
-      await sync.sincronizar();
-      expect(await fincas.observarFincas('user-a').first, hasLength(1));
+  test('al entrar una cuenta distinta se limpia la caché y sus filas viejas sí '
+      'bajan', () async {
+    datosDeLaPrimeraCuenta();
+    await sesiones.guardarUsuarioVerificado(
+      usuarioId: 'user-a',
+      email: 'user-a@example.com',
+    );
+    await sync.sincronizar();
+    expect(await fincas.observarFincas('user-a').first, hasLength(1));
 
-      datosDeLaSegundaCuenta();
-      await sesiones.guardarUsuarioVerificado(
-        usuarioId: 'user-b',
-        email: 'user-b@example.com',
-      );
+    datosDeLaSegundaCuenta();
+    await sesiones.guardarUsuarioVerificado(
+      usuarioId: 'user-b',
+      email: 'user-b@example.com',
+    );
 
-      // La caché del primero se fue completa, cursores incluidos.
-      expect(await db.select(db.fincas).get(), isEmpty);
-      expect(await db.select(db.syncCursores).get(), isEmpty);
-      // Y la identidad nueva quedó guardada.
-      expect(sesiones.usuarioId, 'user-b');
+    // La caché del primero se fue completa, cursores incluidos.
+    expect(await db.select(db.fincas).get(), isEmpty);
+    expect(await db.select(db.syncCursores).get(), isEmpty);
+    // Y la identidad nueva quedó guardada.
+    expect(sesiones.usuarioId, 'user-b');
 
-      await sync.sincronizar();
+    await sync.sincronizar();
 
-      final misFincas = await fincas.observarFincas('user-b').first;
-      expect(misFincas, hasLength(1));
-      expect(misFincas.single.id, 'finca-b');
-      // Con la fila de `usuarios` abajo, ya hay licencia que leer: crear una
-      // finca deja de contestar "Conectate a internet".
-      final estado = await fincas.estadoLicencia('user-b');
-      expect(estado, isNotNull);
-      expect(estado!.planNombre, 'Pro');
-      expect(estado.usadas, 1);
-      // Y nada del primero quedó mezclado.
-      expect(await fincas.observarFincas('user-a').first, isEmpty);
-    },
-  );
+    final misFincas = await fincas.observarFincas('user-b').first;
+    expect(misFincas, hasLength(1));
+    expect(misFincas.single.id, 'finca-b');
+    // Con la fila de `usuarios` abajo, ya hay licencia que leer: crear una
+    // finca deja de contestar "Conectate a internet".
+    final estado = await fincas.estadoLicencia('user-b');
+    expect(estado, isNotNull);
+    expect(estado!.planNombre, 'Pro');
+    expect(estado.usadas, 1);
+    // Y nada del primero quedó mezclado.
+    expect(await fincas.observarFincas('user-a').first, isEmpty);
+  });
 
   test('volver a entrar la MISMA cuenta no borra su caché offline', () async {
     datosDeLaPrimeraCuenta();
@@ -275,35 +272,32 @@ void main() {
       expect(await db.select(db.syncCursores).get(), isEmpty);
     });
 
-    test(
-      'descartando lo pendiente también borra todo, y la cuenta que entra '
-      'después sí baja sus filas viejas',
-      () async {
-        datosDeLaPrimeraCuenta();
-        await sesiones.guardarUsuarioVerificado(
-          usuarioId: 'user-a',
-          email: 'user-a@example.com',
-        );
-        await sync.sincronizar();
-        await dejarAlgoSinSubir();
+    test('descartando lo pendiente también borra todo, y la cuenta que entra '
+        'después sí baja sus filas viejas', () async {
+      datosDeLaPrimeraCuenta();
+      await sesiones.guardarUsuarioVerificado(
+        usuarioId: 'user-a',
+        email: 'user-a@example.com',
+      );
+      await sync.sincronizar();
+      await dejarAlgoSinSubir();
 
-        expect(await cerrar(descartarPendientes: true), 0);
-        expect(await db.select(db.syncCursores).get(), isEmpty);
+      expect(await cerrar(descartarPendientes: true), 0);
+      expect(await db.select(db.syncCursores).get(), isEmpty);
 
-        // Entra la segunda cuenta, con filas MÁS VIEJAS que los cursores que
-        // dejó la primera: sin caché heredada, sí bajan.
-        datosDeLaSegundaCuenta();
-        await sesiones.guardarUsuarioVerificado(
-          usuarioId: 'user-b',
-          email: 'user-b@example.com',
-        );
-        await sync.sincronizar();
+      // Entra la segunda cuenta, con filas MÁS VIEJAS que los cursores que
+      // dejó la primera: sin caché heredada, sí bajan.
+      datosDeLaSegundaCuenta();
+      await sesiones.guardarUsuarioVerificado(
+        usuarioId: 'user-b',
+        email: 'user-b@example.com',
+      );
+      await sync.sincronizar();
 
-        final misFincas = await fincas.observarFincas('user-b').first;
-        expect(misFincas, hasLength(1));
-        expect(misFincas.single.id, 'finca-b');
-      },
-    );
+      final misFincas = await fincas.observarFincas('user-b').first;
+      expect(misFincas, hasLength(1));
+      expect(misFincas.single.id, 'finca-b');
+    });
 
     test('la foto de finca sin subir también cuenta como pendiente', () async {
       datosDeLaPrimeraCuenta();

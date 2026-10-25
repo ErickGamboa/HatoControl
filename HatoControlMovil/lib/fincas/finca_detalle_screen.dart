@@ -235,8 +235,7 @@ class _FincaDetalleScreenState extends State<FincaDetalleScreen> {
                             key: const ValueKey('fincaDetail.gastosFijos'),
                             icono: Icons.receipt_long_outlined,
                             label: 'Gastos',
-                            onTap: () =>
-                                _abrir(GastosScreen(finca: finca)),
+                            onTap: () => _abrir(GastosScreen(finca: finca)),
                           ),
                           _BotonOpcion(
                             key: const ValueKey('fincaDetail.analisis'),
