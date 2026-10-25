@@ -962,7 +962,7 @@ class PesajesRepository {
   Future<PesajeRow?> pesajeDeHoy(String animalId, {DateTime? dia}) async {
     final base = dia ?? DateTime.now();
     final inicio = DateTime(base.year, base.month, base.day);
-    final fin = inicio.add(const Duration(days: 1));
+    final fin = diaSiguiente(inicio);
     return (db.select(db.pesajes)
           ..where(
             (t) =>

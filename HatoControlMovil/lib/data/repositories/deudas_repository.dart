@@ -378,11 +378,7 @@ List<DeudaConSaldo> filtrarDeudas(
     if (desde != null && d.deuda.fecha.isBefore(desde)) return false;
     if (hasta != null) {
       // `hasta` es un día completo: cuenta hasta las 23:59 de ese día.
-      final finDelDia = DateTime(
-        hasta.year,
-        hasta.month,
-        hasta.day,
-      ).add(const Duration(days: 1));
+      final finDelDia = DateTime(hasta.year, hasta.month, hasta.day + 1);
       if (!d.deuda.fecha.isBefore(finDelDia)) return false;
     }
 

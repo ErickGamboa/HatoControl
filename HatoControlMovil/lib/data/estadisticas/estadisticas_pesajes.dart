@@ -16,9 +16,14 @@ typedef PesajeDeAnimal = ({String animalId, DateTime fecha, double peso});
 
 /// Días de CALENDARIO entre dos fechas (ignora la hora del día). De ayer a
 /// hoy = 1 día aunque hayan pasado menos de 24 horas reales.
+///
+/// Se resta en UTC a propósito: en una zona con horario de verano, de la
+/// medianoche local del 10/01 a la del 20/03 hay 68 días y 23 horas, e
+/// `inDays` daba 68 en vez de 69 (en Costa Rica no pasa, pero el teléfono o
+/// la compu pueden estar en otra zona).
 int diasCalendario(DateTime anterior, DateTime actual) {
-  final a = DateTime(anterior.year, anterior.month, anterior.day);
-  final b = DateTime(actual.year, actual.month, actual.day);
+  final a = DateTime.utc(anterior.year, anterior.month, anterior.day);
+  final b = DateTime.utc(actual.year, actual.month, actual.day);
   return b.difference(a).inDays;
 }
 

@@ -62,12 +62,13 @@ double costoUsoSpray({
 /// Fecha fin de retiro = fecha aplicación + días de retiro (calendario).
 DateTime? fechaFinRetiro(DateTime fechaAplicacion, int diasRetiro) {
   if (diasRetiro <= 0) return null;
-  final base = DateTime(
+  // Sumando al día del calendario y no 24 h × días: con el cambio de hora
+  // de otoño, la suma de horas caía a las 11 p. m. del día anterior.
+  return DateTime(
     fechaAplicacion.year,
     fechaAplicacion.month,
-    fechaAplicacion.day,
+    fechaAplicacion.day + diasRetiro,
   );
-  return base.add(Duration(days: diasRetiro));
 }
 
 /// true si [hoy] está en retiro (inclusive hasta retiroHasta).

@@ -82,7 +82,7 @@ class SanidadRepository {
   Future<DateTime?> retiroHasta(String animalId, {DateTime? hoy}) async {
     final ahora = hoy ?? DateTime.now();
     final dia = DateTime(ahora.year, ahora.month, ahora.day);
-    final finDelDia = dia.add(const Duration(days: 1));
+    final finDelDia = diaSiguiente(dia);
     final eventos =
         await (db.select(db.eventosSanitarios)..where(
               (t) =>
@@ -172,7 +172,7 @@ class SanidadRepository {
     final dia = fecha ?? digitado;
     _reglas.noFutura(dia, hoy: digitado);
     final inicio = soloDia(dia);
-    final finDelDia = inicio.add(const Duration(days: 1));
+    final finDelDia = diaSiguiente(inicio);
 
     final meds = <MedicamentoRow>[];
     for (final id in medicamentoIds) {

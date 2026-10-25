@@ -17,6 +17,12 @@ class FechaInvalidaException implements Exception {
 /// El día de calendario de [d], sin la hora.
 DateTime soloDia(DateTime d) => DateTime(d.year, d.month, d.day);
 
+/// Medianoche del día siguiente a [d]: el tope (excluido) para buscar lo de
+/// ese día. Se arma por calendario y no sumando 24 h: con el cambio de hora
+/// de otoño, la suma caía a las 11 p. m. del mismo día y se perdía la última
+/// hora.
+DateTime diaSiguiente(DateTime d) => DateTime(d.year, d.month, d.day + 1);
+
 /// Si [a] y [b] caen el mismo día de calendario.
 bool mismoDia(DateTime a, DateTime b) => soloDia(a) == soloDia(b);
 

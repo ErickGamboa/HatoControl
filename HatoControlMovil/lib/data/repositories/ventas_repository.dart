@@ -551,7 +551,7 @@ class VentasRepository {
 
   Future<PesajeRow?> _pesajeDelDia(String animalId, DateTime dia) {
     final inicio = soloDia(dia);
-    final fin = inicio.add(const Duration(days: 1));
+    final fin = diaSiguiente(inicio);
     return (db.select(db.pesajes)
           ..where(
             (t) =>
